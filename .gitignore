@@ -1,0 +1,11 @@
+# Clojure
+.cpcache
+/.nrepl-port
+/.classpath
+
+# System
+.DS_Store
+
+# IDEs
+/.vscode
+/.idea
