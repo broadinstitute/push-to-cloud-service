@@ -1,4 +1,5 @@
 (ns start
+  (:gen-class)
   (:require [clj-time.core   :as t])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session]))
@@ -47,7 +48,7 @@
   (+ a b))
 
 (comment
-  (let [queue     "zero.broad.pushtocloud.enqueue.dev"
+  (let [queue     "wfl.broad.pushtocloud.enqueue.dev"
         url       "get this from the WFL environments.clj!!"
         vault     "secret/dsde/gotc/dev/activemq/logins/zamboni"
         username  "get this from above vault!!"
