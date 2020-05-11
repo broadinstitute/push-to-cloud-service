@@ -1,0 +1,13 @@
+# Clojure
+.cpcache
+/.nrepl-port
+/.classpath
+/target
+
+# System
+.DS_Store
+
+# IDEs
+/.vscode
+/.idea
+push-to-cloud-service.iml
