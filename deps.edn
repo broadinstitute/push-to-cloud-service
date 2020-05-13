@@ -6,7 +6,8 @@
            javax.servlet/servlet-api         {:mvn/version "2.5"}
            org.apache.activemq/activemq-core {:mvn/version "5.7.0"}
            org.slf4j/slf4j-simple            {:mvn/version "1.7.30"}
-           amperity/vault-clj                {:mvn/version "0.5.1"}}
+           amperity/vault-clj                {:mvn/version "0.5.1"}
+           org.apache.commons/commons-email  {:mvn/version "1.5"}}
 
  :aliases {:test     {:extra-paths ["test"]
                       :extra-deps  {lambdaisland/kaocha {:mvn/version "1.0.629"}}
