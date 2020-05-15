@@ -50,7 +50,7 @@
   (+ a b))
 
 (defn message-loop
-  "A blocking message loop that periodically do something."
+  "A blocking message loop that periodically does something."
   [environment]
   (loop []
     (let [_ (send-text environment "hornet" {"hello" "world!"})]

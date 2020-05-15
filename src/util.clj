@@ -36,7 +36,7 @@
         (.setHostName "smtp.gmail.com")
         (.send)))))
 
-(defn reach-out-and-touch-everyone
+(defn email-everyone-on-the-list-with-message
   "Report MSG in email to TO-LIST. "
   [msg to-list]
   (let [message msg]
@@ -46,5 +46,5 @@
            (with-out-str (pprint message)))))
 
 (comment
-  (reach-out-and-touch-everyone {:hello "world!"} [])
+  (email-everyone-on-the-list-with-message {:hello "world!"} [])
   (println (vault-secrets "secret/dsde/gotc/dev/wfl/users")))
