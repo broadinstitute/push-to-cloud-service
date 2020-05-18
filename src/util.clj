@@ -23,10 +23,11 @@
 
 (defn email
   "Email MESSAGE to TO-LIST from with SUBJECT."
-  [to-list subject message]
+  [message to-list]
   (letfn [(add-to [mail to] (.addTo mail to))
           (add-to-list [mail to-list] (run! (partial add-to mail) to-list))]
-    (let [from (str ptc/the-name "@broadinstitute.org")]
+    (let [from (str ptc/the-name "@broadinstitute.org")
+          subject "This thing is from PTC service"]
       (doto (-> (new SimpleEmail)
                 (.setFrom from)
                 (.setSubject subject)
@@ -36,15 +37,9 @@
         (.setHostName "smtp.gmail.com")
         (.send)))))
 
-(defn email-everyone-on-the-list-with-message
-  "Report MSG in email to TO-LIST. "
-  [msg to-list]
-  (let [message msg]
-    (email (or (seq to-list) ["tbl@broadinstitute.org"
-                              "chengche@broadinstitute.org"])
-           "This thing is from PTC service"
-           (with-out-str (pprint message)))))
-
-(comment
-  (email-everyone-on-the-list-with-message {:hello "world!"} [])
-  (println (vault-secrets "secret/dsde/gotc/dev/wfl/users")))
+(defn notify-everyone-on-the-list-with-message
+  "Notify everyone on the TO-LIST with MSG using METHOD."
+  [method msg to-list]
+  (method (with-out-str (pprint msg))
+          (or (seq to-list) ["tbl@broadinstitute.org"
+                             "chengche@broadinstitute.org"])))
