@@ -1,6 +1,7 @@
 (ns start
   (:gen-class)
-  (:require [util])
+  (:require [util]
+            [taoensso.timbre  :as timbre])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session]))
 
@@ -13,9 +14,20 @@
     (with-open [connection (.createQueueConnection factory username password)]
       (call connection queue))))
 
-(defn send-text
-  "Enqueue the TEXT with PROPERTIES map to push-to-cloud JMS queue with ENVIRONMENT."
-  [environment text properties]
+(defn consume
+  "Nil on timeout or the text from a message from JMS queue DESTINATION through CONNECTION."
+  [connection destination]
+  (let [transacted? false
+        timeout 10000]
+    (with-open [session (.createSession connection transacted? Session/AUTO_ACKNOWLEDGE)]
+      (let [queue (.createQueue session destination)]
+        (with-open [consumer (.createConsumer session queue)]
+          (.start connection)
+          (.receive consumer timeout))))))
+
+(defn produce
+  "Enqueue the TEXT with PROPERTIES map to JMS queue DESTINATION through CONNECTION."
+  [connection destination text properties]
   (letfn [(add-property [^TextMessage message k v] (.setStringProperty message k v))
           (send [connection destination]
             (let [transacted? true]
@@ -29,48 +41,28 @@
                     (.start connection)
                     (.send producer message)
                     (.commit session))))))]
-    (with-push-to-cloud-jms-connection environment send)))
+    (send connection destination)))
 
-(defn receive-text
-  "Nil on timeout or the text from a message from the push-to-cloud JMS queue with ENVIRONMENT."
-  [environment]
-  (letfn [(receive [connection destination]
-            (let [transacted? false
-                  timeout 10000]
-              (with-open [session (.createSession connection transacted? Session/AUTO_ACKNOWLEDGE)]
-                (let [queue (.createQueue session destination)]
-                  (with-open [consumer (.createConsumer session queue)]
-                    (.start connection)
-                    (.receive consumer timeout))))))]
-    (with-push-to-cloud-jms-connection environment receive)))
-
-(defn plus
-  "Return the sum of A and B. Just for testing."
-  [^Integer a ^Integer b]
-  (+ a b))
+(defn listen-and-consume-from-queue
+  "Listen on a QUEUE and keep consuming messages with CONNECTION and CADENCE."
+  ([cadence connection queue]
+   (loop [counter 0]
+     (produce connection queue "hornet" {"hello" (format "world! %s" counter)})
+     (when-let [messageText (consume connection queue)]
+       (timbre/info (.getText messageText))
+       (doseq [[k v] (.getProperties messageText)]
+         (timbre/info (str k v))))
+     (Thread/sleep cadence)
+     (recur (inc counter))))
+  ([connection queue]
+   (listen-and-consume-from-queue 10000 connection queue)))
 
 (defn message-loop
   "A blocking message loop that periodically does something."
   [environment]
-  (loop []
-    (let [_ (send-text environment "hornet" {"hello" "world!"})]
-      (when-let [messageText (receive-text environment)]
-        (println (.getText messageText))
-        (doseq [[k v] (.getProperties messageText)]
-          (prn k v))
-        (recur)))))
-
-(comment
-  (message-loop "dev")
-
-  (let [environment "dev"]
-    ;;(send-text environment "hornet" {"hello" "world!"})
-    (when-let [msg (receive-text environment)]
-      (.getText msg)))
-
-  (util/reach-out-and-touch-everyone {:hello "world!"} []))
+  (with-push-to-cloud-jms-connection environment listen-and-consume-from-queue))
 
 (defn -main []
-  (println "Hello world!")
   (let [environment (System/getenv "environment")]
+    (timbre/info (format "%s starting up on %s" ptc/the-name environment))
     (message-loop environment)))
