@@ -1,5 +1,7 @@
 # push-to-cloud-service
 
+![Tests on Pull Requests and Master](https://github.com/broadinstitute/push-to-cloud-service/workflows/Tests%20on%20Pull%20Requests%20and%20Master/badge.svg)
+
 This is the repo for the WorkFlow Launcher's PTC service
 
 ## Quickstart
