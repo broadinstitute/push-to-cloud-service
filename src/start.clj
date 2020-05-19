@@ -45,17 +45,14 @@
 
 (defn listen-and-consume-from-queue
   "Listen on a QUEUE and keep consuming messages with CONNECTION and CADENCE."
-  ([cadence connection queue]
+  [connection queue]
    (loop [counter 0]
      (produce connection queue "hornet" {"hello" (format "world! %s" counter)})
      (when-let [messageText (consume connection queue)]
        (timbre/info (.getText messageText))
        (doseq [[k v] (.getProperties messageText)]
          (timbre/info (str k v))))
-     (Thread/sleep cadence)
      (recur (inc counter))))
-  ([connection queue]
-   (listen-and-consume-from-queue 10000 connection queue)))
 
 (defn message-loop
   "A blocking message loop that periodically does something."
