@@ -1,9 +1,11 @@
 (ns util
   "Utility functions shared across this program."
-  (:require [clojure.string :as str]
+  (:require [clojure.pprint :refer [pprint]]
+            [clojure.string :as str]
             [vault.client.http]
             [vault.core         :as vault]
-            [ptc]))
+            [ptc])
+  (:import [org.apache.commons.mail SimpleEmail]))
 
 (defn vault-secrets
   "Return the vault-secrets at PATH."
@@ -19,5 +21,25 @@
                  msg   (format (str/join \newline lines) ptc/the-name error)]
              (println msg))))))
 
-(comment
-  (println (vault-secrets "secret/dsde/gotc/dev/wfl/users")))
+(defn email
+  "Email MESSAGE to TO-LIST from with SUBJECT."
+  [message to-list]
+  (letfn [(add-to [mail to] (.addTo mail to))
+          (add-to-list [mail to-list] (run! (partial add-to mail) to-list))]
+    (let [from (str ptc/the-name "@broadinstitute.org")
+          subject "This thing is from PTC service"]
+      (doto (-> (new SimpleEmail)
+                (.setFrom from)
+                (.setSubject subject)
+                (.setMsg message))
+        (add-to-list to-list)
+        (.setAuthentication from "fake-password")
+        (.setHostName "smtp.gmail.com")
+        (.send)))))
+
+(defn notify-everyone-on-the-list-with-message
+  "Notify everyone on the TO-LIST with MSG using METHOD."
+  [method msg to-list]
+  (method (with-out-str (pprint msg))
+          (or (seq to-list) ["tbl@broadinstitute.org"
+                             "chengche@broadinstitute.org"])))

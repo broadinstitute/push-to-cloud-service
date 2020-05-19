@@ -1,24 +1,39 @@
 (ns start
   (:gen-class)
-  (:require [clj-time.core   :as t])
+  (:require [util]
+            [taoensso.timbre  :as timbre])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session]))
 
 (defn with-push-to-cloud-jms-connection
-  "CALL (use connection destination) for the push-to-cloud JMS queue with URL, QUEUE, USERNAME and PASSWORD."
-  [url queue username password call]
-  (let [factory (new ActiveMQSslConnectionFactory url)]
+  "CALL (use connection queue) for the push-to-cloud JMS queue with ENVIRONMENT."
+  [environment call]
+  (let [vault-path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
+        {:keys [url username password queue]} (util/vault-secrets vault-path)
+        factory (new ActiveMQSslConnectionFactory url)]
     (with-open [connection (.createQueueConnection factory username password)]
       (call connection queue))))
 
-(defn send-text
-  "Enqueue the TEXT with PROPERTIES map to push-to-cloud JMS queue with URL, QUEUE, USERNAME and PASSWORD."
-  [url queue username password text properties]
+(defn consume
+  "Nil on timeout or the text from a message from JMS QUEUE through CONNECTION."
+  [connection queue]
+  (let [transacted? false
+        timeout 10000]
+    (with-open [session (.createSession connection transacted? Session/AUTO_ACKNOWLEDGE)]
+      (let [queue (.createQueue session queue)]
+        (with-open [consumer (.createConsumer session queue)]
+          (.start connection)
+          (timbre/info (format "Consumer %s: attempting to consume message." (.getConsumerId consumer)))
+          (.receive consumer timeout))))))
+
+(defn produce
+  "Enqueue the TEXT with PROPERTIES map to JMS QUEUE through CONNECTION."
+  [connection queue text properties]
   (letfn [(add-property [^TextMessage message k v] (.setStringProperty message k v))
-          (send [connection destination]
+          (send [connection queue]
             (let [transacted? true]
               (with-open [session (.createSession connection transacted? Session/SESSION_TRANSACTED)]
-                (let [queue (.createQueue session destination)
+                (let [queue (.createQueue session queue)
                       message (.createTextMessage session text)]
                   (doseq [[k v] properties]
                     (add-property message k v))
@@ -27,34 +42,23 @@
                     (.start connection)
                     (.send producer message)
                     (.commit session))))))]
-    (with-push-to-cloud-jms-connection url queue username password send)))
+    (send connection queue)))
 
-(defn receive-text
-  "Nil on timeout or the text from a message from the push-to-cloud JMS queue with URL, QUEUE, USERNAME and PASSWORD"
-  [url queue username password]
-  (letfn [(receive [connection destination]
-            (let [transacted? false
-                  timeout 10000]
-              (with-open [session (.createSession connection transacted? Session/AUTO_ACKNOWLEDGE)]
-                (let [queue (.createQueue session destination)]
-                  (with-open [consumer (.createConsumer session queue)]
-                    (.start connection)
-                    (.receive consumer timeout))))))]
-    (with-push-to-cloud-jms-connection url queue username password receive)))
+(defn listen-and-consume-from-queue
+  "Listen on a QUEUE and synchronously consume messages with CONNECTION."
+  [connection queue]
+   (loop [counter 0]
+     (produce connection queue "hornet" {"hello" (format "world! %s" counter)})
+     (when-let [messageText (consume connection queue)]
+       (timbre/info (format "Consumed message: %s: %s" (.getText messageText) (prn-str (.getProperties messageText)))))
+     (recur (inc counter))))
 
-(defn plus
-  "Return the sum of A and B. Just for testing."
-  [^Integer a ^Integer b]
-  (+ a b))
-
-(comment
-  (let [queue     "wfl.broad.pushtocloud.enqueue.dev"
-        url       "get this from the WFL environments.clj!!"
-        vault     "secret/dsde/gotc/dev/activemq/logins/zamboni"
-        username  "get this from above vault!!"
-        password  "get this from above vault!!"]
-    (send-text url queue username password "hornet" {"hello" "world!"})
-    (.getText (receive-text url queue username password))))
+(defn message-loop
+  "A blocking message loop that periodically does something."
+  [environment]
+  (with-push-to-cloud-jms-connection environment listen-and-consume-from-queue))
 
 (defn -main []
-  (println "Hello world!"))
+  (let [environment (or (System/getenv "environment") "dev")]
+    (timbre/info (format "%s starting up on %s" ptc/the-name environment))
+    (message-loop environment)))
