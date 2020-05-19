@@ -59,6 +59,6 @@
   (with-push-to-cloud-jms-connection environment listen-and-consume-from-queue))
 
 (defn -main []
-  (let [environment (System/getenv "environment")]
+  (let [environment (or (System/getenv "environment") "dev")]
     (timbre/info (format "%s starting up on %s" ptc/the-name environment))
     (message-loop environment)))
