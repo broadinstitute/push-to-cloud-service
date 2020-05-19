@@ -3,6 +3,9 @@
             [start])
   (:import [org.apache.activemq ActiveMQSslConnectionFactory]))
 
+;; Local testing for ActiveMQ
+;; https://activemq.apache.org/how-do-i-embed-a-broker-inside-a-connection
+;;
 (defn with-test-jms-connection
   "CALL with a local JMS connection for testing."
   [call]
