@@ -26,4 +26,4 @@ jobs:
 
       - name: Unit Test
         run: |
-          clj -A:test
+          clojure -A:test
