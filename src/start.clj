@@ -23,6 +23,7 @@
       (let [queue (.createQueue session queue)]
         (with-open [consumer (.createConsumer session queue)]
           (.start connection)
+          (timbre/info (format "Consumer %s: attempting to consume message." (.getConsumerId consumer)))
           (.receive consumer timeout))))))
 
 (defn produce
@@ -44,14 +45,12 @@
     (send connection queue)))
 
 (defn listen-and-consume-from-queue
-  "Listen on a QUEUE and keep consuming messages with CONNECTION and CADENCE."
+  "Listen on a QUEUE and synchronously consume messages with CONNECTION."
   [connection queue]
    (loop [counter 0]
      (produce connection queue "hornet" {"hello" (format "world! %s" counter)})
      (when-let [messageText (consume connection queue)]
-       (timbre/info (.getText messageText))
-       (doseq [[k v] (.getProperties messageText)]
-         (timbre/info (str k v))))
+       (timbre/info (format "Consumed message: %s: %s" (.getText messageText) (prn-str (.getProperties messageText)))))
      (recur (inc counter))))
 
 (defn message-loop
