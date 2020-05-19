@@ -6,7 +6,7 @@
             [javax.jms TextMessage DeliveryMode Session]))
 
 (defn with-push-to-cloud-jms-connection
-  "CALL (use connection destination) for the push-to-cloud JMS queue with ENVIRONMENT."
+  "CALL (use connection queue) for the push-to-cloud JMS queue with ENVIRONMENT."
   [environment call]
   (let [vault-path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
         {:keys [url username password queue]} (util/vault-secrets vault-path)
@@ -15,24 +15,24 @@
       (call connection queue))))
 
 (defn consume
-  "Nil on timeout or the text from a message from JMS queue DESTINATION through CONNECTION."
-  [connection destination]
+  "Nil on timeout or the text from a message from JMS QUEUE through CONNECTION."
+  [connection queue]
   (let [transacted? false
         timeout 10000]
     (with-open [session (.createSession connection transacted? Session/AUTO_ACKNOWLEDGE)]
-      (let [queue (.createQueue session destination)]
+      (let [queue (.createQueue session queue)]
         (with-open [consumer (.createConsumer session queue)]
           (.start connection)
           (.receive consumer timeout))))))
 
 (defn produce
-  "Enqueue the TEXT with PROPERTIES map to JMS queue DESTINATION through CONNECTION."
-  [connection destination text properties]
+  "Enqueue the TEXT with PROPERTIES map to JMS QUEUE through CONNECTION."
+  [connection queue text properties]
   (letfn [(add-property [^TextMessage message k v] (.setStringProperty message k v))
-          (send [connection destination]
+          (send [connection queue]
             (let [transacted? true]
               (with-open [session (.createSession connection transacted? Session/SESSION_TRANSACTED)]
-                (let [queue (.createQueue session destination)
+                (let [queue (.createQueue session queue)
                       message (.createTextMessage session text)]
                   (doseq [[k v] properties]
                     (add-property message k v))
@@ -41,7 +41,7 @@
                     (.start connection)
                     (.send producer message)
                     (.commit session))))))]
-    (send connection destination)))
+    (send connection queue)))
 
 (defn listen-and-consume-from-queue
   "Listen on a QUEUE and keep consuming messages with CONNECTION and CADENCE."
