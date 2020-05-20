@@ -1,5 +1,5 @@
-(ns util
-  "Utility functions shared across this program."
+(ns util.misc
+  "Miscellaneous utility functions shared across this program."
   (:require [clojure.pprint :refer [pprint]]
             [clojure.string :as str]
             [vault.client.http]

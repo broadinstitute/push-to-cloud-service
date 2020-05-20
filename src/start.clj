@@ -1,6 +1,6 @@
 (ns start
   (:gen-class)
-  (:require [util]
+  (:require [util.misc        :as misc]
             [taoensso.timbre  :as timbre])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session]))
@@ -9,7 +9,7 @@
   "CALL (use connection queue) for the push-to-cloud JMS queue with ENVIRONMENT."
   [environment call]
   (let [vault-path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
-        {:keys [url username password queue]} (util/vault-secrets vault-path)
+        {:keys [url username password queue]} (misc/vault-secrets vault-path)
         factory (new ActiveMQSslConnectionFactory url)]
     (with-open [connection (.createQueueConnection factory username password)]
       (call connection queue))))

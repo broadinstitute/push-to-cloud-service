@@ -1,6 +1,6 @@
 (ns util-test
   (:require [clojure.test :refer :all]
-            [util]))
+            [util.misc    :as misc]))
 
 (deftest test-notify-everyone-on-the-list-with-message
   "Test the notify function works."
@@ -9,5 +9,5 @@
     (let [msg      "test"
           ppl      ["A" "B"]
           expected ["\"test\"\nA" "\"test\"\nB"]]
-      (is (= (util/notify-everyone-on-the-list-with-message notify msg ppl)
+      (is (= (misc/notify-everyone-on-the-list-with-message notify msg ppl)
              expected)))))
