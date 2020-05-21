@@ -47,11 +47,11 @@
 (defn listen-and-consume-from-queue
   "Listen on a QUEUE and synchronously consume messages with CONNECTION."
   [connection queue]
-   (loop [counter 0]
-     (produce connection queue "hornet" {"hello" (format "world! %s" counter)})
-     (when-let [messageText (consume connection queue)]
-       (timbre/info (format "Consumed message: %s: %s" (.getText messageText) (prn-str (.getProperties messageText)))))
-     (recur (inc counter))))
+  (loop [counter 0]
+    (produce connection queue "hornet" {"hello" (format "world! %s" counter)})
+    (when-let [messageText (consume connection queue)]
+      (timbre/info (format "Consumed message: %s: %s" (.getText messageText) (prn-str (.getProperties messageText)))))
+    (recur (inc counter))))
 
 (defn message-loop
   "A blocking message loop that periodically does something."

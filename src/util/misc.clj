@@ -21,9 +21,9 @@
   [path]
   (let [token-path (str (System/getProperty "user.home") "/.vault-token")]
     (try (vault/read-secret
-           (doto (vault/new-client "https://clotho.broadinstitute.org:8200/")
-             (vault/authenticate! :token (slurp token-path)))
-           path)
+          (doto (vault/new-client "https://clotho.broadinstitute.org:8200/")
+            (vault/authenticate! :token (slurp token-path)))
+          path)
          (catch Throwable e
            (let [error (get-in (Throwable->map e) [:via 0 :message])
                  lines ["%1$s: %2$s" "%1$s: Run 'vault login' and try again."]
