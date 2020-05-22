@@ -11,3 +11,7 @@
           expected ["\"test\"\nA" "\"test\"\nB"]]
       (is (= (misc/notify-everyone-on-the-list-with-message notify msg ppl)
              expected)))))
+
+(deftest test-list-objects-in-a-cloud-storage-bucket
+  "TODO: Test the list objects for gcs works."
+  (is (true? true)))

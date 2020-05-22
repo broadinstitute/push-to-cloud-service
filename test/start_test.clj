@@ -1,5 +1,6 @@
 (ns start-test
   (:require [clojure.test :refer :all]
+            [clojure.edn :as edn]
             [start])
   (:import [org.apache.activemq ActiveMQSslConnectionFactory]))
 
@@ -14,6 +15,18 @@
         queue   "test.queue"]
     (with-open [connection (.createQueueConnection factory)]
       (call connection queue))))
+
+(def jms-message
+  "An example JMS message for testing."
+  {:headers    {:message-id "ID:gotc-jenkins-slave01.broadinstitute.org-12345-123456789101-10:1:1:1:1"}
+   :properties {:launchSingleSampleCloudWorkflow false
+                :project "Test-Project"
+                :dataType "WGS"
+                :analysisVersion "1"
+                :sampleAlias "Test-Alias"
+                :clinicalDataDeliveryTest false}})
+(comment
+  (edn/read-string (prn-str jms-message)))
 
 (deftest produce-consume-message
   "Test we could produce a message and consume it."
