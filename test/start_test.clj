@@ -21,8 +21,6 @@
   "Example JMS message for testing."
   (edn/read-string (slurp "./test/data/test_msg.edn")))
 
-;; Test we could produce a message and consume it
-;;
 (deftest produce-consume-message
   (let [message-text  (prn-str             (:headers message))
         message-props (walk/stringify-keys (:properties message))]

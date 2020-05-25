@@ -4,17 +4,16 @@
             [util.gcs    :as gcs]))
 
 (deftest test-notify-everyone-on-the-list-with-message
-  "Test the notify function works."
   (letfn [(notify [msg to-list]
             (map (partial str msg) to-list))]
     (let [msg      "test"
           ppl      ["A" "B"]
           expected ["\"test\"\nA" "\"test\"\nB"]]
-      (is (= (misc/notify-everyone-on-the-list-with-message notify msg ppl)
-             expected)))))
+      (testing "notify-everyone-on-the-list-with-message works for notify func"
+        (is (= (misc/notify-everyone-on-the-list-with-message notify msg ppl)
+               expected))))))
 
 (deftest gs-url-test
-  "Test gcs-url helper. Adopted from WFL."
   (testing "URL utilities"
     (testing "parse-gs-url ok"
       (is (= ["b" "obj/ect"]  (gcs/parse-gs-url "gs://b/obj/ect")))
