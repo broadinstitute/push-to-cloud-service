@@ -1,0 +1,7 @@
+{:headers    {:message-id "ID:gotc-jenkins-slave01.broadinstitute.org-12345-123456789101-10:1:1:1:1"}
+ :properties {:launchSingleSampleCloudWorkflow "false"
+              :project "Test-Project"
+              :dataType "WGS"
+              :analysisVersion "1"
+              :sampleAlias "Test-Alias"
+              :clinicalDataDeliveryTest "false"}}

@@ -1,6 +1,7 @@
 (ns start-test
   (:require [clojure.test :refer :all]
             [clojure.edn :as edn]
+            [clojure.walk :as walk]
             [start])
   (:import [org.apache.activemq ActiveMQSslConnectionFactory]))
 
@@ -16,23 +17,23 @@
     (with-open [connection (.createQueueConnection factory)]
       (call connection queue))))
 
-(def jms-message
-  "An example JMS message for testing."
-  {:headers    {:message-id "ID:gotc-jenkins-slave01.broadinstitute.org-12345-123456789101-10:1:1:1:1"}
-   :properties {:launchSingleSampleCloudWorkflow false
-                :project "Test-Project"
-                :dataType "WGS"
-                :analysisVersion "1"
-                :sampleAlias "Test-Alias"
-                :clinicalDataDeliveryTest false}})
-(comment
-  (edn/read-string (prn-str jms-message)))
+(def message
+  "Example JMS message for testing."
+  (edn/read-string (slurp "./test/data/test_msg.edn")))
 
+;; Test we could produce a message and consume it
+;;
 (deftest produce-consume-message
-  "Test we could produce a message and consume it."
-  (letfn [(produce-consume [connection queue]
-            (start/produce connection queue "test-message" {"test" "OK"})
-            (start/consume connection queue))]
-    (if-let [msg (with-test-jms-connection produce-consume)]
-      (is (= "test-message" (.getText msg)))
-      (is false))))
+  (let [message-text  (prn-str             (:headers message))
+        message-props (walk/stringify-keys (:properties message))]
+    (letfn [(produce-consume [connection queue]
+              (start/produce connection queue message-text message-props)
+              (start/consume connection queue))]
+      (if-let [msg (with-test-jms-connection produce-consume)]
+        (testing "Message is not nil and can be properly consumed"
+          (is (= (:headers message)
+                 (edn/read-string (.getText msg))))
+          (doseq [[k v] (.getProperties msg)]
+            (is (= (get (:properties message) (keyword k)) 
+                   v))))
+        (is false)))))
