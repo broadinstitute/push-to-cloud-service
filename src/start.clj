@@ -4,7 +4,7 @@
             [util.misc        :as misc]
             [taoensso.timbre  :as timbre])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
-            [javax.jms TextMessage DeliveryMode Session]))
+            [javax.jms TextMessage DeliveryMode Session JMSException]))
 
 (defn with-push-to-cloud-jms-connection
   "CALL (use connection queue) for the push-to-cloud JMS queue with ENVIRONMENT."
@@ -55,7 +55,7 @@
     (produce connection queue "hornet" {"hello" (format "world! %s" counter)})
     (try (when-let [messageText (consume connection queue)]
            (timbre/info (format "Consumed message: %s: %s" (.getText messageText) (prn-str (.getProperties messageText)))))
-         (catch javax.jms.JMSException e (timbre/error (str (.getMessage e)))))
+         (catch JMSException e (timbre/error (str (.getMessage e)))))
     (recur (inc counter))))
 
 (defn message-loop
