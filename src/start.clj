@@ -72,18 +72,25 @@
                       [k v])))))
 
 (defn listen-and-consume-from-queue
-  "Listen on a QUEUE and synchronously consume messages with CONNECTION."
-  [connection queue]
-  (let [msg (edn/read-string (slurp "./test/data/test_msg.edn"))
-        title (get-in msg [:headers :message-id])
-        text  (walk/stringify-keys (:properties msg))]
-    (loop [counter 0]
-      (produce connection queue title text)
-      (try (when-let [message (consume connection queue)]
-             (let [message (parse-message message)]
-               (timbre/info (format "Consumed message %s: %s: %s" counter (:headers message) (:properties message)))))
-           (catch JMSException e (timbre/error (str (.getMessage e)))))
-      (recur (inc counter)))))
+  "Listen on a QUEUE, synchronously consume messages with CONNECTION.
+   Block on doing TASK! after each receipt."
+  ([connection queue task!]
+   (let [msg (edn/read-string (slurp "./test/data/test_msg.edn"))
+         title (get-in msg [:headers :message-id])
+         text  (walk/stringify-keys (:properties msg))]
+     (loop [counter 0
+            msg-state (atom nil)]
+       (produce connection queue title text)
+       (try (when-let [message (consume connection queue)]
+              (let [message (parse-message message)]
+                (reset! msg-state message)
+                (timbre/info (format "Consumed message %s: %s: %s" counter (:headers message) (:properties message)))))
+            (catch JMSException e (timbre/error (str (.getMessage e)))))
+       (if (task!)
+         (recur (inc counter) @msg-state)
+         @msg-state))))
+  ([connection queue]
+   (listen-and-consume-from-queue connection queue (fn [] "We can know only that we know nothing."))))
 
 (defn message-loop
   "A blocking message loop that periodically does something."
