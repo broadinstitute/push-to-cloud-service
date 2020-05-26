@@ -2,7 +2,8 @@
   (:gen-class)
   (:require [ptc]
             [util.misc        :as misc]
-            [clojure.edn :as edn]
+            [clojure.edn      :as edn]
+            [clojure.walk     :as walk]
             [taoensso.timbre  :as timbre])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session JMSException]))
@@ -64,21 +65,25 @@
 
 (defn parse-message
   "Parse the MESSAGE fetched from JMS queue."
-  [message]
+  [^TextMessage message]
   (let [parsed {:headers (.getText message)}]
     (assoc parsed :properties
-                  (into {} (for [[k v] (.getProperties message)]
-                             [k v])))))
+           (into {} (for [[k v] (.getProperties message)]
+                      [k v])))))
 
 (defn listen-and-consume-from-queue
   "Listen on a QUEUE and synchronously consume messages with CONNECTION."
   [connection queue]
-  (loop [counter 0]
-    (produce connection queue "hornet" {"hello" (format "world! %s" counter)})
-    (try (when-let [message (consume connection queue)]
-           (timbre/info (format "Consumed message: %s: %s" (.getText message) (prn-str (.getProperties message)))))
-         (catch JMSException e (timbre/error (str (.getMessage e)))))
-    (recur (inc counter))))
+  (let [msg (edn/read-string (slurp "./test/data/test_msg.edn"))
+        title (get-in msg [:headers :message-id])
+        text  (walk/stringify-keys (:properties msg))]
+    (loop [counter 0]
+      (produce connection queue title text)
+      (try (when-let [message (consume connection queue)]
+             (let [message (parse-message message)]
+               (timbre/info (format "Consumed message %s: %s: %s" counter (:headers message) (:properties message)))))
+           (catch JMSException e (timbre/error (str (.getMessage e)))))
+      (recur (inc counter)))))
 
 (defn message-loop
   "A blocking message loop that periodically does something."
