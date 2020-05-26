@@ -30,6 +30,19 @@
           (timbre/info (format "Consumer %s: attempting to consume message." (.getConsumerId consumer)))
           (.receive consumer timeout))))))
 
+(defn peek
+  "Peek 1 message from JMS QUEUE through CONNECTION."
+  [connection queue]
+  (let [transacted? false]
+    (with-open [session (.createSession connection transacted? Session/AUTO_ACKNOWLEDGE)]
+      (let [queue (.createQueue session queue)]
+        (with-open [browser (.createBrowser session queue)]
+          (.start connection)
+          (timbre/info (format "Browser: attempting to peek message."))
+          (let [msg-enum (.getEnumeration browser)]
+            (when (.hasMoreElements msg-enum)
+              (.nextElement msg-enum))))))))
+
 (defn produce
   "Enqueue the TEXT with PROPERTIES map to JMS QUEUE through CONNECTION."
   [connection queue text properties]
@@ -53,8 +66,8 @@
   [connection queue]
   (loop [counter 0]
     (produce connection queue "hornet" {"hello" (format "world! %s" counter)})
-    (try (when-let [messageText (consume connection queue)]
-           (timbre/info (format "Consumed message: %s: %s" (.getText messageText) (prn-str (.getProperties messageText)))))
+    (try (when-let [message (consume connection queue)]
+           (timbre/info (format "Consumed message: %s: %s" (.getText message) (prn-str (.getProperties message)))))
          (catch JMSException e (timbre/error (str (.getMessage e)))))
     (recur (inc counter))))
 
