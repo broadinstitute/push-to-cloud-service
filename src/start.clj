@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [ptc]
             [util.misc        :as misc]
+            [clojure.edn :as edn]
             [taoensso.timbre  :as timbre])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session JMSException]))
@@ -30,7 +31,7 @@
           (timbre/info (format "Consumer %s: attempting to consume message." (.getConsumerId consumer)))
           (.receive consumer timeout))))))
 
-(defn peek
+(defn peek-message
   "Peek 1 message from JMS QUEUE through CONNECTION."
   [connection queue]
   (let [transacted? false]
@@ -60,6 +61,14 @@
                     (.send producer message)
                     (.commit session))))))]
     (send connection queue)))
+
+(defn parse-message
+  "Parse the MESSAGE fetched from JMS queue."
+  [message]
+  (let [parsed {:headers (.getText message)}]
+    (assoc parsed :properties
+                  (into {} (for [[k v] (.getProperties message)]
+                             [k v])))))
 
 (defn listen-and-consume-from-queue
   "Listen on a QUEUE and synchronously consume messages with CONNECTION."

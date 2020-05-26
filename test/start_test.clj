@@ -41,7 +41,7 @@
         message-props (walk/stringify-keys (:properties message))]
     (letfn [(produce-peek [connection queue]
               (start/produce connection queue message-text message-props)
-              (start/peek connection queue))]
+              (start/peek-message connection queue))]
       (if-let [msg (with-test-jms-connection produce-peek)]
         (testing "Message is not nil and can be properly consumed"
           (is (= (:headers message)
