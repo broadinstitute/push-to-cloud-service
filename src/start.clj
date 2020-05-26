@@ -1,6 +1,7 @@
 (ns start
   (:gen-class)
-  (:require [util.misc        :as misc]
+  (:require [ptc]
+            [util.misc        :as misc]
             [taoensso.timbre  :as timbre])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session]))
@@ -14,6 +15,9 @@
     (with-open [connection (.createQueueConnection factory username password)]
       (call connection queue))))
 
+;; We are using sync receipt for now
+;; check https://activemq.apache.org/maven/apidocs/org/apache/activemq/ActiveMQMessageConsumer.html
+;;
 (defn consume
   "Nil on timeout or the text from a message from JMS QUEUE through CONNECTION."
   [connection queue]
@@ -49,8 +53,9 @@
   [connection queue]
   (loop [counter 0]
     (produce connection queue "hornet" {"hello" (format "world! %s" counter)})
-    (when-let [messageText (consume connection queue)]
-      (timbre/info (format "Consumed message: %s: %s" (.getText messageText) (prn-str (.getProperties messageText)))))
+    (try (when-let [messageText (consume connection queue)]
+           (timbre/info (format "Consumed message: %s: %s" (.getText messageText) (prn-str (.getProperties messageText)))))
+         (catch javax.jms.JMSException e (timbre/error (str (.getMessage e)))))
     (recur (inc counter))))
 
 (defn message-loop
