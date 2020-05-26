@@ -35,3 +35,18 @@
             (is (= (get (:properties message) (keyword k))
                    v))))
         (is false)))))
+
+(deftest produce-peek-message
+  (let [message-text  (prn-str             (:headers message))
+        message-props (walk/stringify-keys (:properties message))]
+    (letfn [(produce-peek [connection queue]
+              (start/produce connection queue message-text message-props)
+              (start/peek connection queue))]
+      (if-let [msg (with-test-jms-connection produce-peek)]
+        (testing "Message is not nil and can be properly consumed"
+          (is (= (:headers message)
+                 (edn/read-string (.getText msg))))
+          (doseq [[k v] (.getProperties msg)]
+            (is (= (get (:properties message) (keyword k))
+                   v))))
+        (is false)))))
