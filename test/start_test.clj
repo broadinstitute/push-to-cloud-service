@@ -32,6 +32,6 @@
           (is (= (:headers message)
                  (edn/read-string (.getText msg))))
           (doseq [[k v] (.getProperties msg)]
-            (is (= (get (:properties message) (keyword k)) 
+            (is (= (get (:properties message) (keyword k))
                    v))))
         (is false)))))
