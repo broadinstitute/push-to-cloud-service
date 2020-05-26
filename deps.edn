@@ -3,8 +3,6 @@
  :deps
           {org.clojure/clojure                   {:mvn/version "1.10.1"}
            org.clojure/data.json                 {:mvn/version "1.0.0"}
-           clj-time                              {:mvn/version "0.14.2"}
-           cljfmt                                {:mvn/version "0.6.7"}
            javax.servlet/servlet-api             {:mvn/version "2.5"}
            org.apache.activemq/activemq-core     {:mvn/version "5.7.0"}
            org.apache.tika/tika-core             {:mvn/version "1.24"}
@@ -20,6 +18,8 @@
                        :main-opts   ["-m" "kaocha.runner"]}
            :uberdeps  {:extra-deps {uberdeps {:mvn/version "0.1.10"}}
                        :main-opts  ["-m" "uberdeps.uberjar"]}
-           :lint      {:main-opts ["-m" "cljfmt.main" "check"]}
-           :format    {:main-opts ["-m" "cljfmt.main" "fix"]}}
+           :lint      {:extra-deps {cljfmt {:mvn/version "0.6.7"}}
+                       :main-opts ["-m" "cljfmt.main" "check"]}
+           :format    {:extra-deps {cljfmt {:mvn/version "0.6.7"}}
+                       :main-opts ["-m" "cljfmt.main" "fix"]}}
  }
