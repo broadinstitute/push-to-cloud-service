@@ -26,8 +26,18 @@ The tests are managed by `clj` as well and will be executed by
  run the following code to see an example:
 
  ```bash
- clojure -A:test
+ clojure -A:test unit
  ```
+
+For integration testing, you need to connect to the VPN or be in the Broad
+network and run:
+
+```bash
+ clojure -A:test integration
+```
+
+which will run the end to end test including uploading some files to the 
+testing Google Cloud Storage Bucket.
 
 ## Development
 
