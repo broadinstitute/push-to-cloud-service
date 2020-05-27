@@ -5,6 +5,7 @@
             [clojure.string     :as str]
             [clojure.java.io    :as io]
             [clj-http.client    :as http]
+            [clj-http.util      :as http-util]
             [vault.client.http]
             [ptc]
             [util.once          :as once])
@@ -21,6 +22,11 @@
 (def bucket-url
   "The Google Cloud Storage URL for bucket operations."
   (str storage-url "b/"))
+
+(defn bucket-object-url
+  "The API URL referring to OBJECT in BUCKET."
+  [bucket object]
+  (str bucket-url bucket "/o/" (http-util/url-encode object)))
 
 (def upload-url
   "The Google Cloud Storage URL for upload operations."
@@ -57,6 +63,17 @@
   ([bucket]
    (list-objects bucket "")))
 
+(defn delete-object
+  "Delete URL or OBJECT from BUCKET"
+  ([bucket object headers]
+   (http/request {:method  :delete ;; :debug true :debug-body true
+                  :url     (bucket-object-url bucket object)
+                  :headers headers}))
+  ([bucket object]
+   (delete-object bucket object (once/get-auth-header!)))
+  ([url]
+   (apply delete-object (parse-gs-url url))))
+
 (defn upload-file
   "Upload FILE to BUCKET with name OBJECT."
   ([file bucket object headers]
@@ -78,4 +95,5 @@
 
 (comment
   (list-objects "broad-gotc-dev-zero-test")
-  (upload-file "project.clj" "broad-gotc-dev-zero-test" "junk-test.clj"))
+  (upload-file "project.clj" "broad-gotc-dev-zero-test" "junk-test.clj")
+  (delete-object "broad-gotc-dev-zero-test" "junk-test.clj"))
