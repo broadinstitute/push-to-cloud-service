@@ -57,9 +57,9 @@
               ;; return false to break the loop
               false)]
       (if-let [parsed-msg (with-test-jms-connection
-                     (fn [connection queue]
-                       (start/produce connection queue message-text message-props)
-                       (start/listen-and-consume-from-queue connection queue custom-task)))]
+                            (fn [connection queue]
+                              (start/produce connection queue message-text message-props)
+                              (start/listen-and-consume-from-queue connection queue custom-task)))]
         (testing "Message is not nil and can be properly consumed"
           (is (= message-text
                  (:headers parsed-msg)))
