@@ -1,5 +1,5 @@
 (ns start-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is testing]]
             [clojure.edn :as edn]
             [clojure.walk :as walk]
             [start])
