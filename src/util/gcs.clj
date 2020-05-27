@@ -92,8 +92,3 @@
    (upload-file file bucket object (once/get-auth-header!)))
   ([file url]
    (apply upload-file file (parse-gs-url url))))
-
-(comment
-  (list-objects "broad-gotc-dev-zero-test")
-  (upload-file "project.clj" "broad-gotc-dev-zero-test" "junk-test.clj")
-  (delete-object "broad-gotc-dev-zero-test" "junk-test.clj"))
