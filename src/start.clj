@@ -21,16 +21,15 @@
 ;; check https://activemq.apache.org/maven/apidocs/org/apache/activemq/ActiveMQMessageConsumer.html
 ;;
 (defn consume
-  "Nil on timeout or the text from a message from JMS QUEUE through CONNECTION."
+  "The text from a message from JMS QUEUE through CONNECTION."
   [connection queue]
-  (let [transacted? false
-        timeout 10000]
+  (let [transacted? false]
     (with-open [session (.createSession connection transacted? Session/AUTO_ACKNOWLEDGE)]
       (let [queue (.createQueue session queue)]
         (with-open [consumer (.createConsumer session queue)]
           (.start connection)
           (timbre/info (format "Consumer %s: attempting to consume message." (.getConsumerId consumer)))
-          (.receive consumer timeout))))))
+          (.receive consumer))))))
 
 (defn peek-message
   "Peek 1 message from JMS QUEUE through CONNECTION."
@@ -72,30 +71,25 @@
                       [k v])))))
 
 (defn listen-and-consume-from-queue
-  "Listen on a QUEUE, synchronously consume messages with CONNECTION.
+  "Block on listening on a QUEUE, synchronously consume messages with CONNECTION.
    Block on doing TASK! after each receipt."
   ([connection queue task!]
-   (let [msg (edn/read-string (slurp "./test/data/test_msg.edn"))
-         title (get-in msg [:headers :message-id])
-         text  (walk/stringify-keys (:properties msg))]
-     (loop [counter 0
-            msg-state (atom nil)]
-       (produce connection queue title text)
-       (try (when-let [message (consume connection queue)]
-              (let [message (parse-message message)]
-                (reset! msg-state message)
-                (timbre/info (format "Consumed message %s: %s: %s" counter (:headers message) (:properties message)))))
-            (catch JMSException e (timbre/error (str (.getMessage e)))))
-       (if (task!)
-         (recur (inc counter) @msg-state)
-         @msg-state))))
+   (loop [counter 0]
+     (let [message (parse-message (consume connection queue))]
+       (timbre/info (format "Consumed message %s: %s" counter message))
+       (if (task! message)
+         (recur (inc counter))
+         message))))
   ([connection queue]
-   (listen-and-consume-from-queue connection queue (fn [] "We can know only that we know nothing."))))
+   (listen-and-consume-from-queue connection queue constantly)))
 
 (defn message-loop
   "A blocking message loop that periodically does something."
   [environment]
-  (with-push-to-cloud-jms-connection environment listen-and-consume-from-queue))
+  (while true
+    (try
+      (with-push-to-cloud-jms-connection environment listen-and-consume-from-queue)
+      (catch JMSException e (timbre/error (str (.getMessage e)))))))
 
 (defn -main []
   (let [environment (or (System/getenv "environment") "dev")]
