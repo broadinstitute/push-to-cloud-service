@@ -18,7 +18,7 @@ This project is managed by the vanilla Clojure CLI tools, make sure
 You could then run `clj -m $namespace` to run a module with given namespace. e.g.
 
 ```bash
-clj -m start
+clojure -m start
 ```
 
 The tests are managed by `clj` as well and will be executed by 
@@ -26,8 +26,18 @@ The tests are managed by `clj` as well and will be executed by
  run the following code to see an example:
 
  ```bash
- clj -Atest
+ clojure -A:test unit
  ```
+
+For integration testing, you need to connect to the VPN or be in the Broad
+network and run:
+
+```bash
+ clojure -A:test integration
+```
+
+which will run the end to end test including uploading some files to the 
+testing Google Cloud Storage Bucket.
 
 ## Development
 
@@ -45,6 +55,21 @@ $ tree .
 The project structure is shown as above, you add new entries to `deps.edn` 
 to introduce a new dependency, add new modules to `src/` and implement new 
 test cases to `test/`.
+
+### Code Style
+
+We use [`cljfmt`](https://github.com/weavejester/cljfmt) for a 
+standard and consistent code style in this repo.
+
+To lint the code, run:
+```bash
+clojure -A:lint
+```
+
+To format the code, run:
+```bash
+clojure -A:format
+```
 
 ## Build
 
