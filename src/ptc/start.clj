@@ -1,10 +1,8 @@
-(ns start
+(ns ptc.start
   (:gen-class)
-  (:require [ptc]
-            [util.misc        :as misc]
-            [clojure.edn      :as edn]
-            [clojure.walk     :as walk]
-            [taoensso.timbre  :as timbre])
+  (:require [ptc.ptc         :as ptc]
+            [ptc.util.misc   :as misc]
+            [taoensso.timbre :as timbre])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session JMSException]))
 

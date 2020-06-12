@@ -1,8 +1,8 @@
-(ns start-test
+(ns ptc.unit.start-test
   (:require [clojure.test :refer [deftest is testing]]
-            [clojure.edn :as edn]
+            [clojure.edn  :as edn]
             [clojure.walk :as walk]
-            [start])
+            [ptc.start    :as start])
   (:import [org.apache.activemq ActiveMQSslConnectionFactory]))
 
 ;; Local testing for ActiveMQ
@@ -19,7 +19,7 @@
 
 (def message
   "Example JMS message for testing."
-  (edn/read-string (slurp "./test/data/test_msg.edn")))
+  (edn/read-string (slurp "test/data/test_msg.edn")))
 
 (deftest produce-consume-message
   (let [message-text  (prn-str             (:headers message))

@@ -1,15 +1,13 @@
-(ns util.gcs
+(ns ptc.util.gcs
   "Utility functions for Google Cloud Storage shared across this program."
-  (:require [clojure.pprint :refer [pprint]]
-            [clojure.data.json  :as json]
-            [clojure.string     :as str]
-            [clojure.java.io    :as io]
-            [clj-http.client    :as http]
-            [clj-http.util      :as http-util]
-            [vault.client.http]
-            [ptc]
-            [util.once          :as once])
-  (:import  [org.apache.tika Tika]))
+  (:require [clojure.pprint    :refer [pprint]]
+            [clojure.data.json :as json]
+            [clojure.string    :as str]
+            [clojure.java.io   :as io]
+            [clj-http.client   :as http]
+            [clj-http.util     :as http-util]
+            [ptc.util.once     :as once])
+  (:import [org.apache.tika Tika]))
 
 (def api-url
   "The Google Cloud API URL."

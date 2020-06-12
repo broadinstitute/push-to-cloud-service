@@ -1,11 +1,9 @@
-(ns integration-test
+(ns ptc.integration.integration-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.edn :as edn]
-            [clojure.string :as str]
-            [util.misc    :as misc]
             [clojure.walk :as walk]
-            [start]
-            [util.gcs    :as gcs])
+            [ptc.start :as start]
+            [ptc.util.gcs    :as gcs])
   (:import [org.apache.activemq ActiveMQSslConnectionFactory]))
 
 ;; Local testing for ActiveMQ
@@ -22,10 +20,10 @@
 
 (def message
   "Example JMS message for testing."
-  (edn/read-string (slurp "./test/data/test_msg.edn")))
+  (edn/read-string (slurp "test/data/test_msg.edn")))
 
 (def testing-bucket
-  "Storage bucket for running integration test with."
+  "Storage bucket for running ptc.integration test with."
   "broad-gotc-dev-zero-test")
 
 (defn cleanup-object-test
