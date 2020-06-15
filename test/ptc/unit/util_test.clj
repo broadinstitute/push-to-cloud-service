@@ -1,7 +1,7 @@
-(ns util-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [util.misc    :as misc]
-            [util.gcs    :as gcs]))
+(ns ptc.unit.util-test
+  (:require [clojure.test  :refer [deftest is testing]]
+            [ptc.util.misc :as misc]
+            [ptc.util.gcs  :as gcs]))
 
 (deftest test-notify-everyone-on-the-list-with-message
   (letfn [(notify [msg to-list]

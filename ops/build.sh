@@ -7,7 +7,7 @@
 # - https://github.com/tonsky/uberdeps
 
 # 1. Aot compile
-clj -e "(compile 'start)"
+clj -e "(compile 'ptc.start)"
 
 # 2. Uberjar with --main-class option
-clojure -A:uberdeps --main-class start
+clojure -A:uberdeps --main-class ptc.start

@@ -1,11 +1,10 @@
-(ns util.misc
+(ns ptc.util.misc
   "Miscellaneous utility functions shared across this program."
   (:require [clojure.pprint     :refer [pprint]]
             [clojure.string     :as str]
-            [vault.client.http]
             [vault.core         :as vault]
             [clojure.java.shell :as shell]
-            [ptc])
+            [ptc.ptc            :as ptc])
   (:import [org.apache.commons.mail SimpleEmail]
            [com.google.auth.oauth2 GoogleCredentials]))
 

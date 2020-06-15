@@ -1,8 +1,7 @@
-(ns util.once
+(ns ptc.util.once
   "Low-level vars to define exactly once and auth related junk."
   (:require [clojure.data.json :as json]
-            [vault.client.http]
-            [util.misc :as misc])
+            [ptc.util.misc     :as misc])
   (:import [com.google.auth.oauth2 UserCredentials]
            [java.net URI]))
 
