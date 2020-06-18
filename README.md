@@ -14,15 +14,15 @@ This project is managed by the vanilla Clojure CLI tools, make sure
  brew tap clojure/tools
  brew install clojure/tools/clojure
  ```
- 
+
 You could then run `clj -m $namespace` to run a module with given namespace. e.g.
 
 ```bash
-clojure -m start
+clojure -m ptc.start
 ```
 
-The tests are managed by `clj` as well and will be executed by 
- [`kaocha`](https://github.com/lambdaisland/kaocha) test runner. You could 
+The tests are managed by `clj` as well and will be executed by
+ [`kaocha`](https://github.com/lambdaisland/kaocha) test runner. You could
  run the following code to see an example:
 
  ```bash
@@ -36,7 +36,7 @@ network and run:
  clojure -A:test integration
 ```
 
-which will run the end to end test including uploading some files to the 
+which will run the end to end test including uploading some files to the
 testing Google Cloud Storage Bucket.
 
 ## Development
@@ -52,13 +52,13 @@ $ tree .
 └── test
     └── start_test.clj
 ```
-The project structure is shown as above, you add new entries to `deps.edn` 
-to introduce a new dependency, add new modules to `src/` and implement new 
+The project structure is shown as above, you add new entries to `deps.edn`
+to introduce a new dependency, add new modules to `src/` and implement new
 test cases to `test/`.
 
 ### Code Style
 
-We use [`cljfmt`](https://github.com/weavejester/cljfmt) for a 
+We use [`cljfmt`](https://github.com/weavejester/cljfmt) for a
 standard and consistent code style in this repo.
 
 To lint the code, run:
@@ -78,11 +78,11 @@ simply run:
 
 ```bash
 bash ops/build.sh
-``` 
+```
 
 which should output the detailed information about what are thrown into the
 Jar file while building the executable Jar file to `target/push-to-cloud-service.jar`.
 
 You could run it with `java -jar target/push-to-cloud-service.jar`, which will invoke
-the main function in the `start.clj` namespace, which is currently the only module with 
+the main function in the `start.clj` namespace, which is currently the only module with
 `:gen-class`.
