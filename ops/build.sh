@@ -4,7 +4,7 @@
 # information, see https://github.com/tonsky/uberdeps
 
 if [ ${USE_CPCACHE-1} -eq 0 ]; then
-    CLJ_FLAGS+=-Sforce
+    CLJ_FLAGS=-Sforce
 fi
 
 clojure $CLJ_FLAGS -A:uberdeps --main-class ptc.start
