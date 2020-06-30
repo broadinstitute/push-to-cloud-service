@@ -77,12 +77,18 @@ To build an executable [Uber Jar with AOT compilation](https://clojure.org/guide
 simply run:
 
 ```bash
-bash ops/build.sh
+$ ./ops/build.sh
 ```
 
-which should output the detailed information about what are thrown into the
-Jar file while building the executable Jar file to `target/push-to-cloud-service.jar`.
+By default, `build.sh` packages the sources and dependencies into
+`target/push-to-cloud-service.jar` and runs the unit tests. For more
+information, see the usage output:
 
-You could run it with `java -jar target/push-to-cloud-service.jar`, which will invoke
-the main function in the `start.clj` namespace, which is currently the only module with
-`:gen-class`.
+```bash
+$ ./ops/build.sh --help
+```
+
+The JAR produced by `build.sh` can be run with
+`java -jar target/push-to-cloud-service.jar`, which will invoke the
+main function in the `start.clj` namespace, which is currently the only
+module with `:gen-class`.
