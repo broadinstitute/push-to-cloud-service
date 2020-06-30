@@ -67,7 +67,10 @@ do
 done
 
 when() {
-    [ "$1" -ne 0 ] && shift && "$@" || true
+    if [ "$1" -ne 0 ]; then
+        shift
+        "$@"
+    fi
 }
 
 info() {
@@ -82,7 +85,7 @@ doIO() {
 
 clean-outputs() {
     info '=> cleaning output directories'
-    doIO rm -rf target/ derived/
+    doIO rm -rf target/ derived/ .cpcache
 }
 
 make-ptc-jar() {
