@@ -17,7 +17,7 @@
                          :main-opts   ["-m" "kaocha.runner"]}
            :build       {:extra-deps {uberdeps {:mvn/version "0.1.10"}}
                          :main-opts  ["-m" "uberdeps.uberjar" "-main-classpath" "ptc.start"]}
-           :lint        {:extra-deps {cljfmt {:mvn/version "0.6.7"}}
+           :lint        {:extra-deps {cljfmt {:mvn/version "0.6.8"}}
                          :main-opts  ["-m" "cljfmt.main" "check"]}
            :format      {:extra-deps {cljfmt {:mvn/version "0.6.7"}}
                          :main-opts  ["-m" "cljfmt.main" "fix"]}}
