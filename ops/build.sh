@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 
-# Build Uberjar with --main-class option. See for more
-# information, see https://github.com/tonsky/uberdeps
+# Build push-to-cloud service jar without the classpath cache,
+# running build-time (unit) tests.
 
-clojure -Sforce -A:uberdeps --main-class ptc.start
+set -e
+
+info() {
+    local BOLD='\e[1;1m%-6s\e[m\n'
+    printf $BOLD "$*"
+}
+
+logged() { echo "$*"; "$@"; }
+
+main() {
+    info '=> building push-to-cloud-service.jar'
+    logged clojure -Sforce -A:build
+
+    info '=> running unit tests'
+    logged clojure -Sforce -A:test unit
+}
+
+main

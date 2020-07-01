@@ -56,6 +56,20 @@ The project structure is shown as above, you add new entries to `deps.edn`
 to introduce a new dependency, add new modules to `src/` and implement new
 test cases to `test/`.
 
+## Build
+
+To build an executable [Uber Jar with AOT compilation](https://clojure.org/guides/deps_and_cli#aot_compilation),
+simply run:
+
+```bash
+$ clojure -A:build
+```
+
+The JAR produced by can be run with
+`java -jar target/push-to-cloud-service.jar`, which will invoke the
+main function in the `start.clj` namespace, which is currently the only
+module with `:gen-class`.
+
 ### Code Style
 
 We use [`cljfmt`](https://github.com/weavejester/cljfmt) for a
@@ -70,19 +84,3 @@ To format the code, run:
 ```bash
 clojure -A:format
 ```
-
-## Build
-
-To build an executable [Uber Jar with AOT compilation](https://clojure.org/guides/deps_and_cli#aot_compilation),
-simply run:
-
-```bash
-bash ops/build.sh
-```
-
-which should output the detailed information about what are thrown into the
-Jar file while building the executable Jar file to `target/push-to-cloud-service.jar`.
-
-You could run it with `java -jar target/push-to-cloud-service.jar`, which will invoke
-the main function in the `start.clj` namespace, which is currently the only module with
-`:gen-class`.
