@@ -1,16 +1,13 @@
 # Clojure
-.cpcache/
-.classpath/
-.nrepl-port/
-target/
+.cpcache
+/.nrepl-port
+/.classpath
+/target
 
 # System
 .DS_Store
 
 # IDEs
-.idea/
-.vscode/
+/.vscode
+/.idea
 push-to-cloud-service.iml
-
-# Derived Files
-derived/
