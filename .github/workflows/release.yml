@@ -4,22 +4,28 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: The branch, tag or SHA to checkout. [master]
-        required: true
-        default: ''
+        description: branch, tag or SHA to checkout.
+        required: false
+        default: 'master'
       version:
-        description: semantic version to release, on success.
+        description: semantic version to release.
         required: true
-      body:
-        description: release note. ['']
-        required: true
+      release_note:
+        description: release note file.
+        required: false
         default: ''
+      draft:
+        description: review before publishing?
+        required: false
+        default: true
+env:
+  RELEASE_NAME: push-to-cloud-service-${{ github.event.inputs.version }}
+  ARTIFACT: push-to-cloud-service-${{ github.event.inputs.version }}.zip
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     env:
-      RELEASE_NAME: push-to-cloud-service-${{ github.event.inputs.version }}
-      ARTIFACT: $RELEASE_NAME.tar.gz
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: prepare sources
         uses: actions/checkout@v2
@@ -34,7 +40,7 @@ jobs:
       - name: setup Clojure
         uses: DeLaGuardo/setup-clojure@2.0
         with:
-          tools-deps: '1.10'
+          tools-deps: '1.10.1.469'
 
       - name: lint
         run: clojure -A:lint
@@ -48,26 +54,26 @@ jobs:
       - name: package
         run: |
           mkdir -p release/
-          tar -czvf release/$ARTIFACT --transform='s%.*/%%' \
-            target/push-to-cloud-service.jar
+          echo ${{ github.event.inputs.version }} >> target/version
+          zip --junk-paths release/$ARTIFACT \
+            target/push-to-cloud-service.jar \
+            target/version \
+            ${{ github.event.input.release_note }}
 
       - name: create release
         id: create_release
         uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ github.events.inputs.version }}
-          release_name: $RELEASE_NAME
-          draft: true
+          tag_name: v${{ github.event.inputs.version }}
+          release_name: ${{ env.RELEASE_NAME }}
+          commitish: ${{ github.event.inputs.ref }}
+          body_path: ${{ github.event.inputs.release_note }}
+          draft: ${{ github.event.inputs.draft }}
 
-      - name: upload
+      - name: upload artifacts
         uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release/$ARTIFACT
-          asset_name: $ARTIFACT
-          asset_content_type: application/gzip
-
+          asset_path: release/${{ env.ARTIFACT }}
+          asset_name: ${{ env.ARTIFACT }}
+          asset_content_type: application/zip
