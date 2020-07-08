@@ -53,6 +53,7 @@ jobs:
 
       - name: package
         run: |
+<<<<<<< HEAD
           mkdir -p derived/$RELEASE_NAME
           echo ${{ github.event.inputs.version }} > derived/$RELEASE_NAME/version
           cp target/push-to-cloud-service.jar derived/$RELEASE_NAME
@@ -63,6 +64,14 @@ jobs:
           pushd derived
           zip -r $ARTIFACT $RELEASE_NAME
           popd
+=======
+          mkdir -p release/
+          echo ${{ github.event.inputs.version }} >> target/version
+          zip --junk-paths release/$ARTIFACT \
+            target/push-to-cloud-service.jar \
+            target/version \
+            ${{ github.event.input.release_note }}
+>>>>>>> 71ed989... release workflow tested in fork
 
       - name: create release
         id: create_release
@@ -78,6 +87,10 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
+<<<<<<< HEAD
           asset_path: derived/${{ env.ARTIFACT }}
+=======
+          asset_path: release/${{ env.ARTIFACT }}
+>>>>>>> 71ed989... release workflow tested in fork
           asset_name: ${{ env.ARTIFACT }}
           asset_content_type: application/zip
