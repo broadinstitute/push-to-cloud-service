@@ -1,0 +1,73 @@
+# build, test and release push-to-cloud
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: The branch, tag or SHA to checkout. [master]
+        required: true
+        default: ''
+      version:
+        description: semantic version to release, on success.
+        required: true
+      body:
+        description: release note. ['']
+        required: true
+        default: ''
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_NAME: push-to-cloud-service-${{ github.event.inputs.version }}
+      ARTIFACT: $RELEASE_NAME.tar.gz
+    steps:
+      - name: prepare sources
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: setup Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+
+      - name: setup Clojure
+        uses: DeLaGuardo/setup-clojure@2.0
+        with:
+          tools-deps: '1.10'
+
+      - name: lint
+        run: clojure -A:lint
+
+      - name: build
+        run: clojure -A:build
+
+      - name: test
+        run: clojure -A:test unit
+
+      - name: package
+        run: |
+          mkdir -p release/
+          tar -czvf release/$ARTIFACT --transform='s%.*/%%' \
+            target/push-to-cloud-service.jar
+
+      - name: create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.events.inputs.version }}
+          release_name: $RELEASE_NAME
+          draft: true
+
+      - name: upload
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release/$ARTIFACT
+          asset_name: $ARTIFACT
+          asset_content_type: application/gzip
+
