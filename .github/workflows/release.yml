@@ -1,0 +1,83 @@
+# build, test and release push-to-cloud
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: branch, tag or SHA to checkout.
+        required: false
+        default: 'master'
+      version:
+        description: semantic version to release.
+        required: true
+      release_note:
+        description: release note file.
+        required: false
+        default: ''
+      draft:
+        description: review before publishing?
+        required: false
+        default: true
+env:
+  RELEASE_NAME: push-to-cloud-service-${{ github.event.inputs.version }}
+  ARTIFACT: push-to-cloud-service-${{ github.event.inputs.version }}.zip
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: prepare sources
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: setup Java
+        uses: actions/setup-java@v1
+        with:
+          java-version: '11'
+
+      - name: setup Clojure
+        uses: DeLaGuardo/setup-clojure@2.0
+        with:
+          tools-deps: '1.10.1.469'
+
+      - name: lint
+        run: clojure -A:lint
+
+      - name: build
+        run: clojure -A:build
+
+      - name: test
+        run: clojure -A:test unit
+
+      - name: package
+        run: |
+          mkdir -p derived/$RELEASE_NAME
+          echo ${{ github.event.inputs.version }} > derived/$RELEASE_NAME/version
+          cp target/push-to-cloud-service.jar derived/$RELEASE_NAME
+          if [[ -n "${{ github.event.input.release_note }}" ]]; then
+            cp "${{ github.event.input.release_note }}" derived/$RELEASE_NAME
+          fi
+
+          pushd derived
+          zip -r $ARTIFACT $RELEASE_NAME
+          popd
+
+      - name: create release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          release_name: ${{ env.RELEASE_NAME }}
+          commitish: ${{ github.event.inputs.ref }}
+          body_path: ${{ github.event.inputs.release_note }}
+          draft: ${{ github.event.inputs.draft }}
+
+      - name: upload artifacts
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: derived/${{ env.ARTIFACT }}
+          asset_name: ${{ env.ARTIFACT }}
+          asset_content_type: application/zip
