@@ -1,24 +1,30 @@
 #!/usr/bin/env bash
 
 THIS=$(basename ${0})
-JAR=$PWD/target/push-to-cloud-service.jar
+JAR="${1}"
 
 bold() { printf '\e[1;1m%-6s\e[m\n' "$*"; }
 red() { printf '\e[1;91m%-6s\e[m\n' "$*"; }
 
-error() {
-    local message=${1}
-    echo -e $(bold ${THIS}:) $(red $(bold 'error:')) $message 1>&2
-
-    local details=${2}
-    if [ -n "${details}" ]; then
-        echo -e $(bold ${THIS}:) $details 1>&2
-    fi
+usage() {
+    cat <<EOF
+Usage:
+   ${THIS} JAR_FILE
+EOF
 }
 
+error() {
+    >&2 echo -e $(bold ${THIS}:) $(red $(bold 'error:')) ${1}
+}
+
+if [ -z ${JAR} ]; then
+    error 'missing jar file'
+    usage
+    exit 1
+fi
+
 if [ ! -e ${JAR} ]; then
-    error 'no such file: push-to-cloud-service.jar' \
-          'run build.sh before deploying Push-To-Cloud'
+    error "no such file: ${JAR}"
     exit 1
 fi
 
