@@ -11,3 +11,5 @@
 /.vscode
 /.idea
 push-to-cloud-service.iml
+
+derived/
