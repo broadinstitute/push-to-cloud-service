@@ -5,8 +5,7 @@
             [vault.core         :as vault]
             [clojure.java.shell :as shell]
             [ptc.ptc            :as ptc])
-  (:import [org.apache.commons.mail SimpleEmail]
-           [com.google.auth.oauth2 GoogleCredentials]))
+  (:import [org.apache.commons.mail SimpleEmail]))
 
 (defmacro do-or-nil
   "Value of BODY or nil if it throws."
