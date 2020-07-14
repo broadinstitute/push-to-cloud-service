@@ -56,7 +56,7 @@
   (let [{:keys [exit err out]} (apply shell/sh args)]
     (when-not (zero? exit)
       (throw (Exception. (format "%s: %s exit status from: %s : %s"
-                                 ptc/the-name exit args err))))
+                           ptc/the-name exit args err))))
     (str/trim out)))
 
 (defn get-auth-header!
