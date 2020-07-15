@@ -70,4 +70,4 @@
   "Are the ids of each given message the same?"
   [& messages]
   (or (empty? messages)
-      (apply = (map #((-> % :headers :message-id)) messages))))
+      (apply = (map #(-> % :headers :message-id) messages))))
