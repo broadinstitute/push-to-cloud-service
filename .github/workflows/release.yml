@@ -50,7 +50,6 @@ jobs:
           ROLE_ID: ${{ secrets.ROLE_ID }}
           SECRET_ID: ${{ secrets.SECRET_ID }}
           VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
-          SA_KEY_PATH: ${{ secrets.SA_KEY_PATH }}
         run: |
           # get vault token using role-id and secret-id
           VAULT_TOKEN=$(curl \
@@ -65,7 +64,7 @@ jobs:
           echo ::set-env name=VAULT_TOKEN::${VAULT_TOKEN}
           # use vault token to read secret - service account json
           curl --silent -H "X-Vault-Token: ${VAULT_TOKEN}" -X GET \
-               ${VAULT_ADDR}${SA_KEY_PATH} \
+               ${VAULT_ADDR}/v1/secret/dsde/gotc/dev/service-accounts/ptc-non-prod-service-account.json \
                | jq .data > sa.json
           if [ ! -s sa.json ] ; then
              echo "Retrieval of Gcloud SA credentials failed"
