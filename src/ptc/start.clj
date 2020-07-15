@@ -69,15 +69,24 @@
                       [k v])))))
 
 (defn listen-and-consume-from-queue
-  "Block on listening on a QUEUE, synchronously consume messages with CONNECTION.
-   Block on doing TASK! after each receipt."
+  "Block on listening on a QUEUE, synchronously peeking messages with CONNECTION.
+   Block on doing TASK! after each receipt before consuming the peeked message from the queue."
   ([connection queue task!]
    (loop [counter 0]
-     (let [message (parse-message (consume connection queue))]
-       (timbre/info (format "Consumed message %s: %s" counter message))
-       (if (task! message)
-         (recur (inc counter))
-         message))))
+     (if-let [peeked-message (parse-message (peek-message connection queue))]
+       (do (timbre/info (format "Peeked message %s: %s" counter peeked-message))
+           (if (task! peeked-message)
+             (let [consumed-message (parse-message (consume connection queue))]
+                 (timbre/info (format "Task complete, consumed message %s" counter))
+                 (if (not (misc/message-ids-equal? peek-message consumed-message))
+                   (timbre/warn (format "Is PTC in parallel? Peeked message ID %s not equal to consumed ID %s"
+                                        (-> peek-message :headers :message-id)
+                                        (-> consumed-message :headers :message-id))))
+                 (recur (inc counter)))
+             (do
+               (timbre/warn "Task returned nil/false, not consuming message %s and instead exiting" counter)
+               peeked-message)))
+       (recur counter))))
   ([connection queue]
    (listen-and-consume-from-queue connection queue constantly)))
 
