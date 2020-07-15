@@ -42,7 +42,7 @@
         test-file "deps.edn"
         message-text  (prn-str             (:headers message))
         message-props (walk/stringify-keys (:properties message))]
-    (letfn [(custom-task [message]
+    (letfn [(custom-task [_]
               (try
                 (testing "end-to-end: "
                   (testing "upload a file to the bucket"
