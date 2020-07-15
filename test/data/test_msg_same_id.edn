@@ -1,0 +1,8 @@
+; Like test_msg.edn but with a different project (same message-id, so equal by misc/message-ids-equal?)
+{:headers    {:message-id "ID:gotc-jenkins-01.broadinstitute.org-12345-123456789101-10:1:1:1:1"}
+ :properties {:launchSingleSampleCloudWorkflow "false"
+              :project "Test-Project-But-Different"
+              :dataType "Arrays"
+              :analysisVersion "1"
+              :sampleAlias "Test-Alias"
+              :clinicalDataDeliveryTest "false"}}
