@@ -1,5 +1,6 @@
 (ns ptc.tbl
-  "Frob JMS messages into upload actions and workflow parameters.")
+  "Frob JMS messages into upload actions and workflow parameters."
+  (:require [ptc.util.misc   :as misc]))
 
 (def http-url-keys
   "JMS message keys that name HTTP URLs."
@@ -201,3 +202,58 @@
    :variantCallingRequestQueue
    :vaultTokenPath
    :warnings])
+
+(def inputs
+  "The Arrays.wdl inputs without the :Arrays prefix."
+  {:IlluminaGenotypingArray.IlluminaGenotypingArray.AutoCall.is_gender_autocall "Boolean? (optional)"
+   :IlluminaGenotypingArray.IlluminaGenotypingArray.GtcToVcf.memory "Float? (optional)"
+   :IlluminaGenotypingArray.IlluminaGenotypingArray.SelectFingerprintVariants.excludeFiltered "Boolean (optional, default = false)"
+   :IlluminaGenotypingArray.IlluminaGenotypingArray.SelectFingerprintVariants.excludeNonVariants "Boolean (optional, default = false)"
+   :IlluminaGenotypingArray.IlluminaGenotypingArray.SelectVariantsForGenotypeConcordance.excludeNonVariants "Boolean (optional, default = false)"
+   :IlluminaGenotypingArray.IlluminaGenotypingArray.SelectVariantsForGenotypeConcordance.variant_rsids_file "File? (optional)"
+   :IlluminaGenotypingArray.chip_type "String? (optional)"
+   :UploadEmptyArraysMetrics.arrays_control_code_summary_metrics "File? (optional)"
+   :UploadEmptyArraysMetrics.arrays_variant_calling_summary_metrics "File? (optional)"
+   :UploadEmptyArraysMetrics.fingerprinting_detail_metrics "File? (optional)"
+   :UploadEmptyArraysMetrics.fingerprinting_summary_metrics "File? (optional)"
+   :UploadEmptyArraysMetrics.genotype_concordance_contingency_metrics "File? (optional)"
+   :UploadEmptyArraysMetrics.genotype_concordance_detail_metrics "File? (optional)"
+   :UploadEmptyArraysMetrics.genotype_concordance_summary_metrics "File? (optional)"
+   :UploadEmptyArraysMetrics.verify_id_metrics "File? (optional)"
+   :analysis_version_number "Int"
+   :autocall_version "String (optional, default = \"3.0.0\")"
+   :bead_pool_manifest_file "File"
+   :call_rate_threshold "Float"
+   :chip_type "String? (optional)"
+   :chip_well_barcode "String"
+   :cluster_file "File"
+   :cluster_filename "String? (optional)"
+   :contamination_controls_vcf "File? (optional)"
+   :control_sample_intervals_file "File? (optional)"
+   :control_sample_name "String? (optional)"
+   :control_sample_vcf_file "File? (optional)"
+   :control_sample_vcf_index_file "File? (optional)"
+   :dbSNP_vcf "File"
+   :dbSNP_vcf_index "File"
+   :disk_size "Int"
+   :environment "String"
+   :extended_chip_manifest_file "File"
+   :fingerprint_genotypes_vcf_file "File? (optional)"
+   :fingerprint_genotypes_vcf_index_file "File? (optional)"
+   :gender_cluster_file "File? (optional)"
+   :genotype_concordance_threshold "Float (optional, default = 0.98)"
+   :green_idat_cloud_path "File"
+   :haplotype_database_file "File"
+   :params_file "File"
+   :preemptible_tries "Int"
+   :red_idat_cloud_path "File"
+   :ref_dict "File"
+   :ref_fasta "File"
+   :ref_fasta_index "File"
+   :reported_gender "String"
+   :sample_alias "String"
+   :sample_lsid "String"
+   :subsampled_metrics_interval_list "File? (optional)"
+   :variant_rsids_file "File"
+   :vault_token_path "File"
+   :zcall_thresholds_file "File? (optional)"})
