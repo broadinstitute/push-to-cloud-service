@@ -46,7 +46,7 @@ jobs:
           echo ::set-env name=VAULT_TOKEN::${VAULT_TOKEN}
           # use vault token to read secret - service account json
           curl --silent -H "X-Vault-Token: ${VAULT_TOKEN}" -X GET \
-               ${VAULT_ADDR}/v1/secret/dsde/gotc/dev/service-accounts/ptc-non-prod-service-account.json \
+               ${VAULT_ADDR}/v1/secret/dsde/gotc/dev/service-accounts/push-to-cloud-non-prod-service-account.json \
                | jq .data > sa.json
           if [ ! -s sa.json ] ; then
              echo "Retrieval of Gcloud SA credentials failed"
