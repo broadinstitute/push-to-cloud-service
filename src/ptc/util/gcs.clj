@@ -6,7 +6,7 @@
             [clojure.java.io   :as io]
             [clj-http.client   :as http]
             [clj-http.util     :as http-util]
-            [ptc.util.once     :as once])
+            [ptc.util.misc     :as misc])
   (:import [org.apache.tika Tika]))
 
 (def api-url
@@ -49,13 +49,13 @@
                    (-> {:method       :get   ;; :debug true :debug-body true
                         :url          (str bucket-url bucket "/o")
                         :content-type :application/json
-                        :headers      (once/get-auth-header!)
+                        :headers      (misc/get-auth-header!)
                         :query-params {:prefix prefix
                                        :maxResults 999
                                        :pageToken pageToken}}
-                       http/request
-                       :body
-                       (json/read-str :key-fn keyword))]
+                     http/request
+                     :body
+                     (json/read-str :key-fn keyword))]
                (lazy-cat items (when nextPageToken (each nextPageToken)))))]
      (each "")))
   ([bucket]
@@ -68,7 +68,7 @@
                   :url     (bucket-object-url bucket object)
                   :headers headers}))
   ([bucket object]
-   (delete-object bucket object (once/get-auth-header!)))
+   (delete-object bucket object (misc/get-auth-header!)))
   ([url]
    (apply delete-object (parse-gs-url url))))
 
@@ -83,10 +83,10 @@
           :content-type (.detect (new Tika) body)
           :headers      headers
           :body         body}
-         http/request
-         :body
-         (json/read-str :key-fn keyword))))
+       http/request
+       :body
+       (json/read-str :key-fn keyword))))
   ([file bucket object]
-   (upload-file file bucket object (once/get-auth-header!)))
+   (upload-file file bucket object (misc/get-auth-header!)))
   ([file url]
    (apply upload-file file (parse-gs-url url))))

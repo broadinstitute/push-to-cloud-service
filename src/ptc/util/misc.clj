@@ -5,8 +5,7 @@
             [vault.core         :as vault]
             [clojure.java.shell :as shell]
             [ptc.ptc            :as ptc])
-  (:import [org.apache.commons.mail SimpleEmail]
-           [com.google.auth.oauth2 GoogleCredentials]))
+  (:import [org.apache.commons.mail SimpleEmail]))
 
 (defmacro do-or-nil
   "Value of BODY or nil if it throws."
@@ -58,20 +57,11 @@
   (let [{:keys [exit err out]} (apply shell/sh args)]
     (when-not (zero? exit)
       (throw (Exception. (format "%s: %s exit status from: %s : %s"
-                                 ptc/the-name exit args err))))
+                           ptc/the-name exit args err))))
     (str/trim out)))
 
-(defn bearer-token-header-for
-  "Return a valid bearer token for the GoogleCredentials CREDENTIAL."
-  [^GoogleCredentials credentials]
-  (let [token (some-> credentials
-                      (doto .refreshIfExpired)
-                      .getAccessToken
-                      .getTokenValue)]
-    (when-not token
-      (let [lines ["%1$s: Cannot generate token from Google Credentials."
-                   "%1$s: Run 'gsutil auth list' to check your account if running locally"
-                   "%1$s: Try to login if running on a server."]
-            err (format (str/join \newline lines) ptc/the-name)]
-        (throw (Exception. err))))
-    {"Authorization" (str "Bearer " token)}))
+(defn get-auth-header!
+  "Return an Authorization header with a Bearer token."
+  []
+  {"Authorization"
+   (str "Bearer" \space (shell! "gcloud" "auth" "print-access-token"))})
