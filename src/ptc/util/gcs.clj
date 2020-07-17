@@ -53,9 +53,9 @@
                         :query-params {:prefix prefix
                                        :maxResults 999
                                        :pageToken pageToken}}
-                     http/request
-                     :body
-                     (json/read-str :key-fn keyword))]
+                       http/request
+                       :body
+                       (json/read-str :key-fn keyword))]
                (lazy-cat items (when nextPageToken (each nextPageToken)))))]
      (each "")))
   ([bucket]
@@ -83,9 +83,9 @@
           :content-type (.detect (new Tika) body)
           :headers      headers
           :body         body}
-       http/request
-       :body
-       (json/read-str :key-fn keyword))))
+         http/request
+         :body
+         (json/read-str :key-fn keyword))))
   ([file bucket object]
    (upload-file file bucket object (misc/get-auth-header!)))
   ([file url]
