@@ -59,6 +59,9 @@ jobs:
              exit 1
           fi
 
+      - name: Lint
+        run: clojure -A:lint
+
       - name: Unit Test
         run: clojure -A:test unit
 
