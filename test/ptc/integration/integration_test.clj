@@ -59,10 +59,31 @@
                             (fn [connection queue]
                               (start/produce connection queue message-text message-props)
                               (start/listen-and-consume-from-queue connection queue custom-task)))]
-        (testing "Message is not nil and can be properly consumed"
+        (testing "Message is not nil and can be properly read"
           (is (= message-text
                  (:headers parsed-msg)))
           (doseq [[k v] (:properties parsed-msg)]
             (is (= (get message-props k)
                    v))))
         (is false)))))
+
+(deftest peeking
+  (let [message-text (prn-str (:headers message))
+        message-props (walk/stringify-keys (:properties message))]
+    (letfn [(custom-task [message]
+              (testing "Message given to task isn't nil"
+                (is (not (nil? message))))
+              ;; return false to break the loop (as if the task failed)
+              false)]
+      (with-test-jms-connection
+        (fn [connection queue]
+          (start/produce connection queue message-text message-props)
+          (start/listen-and-consume-from-queue connection queue custom-task)
+          (testing "The message was only peeked and can still be consumed"
+            (let [message (start/parse-message (start/consume connection queue))]
+              (testing "Message is not nil and can be properly read"
+                (is (= message-text
+                       (:headers message)))
+                (doseq [[k v] (:properties message)]
+                  (is (= (get message-props k)
+                         v)))))))))))
