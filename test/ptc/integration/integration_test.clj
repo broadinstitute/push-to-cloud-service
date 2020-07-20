@@ -4,7 +4,8 @@
             [clojure.walk :as walk]
             [ptc.start :as start]
             [ptc.util.gcs    :as gcs])
-  (:import [org.apache.activemq ActiveMQSslConnectionFactory]))
+  (:import [org.apache.activemq ActiveMQSslConnectionFactory]
+           (java.util UUID)))
 
 ;; Local testing for ActiveMQ
 ;; https://activemq.apache.org/how-do-i-embed-a-broker-inside-a-connection
@@ -37,11 +38,11 @@
   (some #(= x %) coll))
 
 (deftest integration
-  (let [object    {:name "test/junk" :contentType "text/plain"}
+  (let [object {:name (str "test/" (UUID/randomUUID)) :contentType "text/plain"}
         test-file "deps.edn"
         message-text  (prn-str             (:headers message))
         message-props (walk/stringify-keys (:properties message))]
-    (letfn [(custom-task [message]
+    (letfn [(custom-task [_]
               (try
                 (testing "end-to-end: "
                   (testing "upload a file to the bucket"
