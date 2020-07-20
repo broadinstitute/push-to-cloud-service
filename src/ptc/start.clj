@@ -77,12 +77,12 @@
        (do (timbre/info (format "Peeked message %s: %s" counter peeked-message))
            (if (task! peeked-message)
              (let [consumed-message (parse-message (consume connection queue))]
-                 (timbre/info (format "Task complete, consumed message %s" counter))
-                 (if (not (misc/message-ids-equal? peek-message consumed-message))
-                   (timbre/warn (format "Is PTC in parallel? Peeked message ID %s not equal to consumed ID %s"
-                                        (-> peek-message :headers :message-id)
-                                        (-> consumed-message :headers :message-id))))
-                 (recur (inc counter)))
+               (timbre/info (format "Task complete, consumed message %s" counter))
+               (if (not (misc/message-ids-equal? peek-message consumed-message))
+                 (timbre/warn (format "Is PTC in parallel? Peeked message ID %s not equal to consumed ID %s"
+                                      (-> peek-message :headers :message-id)
+                                      (-> consumed-message :headers :message-id))))
+               (recur (inc counter)))
              (do
                (timbre/warn "Task returned nil/false, not consuming message %s and instead exiting" counter)
                peeked-message)))
