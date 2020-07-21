@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -ex
 
 NAME=push-to-cloud-service
 INSTALL_PREFIX="${HOME}/.local/share/${NAME}"
@@ -8,6 +8,12 @@ LIB_DIR="${INSTALL_PREFIX}/lib"
 UNIT_DIR="${HOME}/.local/share/systemd/user"
 
 main() {
+    local kernal=$(uname -s)
+    if [ 'Linux' != "${kernal}" ]; then
+        >&2 echo ${kernal}' is not supported'
+        exit 1
+    fi
+
     mkdir -p "${LIB_DIR}"
     cp "lib/${NAME}.jar" "${LIB_DIR}/${NAME}.jar"
 
