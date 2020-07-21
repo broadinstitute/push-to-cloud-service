@@ -1,0 +1,8 @@
+[Unit]
+Description=All-of-Us Arrays Push-to-Cloud Daemon
+
+[Service]
+ExecStart=%INSTALL_PREFIX%/bin/start
+
+[Install]
+WantedBy=default.target

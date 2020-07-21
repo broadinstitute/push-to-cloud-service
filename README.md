@@ -84,3 +84,13 @@ To format the code, run:
 ```bash
 clojure -A:format
 ```
+
+## Deployment
+
+push-to-cloud-service is designed to be a [systemd user unit](https://wiki.archlinux.org/index.php/Systemd/User).
+Once installed via the bundled install script, you can enable push-to-cloud via:
+```bash
+systemctl --user enable --now push-to-cloud.service
+```
+
+More information on systemd usage can be found [here](https://wiki.archlinux.org/index.php/Systemd).

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -e
+
+NAME=push-to-cloud-service
+INSTALL_PREFIX="${HOME}/.local/share/${NAME}"
+BIN_DIR="${INSTALL_PREFIX}/bin"
+LIB_DIR="${INSTALL_PREFIX}/lib"
+UNIT_DIR="${HOME}/.local/share/systemd/user"
+
+main() {
+    mkdir -p "${LIB_DIR}"
+    cp "lib/${NAME}.jar" "${LIB_DIR}/${NAME}.jar"
+
+    mkdir -p "${BIN_DIR}"
+    cat <<EOF > "${BIN_DIR}/start"
+#!/usr/bin/env bash
+java -cp "${LIB_DIR}/${NAME}.jar" clojure.main -m ptc.start
+EOF
+    chmod +x "${BIN_DIR}/start"
+
+    mkdir -p "${UNIT_DIR}"
+    sed 's@%INSTALL_PREFIX%@'"${INSTALL_PREFIX}"'@g' \
+        in/unit/push-to-cloud.service.in > ${UNIT_DIR}/push-to-cloud.service \
+        && systemctl --user daemon-reload
+}
+
+main "$@"
