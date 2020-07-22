@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-set -ex
-
-THIS=$(basename ${0})
+set -e
 
 bold() { printf '\e[1;1m%-6s\e[m\n' "$*"; }
 red() { printf '\e[1;91m%-6s\e[m\n' "$*"; }
-error() { >&2 echo -e $(bold ${THIS}:) $(red $(bold 'error:')) ${1}; }
+error() {
+    >&2 echo -e $(bold $(basename ${0}):) $(red $(bold 'error:')) ${1}
+}
 
 validate() {
     local var="$1"
     if [ -z "${!var}" ]; then
         error "${var} must be set!"
+        exit 1
     fi
 }
 
@@ -35,8 +36,8 @@ main() {
     cp target/push-to-cloud-service.jar "${out}/lib"
 
     if [[ -n "${NOTES}" ]]; then
-        mkdir -p "${out}/doc"
-        cp "${NOTES}" "${out}/doc"
+        mkdir -p "${out}/docs"
+        cp "${NOTES}" "${out}/docs"
     fi
 
     pushd derived

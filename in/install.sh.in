@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -ex
+set -e
 
 NAME=push-to-cloud-service
 INSTALL_PREFIX="${HOME}/.local/share/${NAME}"
