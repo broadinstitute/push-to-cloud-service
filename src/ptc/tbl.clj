@@ -2,6 +2,24 @@
   "Frob JMS messages into upload actions and workflow parameters."
   (:require [ptc.util.misc   :as misc]))
 
+(def params-keys
+  "Keys in the params.txt file."
+  [:CHIP_TYPE_NAME
+   :CHIP_WELL_BARCODE
+   :INDIVIDUAL_ALIAS
+   :LAB_BATCH
+   :PARTICIPANT_ID
+   :PRODUCT_FAMILY
+   :PRODUCT_NAME
+   :PRODUCT_ORDER_ID
+   :PRODUCT_PART_NUMBER
+   :REGULATORY_DESIGNATION
+   :RESEARCH_PROJECT_ID
+   :SAMPLE_ALIAS
+   :SAMPLE_GENDER
+   :SAMPLE_ID
+   :SAMPLE_LSID])
+
 (def http-url-keys
   "JMS message keys that name HTTP URLs."
   [:cromwellBaseUrl
