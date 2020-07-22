@@ -7,13 +7,13 @@
             [javax.jms TextMessage DeliveryMode Session JMSException]))
 
 (defn with-push-to-cloud-jms-connection
-  "CALL (use connection queue) for the push-to-cloud JMS queue with ENVIRONMENT."
-  [environment call]
+  "Call (use connection queue) for the JMS queue in ENVIRONMENT."
+  [environment use]
   (let [path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
         {:keys [url username password queue]} (misc/vault-secrets path)
         factory (new ActiveMQSslConnectionFactory url)]
     (with-open [connection (.createQueueConnection factory username password)]
-      (call connection queue))))
+      (use connection queue))))
 
 (defn create-session
   "Open a JMS session on CONNECTION, conditionally TRANSACTED?"
@@ -32,7 +32,7 @@
       (with-open [consumer (.createConsumer session queue)]
         (.start connection)
         (log/infof "Consumer %s: attempting to consume message." (.getConsumerId consumer))
-        (.receive consumer)))))
+        #_(.receive consumer)))))
 
 (defn peek-message
   "Peek 1 message from JMS QUEUE through CONNECTION."
