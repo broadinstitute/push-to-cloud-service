@@ -1,8 +1,13 @@
 [Unit]
 Description=All-of-Us Arrays Push-to-Cloud Daemon
+After=network.target
+StartLimitIntervalSec=0
 
 [Service]
 ExecStart=%INSTALL_PREFIX%/bin/start
+Restart=Always
+RestartSec=1
+SuccessExitStatus=143
 
 [Install]
 WantedBy=default.target
