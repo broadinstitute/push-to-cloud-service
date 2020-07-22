@@ -9,11 +9,17 @@
 (defn with-push-to-cloud-jms-connection
   "CALL (use connection queue) for the push-to-cloud JMS queue with ENVIRONMENT."
   [environment call]
-  (let [vault-path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
-        {:keys [url username password queue]} (misc/vault-secrets vault-path)
+  (let [path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
+        {:keys [url username password queue]} (misc/vault-secrets path)
         factory (new ActiveMQSslConnectionFactory url)]
     (with-open [connection (.createQueueConnection factory username password)]
       (call connection queue))))
+
+(defn create-session
+  "Open a JMS session on CONNECTION, conditionally TRANSACTED?"
+  [connection transacted?]
+  (.createSession connection transacted?
+    (if transacted? Session/SESSION_TRANSACTED Session/AUTO_ACKNOWLEDGE)))
 
 ;; We are using sync receipt for now
 ;; check https://activemq.apache.org/maven/apidocs/org/apache/activemq/ActiveMQMessageConsumer.html
@@ -21,43 +27,40 @@
 (defn consume
   "The text from a message from JMS QUEUE through CONNECTION."
   [connection queue]
-  (let [transacted? false]
-    (with-open [session (.createSession connection transacted? Session/AUTO_ACKNOWLEDGE)]
-      (let [queue (.createQueue session queue)]
-        (with-open [consumer (.createConsumer session queue)]
-          (.start connection)
-          (log/infof "Consumer %s: attempting to consume message." (.getConsumerId consumer))
-          (.receive consumer))))))
+  (with-open [session (create-session connection false)]
+    (let [queue (.createQueue session queue)]
+      (with-open [consumer (.createConsumer session queue)]
+        (.start connection)
+        (log/infof "Consumer %s: attempting to consume message." (.getConsumerId consumer))
+        (.receive consumer)))))
 
 (defn peek-message
   "Peek 1 message from JMS QUEUE through CONNECTION."
   [connection queue]
-  (let [transacted? false]
-    (with-open [session (.createSession connection transacted? Session/AUTO_ACKNOWLEDGE)]
-      (let [queue (.createQueue session queue)]
-        (with-open [browser (.createBrowser session queue)]
-          (.start connection)
-          (log/infof "Browser: attempting to peek message.")
-          (let [msg-enum (.getEnumeration browser)]
-            (when (.hasMoreElements msg-enum)
-              (.nextElement msg-enum))))))))
+  (with-open [session (create-session connection false)]
+    (let [queue (.createQueue session queue)]
+      (with-open [browser (.createBrowser session queue)]
+        (.start connection)
+        (log/infof "Browser: attempting to peek message.")
+        (let [msg-enum (.getEnumeration browser)]
+          (when (.hasMoreElements msg-enum)
+            (.nextElement msg-enum)))))))
 
 (defn produce
   "Enqueue the TEXT with PROPERTIES map to JMS QUEUE through CONNECTION."
   [connection queue text properties]
   (letfn [(add-property [^TextMessage message k v] (.setStringProperty message k v))
           (send [connection queue]
-            (let [transacted? true]
-              (with-open [session (.createSession connection transacted? Session/SESSION_TRANSACTED)]
-                (let [queue (.createQueue session queue)
-                      message (.createTextMessage session text)]
-                  (doseq [[k v] properties]
-                    (add-property message k v))
-                  (with-open [producer (.createProducer session queue)]
-                    (.setDeliveryMode producer DeliveryMode/PERSISTENT)
-                    (.start connection)
-                    (.send producer message)
-                    (.commit session))))))]
+            (with-open [session (create-session connection)]
+              (let [queue (.createQueue session queue)
+                    message (.createTextMessage session text)]
+                (doseq [[k v] properties]
+                  (add-property message k v))
+                (with-open [producer (.createProducer session queue)]
+                  (.setDeliveryMode producer DeliveryMode/PERSISTENT)
+                  (.start connection)
+                  (.send producer message)
+                  (.commit session)))))]
     (send connection queue)))
 
 (defn parse-message
