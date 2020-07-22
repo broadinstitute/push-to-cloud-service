@@ -69,10 +69,10 @@
    (str "Bearer" \space (shell! "gcloud" "auth" "print-access-token"))})
 
 (defn message-ids-equal?
-  "Are the ids of each given message the same?"
+  "True when the IDs of MESSAGES are the same. Otherwise false."
   [& messages]
   (or (empty? messages)
-    (apply = (map #(-> % :headers :message-id) messages))))
+    (apply = (map (comp :message-id :headers) messages))))
 
 (defn slurp-json
   "Nil or the JSON in FILE."
