@@ -20,7 +20,6 @@ on:
         default: true
 env:
   RELEASE_NAME: push-to-cloud-service-${{ github.event.inputs.version }}
-  ARTIFACT: push-to-cloud-service-${{ github.event.inputs.version }}.zip
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -91,17 +90,10 @@ jobs:
         run: clojure -A:test integration
 
       - name: package
-        run: |
-          mkdir -p derived/$RELEASE_NAME
-          echo ${{ github.event.inputs.version }} > derived/$RELEASE_NAME/version
-          cp target/push-to-cloud-service.jar derived/$RELEASE_NAME
-          if [[ -n "${{ github.event.input.release_note }}" ]]; then
-            cp "${{ github.event.input.release_note }}" derived/$RELEASE_NAME
-          fi
-
-          pushd derived
-          zip -r $ARTIFACT $RELEASE_NAME
-          popd
+        env:
+          VERSION=${{ github.event.inputs.version }}
+          NOTE=${{ github.event.input.release_note }}
+        run: contrib/package.sh
 
       - name: create release
         id: create_release
@@ -117,6 +109,6 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: derived/${{ env.ARTIFACT }}
-          asset_name: ${{ env.ARTIFACT }}
-          asset_content_type: application/zip
+          asset_path: derived/${{ env.RELEASE_NAME }}.tar.gz
+          asset_name: ${{ env.RELEASE_NAME }}.tar.gz
+          asset_content_type: application/gzip
