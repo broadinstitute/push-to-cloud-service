@@ -7,6 +7,7 @@
             [clojure.string        :as str]
             [clojure.tools.logging :as log]
             [ptc.ptc               :as ptc]
+            [vault.client.http]         ; vault.core needs this
             [vault.core            :as vault])
   (:import [org.apache.commons.mail SimpleEmail]))
 
