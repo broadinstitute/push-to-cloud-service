@@ -1,4 +1,4 @@
-(ns ptc.tbl
+(ns ptc.util.jms
   "Frob JMS messages into upload actions and workflow parameters."
   (:require [clojure.data.json :as json]
             [clojure.string    :as str]
@@ -113,8 +113,8 @@
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str request))
     result))
 
-(defn handle-jms-message
-  "Push to cloud at PREFIX all the files for JMS payload."
+(defn handle-message
+  "Push to cloud at PREFIX all the files for JMS message."
   [jms]
   (let [prefix "gs://broad-gotc-dev-storage/tbl/ptc"]
     (spit-params prefix jms)
