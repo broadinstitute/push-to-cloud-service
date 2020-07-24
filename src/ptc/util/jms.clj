@@ -73,8 +73,8 @@
   (letfn [(rekey [m [k v]] (assoc m k (v workflow)))]
     (reduce rekey {} params-keys->jms-keys)))
 
-(defn spit-params
-  "Spit a params.txt for JMS payload into the cloud at PREFIX,
+(defn push-params
+  "Push a params.txt for JMS payload into the cloud at PREFIX,
   then return its path in the cloud."
   [prefix {:keys [workflow] :as jms}]
   (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))]
@@ -100,7 +100,7 @@
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
-(defn spit-append-to-aou-request
+(defn push-append-to-aou-request
   "Push an append_to_aou request for JMS to the cloud at PREFIX."
   [prefix jms]
   (let [result (str/join "/" [(cloud-prefix prefix jms) "ptc.json"])
@@ -113,5 +113,5 @@
   "Push to cloud at PREFIX all the files for JMS message."
   [jms]
   (let [prefix "gs://broad-gotc-dev-storage/tbl/ptc"]
-    (spit-params prefix jms)
-    (spit-append-to-aou-request prefix jms)))
+    (push-params prefix jms)
+    (push-append-to-aou-request prefix jms)))
