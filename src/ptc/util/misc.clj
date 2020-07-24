@@ -9,7 +9,8 @@
             [ptc.ptc               :as ptc]
             [vault.client.http]         ; vault.core needs this
             [vault.core            :as vault])
-  (:import [org.apache.commons.mail SimpleEmail]))
+  (:import [java.util UUID]
+           [org.apache.commons.mail SimpleEmail]))
 
 (defmacro do-or-nil
   "Value of BODY or nil if it throws."
@@ -80,3 +81,7 @@
   (do-or-nil
     (with-open [^java.io.Reader in (io/reader file)]
       (json/read in :key-fn keyword))))
+
+(def uuid-nil
+  "The nil UUID."
+  (UUID/fromString "00000000-0000-0000-0000-000000000000"))
