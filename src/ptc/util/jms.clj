@@ -22,7 +22,7 @@
   "An empty append_to_aou request without notifications."
   {:cromwell cromwell
    :environment environment
-   :uuid uuid
+   :uuid (str uuid)
    :notifications []})
 
 (def params-keys->jms-keys
@@ -92,24 +92,20 @@
         {:keys [::chip ::copy ::push]} notification-keys->jms-keys
         chip-and-push (merge chip push)
         sources (map workflow (vals chip-and-push))]
-    (letfn [(rekey [m [k v]] (assoc m k (v workflow)))
-            (cloud [m [k v]]
+    (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
+            (cloudify [m [k v]]
               (assoc m k
                 (str/join "/"
                   [cloud (last (str/split (v workflow) #"/"))])))]
-      (apply misc/shell! "echo" "gsutil" "cp" (concat sources [cloud]))
-      (reduce cloud (reduce rekey {} copy) chip-and-push))))
-
-(defn jms->append-to-aou-request
-  "Append JMS content to the append_to_aou REQUEST."
-  [request jms]
-  (update request :notifications conj (jms->notification jms)))
+      (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
+      (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
 (defn spit-append-to-aou-request
   "Push an append_to_aou request for JMS to the cloud at PREFIX."
   [prefix jms]
   (let [result (str/join "/" [(cloud-prefix prefix jms) "ptc.json"])
-        request (jms->append-to-aou-request append-to-aou-request jms)]
+        request (update append-to-aou-request
+                  :notifications conj (jms->notification prefix jms))]
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str request))
     result))
 
