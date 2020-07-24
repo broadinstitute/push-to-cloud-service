@@ -61,17 +61,17 @@
     (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
     (into {})))
 
-(defn jms->params
-  "Replace keys in JMS with their params.txt names."
-  [{:keys [workflow] :as jms}]
-  (letfn [(rekey [m [k v]] (assoc m k (v workflow)))]
-    (reduce rekey {} params-keys->jms-keys)))
-
 (defn cloud-prefix
   "Return the cloud GCS URL with PREFIX for JMS payload."
   [prefix {:keys [workflow] :as jms}]
   (let [{:keys [analysisCloudVersion chipName chipWellBarcode]} workflow]
     (str/join "/" [prefix chipName chipWellBarcode analysisCloudVersion])))
+
+(defn jms->params
+  "Replace keys in JMS with their params.txt names."
+  [{:keys [workflow] :as jms}]
+  (letfn [(rekey [m [k v]] (assoc m k (v workflow)))]
+    (reduce rekey {} params-keys->jms-keys)))
 
 (defn spit-params
   "Spit a params.txt for JMS payload into the cloud at PREFIX,
@@ -86,7 +86,7 @@
 ;; Push the chip files too until we figure something else out.
 ;;
 (defn jms->notification
-  "Push files and request notification for JMS payload at PREFIX."
+  "Push files and return notification for JMS payload at PREFIX."
   [prefix {:keys [workflow] :as jms}]
   (let [cloud (cloud-prefix prefix jms)
         {:keys [::chip ::copy ::push]} notification-keys->jms-keys
