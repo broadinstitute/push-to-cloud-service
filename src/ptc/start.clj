@@ -69,8 +69,7 @@
   [^TextMessage message]
   (let [parsed {:headers (.getText message)}]
     (assoc parsed :properties
-      (into {} (for [[k v] (.getProperties message)]
-                 [k v])))))
+      (into {} (for [[k v] (.getProperties message)] [k v])))))
 
 (defn listen-and-consume-from-queue
   "Listen to QUEUE on CONNECTION for messages,
@@ -105,7 +104,7 @@
 >>>>>>> fd4aed6... Simplify and spy.
        (recur counter))))
   ([connection queue]
-   (listen-and-consume-from-queue connection queue constantly)))
+   (listen-and-consume-from-queue connection queue identity)))
 
 (defn message-loop
   "Loop with a JMS connection in ENVIRONMENT."
