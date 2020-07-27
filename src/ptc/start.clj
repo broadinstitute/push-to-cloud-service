@@ -80,8 +80,8 @@
                (log/infof "Task complete, consumed message %s" counter)
                (if (not (misc/message-ids-equal? peek-message consumed-message))
                  (log/warnf "Is PTC in parallel? Peeked message ID %s not equal to consumed ID %s"
-                                      (-> peek-message :headers :message-id)
-                                      (-> consumed-message :headers :message-id)))
+                            (-> peek-message :headers :message-id)
+                            (-> consumed-message :headers :message-id)))
                (recur (inc counter)))
              (do
                (log/errorf "Task returned nil/false, not consuming message %s and instead exiting" counter)
