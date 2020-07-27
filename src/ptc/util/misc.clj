@@ -2,6 +2,7 @@
   "Miscellaneous utility functions shared across this program."
   (:require [clojure.pprint     :refer [pprint]]
             [clojure.string     :as str]
+            [clojure.tools.logging :as log]
             [vault.core         :as vault]
             [clojure.java.shell :as shell]
             [ptc.ptc            :as ptc])
@@ -23,10 +24,8 @@
             (vault/authenticate! :token (slurp token-path)))
           path)
          (catch Throwable e
-           (let [error (get-in (Throwable->map e) [:via 0 :message])
-                 lines ["%1$s: %2$s" "%1$s: Run 'vault login' and try again."]
-                 msg   (format (str/join \newline lines) ptc/the-name error)]
-             (println msg))))))
+           (log/warn e "Issue with Vault")
+           (log/debug "Perhaps run 'vault login' and try again")))))
 
 (defn email
   "Email MESSAGE to TO-LIST from with SUBJECT."
