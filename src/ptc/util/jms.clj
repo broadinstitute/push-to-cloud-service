@@ -43,20 +43,31 @@
    :SAMPLE_ID              :sampleId
    :SAMPLE_LSID            :sampleLsid})
 
+(def notification-keys->jms-keys-table
+  "How to satisfy notification keys in WFL request."
+  ["action" "request notification key"   "JMS key"
+   ::copy   :analysis_version_number     :analysisCloudVersion
+   ::copy   :chip_well_barcode           :chipWellBarcode
+   ::copy   :reported_gender             :gender
+   ::copy   :sample_alias                :sampleAlias
+   ::copy   :sample_lsid                 :sampleLsid
+   ::chip   :bead_pool_manifest_file     :beadPoolManifestPath
+   ::chip   :cluster_file                :clusterFilePath
+   ::chip   :extended_chip_manifest_file :chipManifestPath
+   ::chip   :gender_cluster_file         :genderClusterFilePath
+   ::chip   :zcall_thresholds_file       :zCallThresholdsPath
+   ::push   :green_idat_cloud_path       :greenIDatPath
+   ::push   :red_idat_cloud_path         :redIDatPath])
+
+(def all-notification-keys
+  "All the keys in the notification request to WFL."
+  (->> notification-keys->jms-keys-table
+    (partition-all 3)
+    rest
+    (map second)))
+
 (def notification-keys->jms-keys
-  (->> ["action" "request notification key"   "JMS key"
-        ::copy   :analysis_version_number     :analysisCloudVersion
-        ::copy   :chip_well_barcode           :chipWellBarcode
-        ::copy   :reported_gender             :gender
-        ::copy   :sample_alias                :sampleAlias
-        ::copy   :sample_lsid                 :sampleLsid
-        ::chip   :bead_pool_manifest_file     :beadPoolManifestPath
-        ::chip   :cluster_file                :clusterFilePath
-        ::chip   :extended_chip_manifest_file :chipManifestPath
-        ::chip   :gender_cluster_file         :genderClusterFilePath
-        ::chip   :zcall_thresholds_file       :zCallThresholdsPath
-        ::push   :green_idat_cloud_path       :greenIDatPath
-        ::push   :red_idat_cloud_path         :redIDatPath]
+  (->> notification-keys->jms-keys-table
     (partition-all 3) rest (group-by first)
     (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
     (into {})))
@@ -70,8 +81,14 @@
 (defn jms->params
   "Replace keys in JMS with their params.txt names."
   [{:keys [workflow] :as jms}]
-  (letfn [(rekey [m [k v]] (assoc m k (v workflow)))]
-    (reduce rekey {} params-keys->jms-keys)))
+  (letfn [(rekey [m [k v]] (assoc m k (v workflow)))
+          (nilval [k m] (when (nil? (k m)) k))]
+    (let [result (reduce rekey {} params-keys->jms-keys)
+          missing (vec (keep nilval (keys params-keys->jms-keys)))]
+      (when (seq missing)
+        (throw (IllegalArgumentException.
+                 (format "Missing params.txt keys: %s" missing))))
+      result)))
 
 (defn push-params
   "Push a params.txt for JMS payload into the cloud at PREFIX,
@@ -96,9 +113,15 @@
             (cloudify [m [k v]]
               (assoc m k
                 (str/join "/"
-                  [cloud (last (str/split (v workflow) #"/"))])))]
+                  [cloud (last (str/split (v workflow) #"/"))])))
+            (nilval [k m] (when (nil? (k m)) k))]
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
-      (reduce cloudify (reduce rekey {} copy) chip-and-push))))
+      (let [result (reduce cloudify (reduce rekey {} copy) chip-and-push)
+            missing (vec (keep nilval all-notification-keys))]
+        (when (seq missing)
+          (throw (IllegalArgumentException.
+                   (format "Missing notification keys: %s" missing))))
+        result))))
 
 (defn push-append-to-aou-request
   "Push an append_to_aou request for JMS to the cloud at PREFIX."
