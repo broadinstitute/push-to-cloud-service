@@ -35,11 +35,22 @@
   [url]
   (let [[gs-colon nada bucket object] (str/split url #"/" 4)]
     (when-not
-     (and (every? seq [gs-colon bucket])
+        (and (every? seq [gs-colon bucket])
           (= "gs:" gs-colon)
           (= "" nada))
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
+
+(defn gs-url
+  "Format BUCKET and OBJECT into a gs://bucket/object URL."
+  [bucket object]
+  (when-not (and (string?        bucket)
+              (seq            bucket)
+              (not-any? #{\/} bucket))
+    (let [fmt "The bucket (%s) must be a non-empty string."
+          msg (format fmt bucket)]
+      (throw (IllegalArgumentException. msg))))
+  (str "gs://" bucket "/" object))
 
 (defn list-objects
   "The objects in BUCKET with PREFIX in a lazy sequence."

@@ -125,12 +125,15 @@
                 set)
           (vals params-keys->jms-keys))))
 
+(def missing-keys-message
+  "Missing JMS keys:")
+
 (defn handle-message
   "Throw or push to cloud at PREFIX all the files for JMS message."
   [prefix {:keys [workflow] :as jms}]
   (let [missing (keep (fn [k] (when (nil? (k workflow)) k)) required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
-               (format "Missing JMS keys: %s" missing)))))
+               (str/join \space missing-keys-message missing)))))
   (push-params prefix jms)
   (push-append-to-aou-request prefix jms))

@@ -19,6 +19,23 @@
         (catch Exception x#
           (println x#))))
 
+(defmacro dump
+  "Dump [EXPRESSION VALUE] where VALUE is EXPRESSION's value."
+  [expression]
+  `(let [x# ~expression]
+     (do
+       (pprint ['~expression x#])
+       x#)))
+
+(defmacro trace
+  "Like DUMP but include location metadata."
+  [expression]
+  (let [{:keys [line column]} (meta &form)]
+    `(let [x# ~expression]
+       (do
+         (pprint {:file ~*file* :line ~line '~expression x#})
+         x#))))
+
 (defn vault-secrets
   "Return the vault-secrets at PATH."
   [path]
