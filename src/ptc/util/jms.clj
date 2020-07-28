@@ -59,6 +59,31 @@
    ::push   :green_idat_cloud_path       :greenIDatPath
    ::push   :red_idat_cloud_path         :redIDatPath])
 
+;; There are others, but these are not null in the sample messages.
+;;
+(def header-map
+  "Map keywords naming JMS headers to their getters."
+  {:arrival              #(.getArrival              %)
+   :brokerInTime         #(.getBrokerInTime         %)
+   :brokerOutTime        #(.getBrokerOutTime        %)
+   :commandId            #(.getCommandId            %)
+   :compressed           #(.isCompressed            %)
+   :destination          #(.getDestination          %)
+   :droppable            #(.isDroppable             %)
+   :expiration           #(.getExpiration           %)
+   :groupSequence        #(.getGroupSequence        %)
+   :marshalledProperties #(.getMarshalledProperties %)
+   :messageId            #(.getMessageId            %)
+   :persistent           #(.isPersistent            %)
+   :priority             #(.getPriority             %)
+   :producerId           #(.getProducerId           %)
+   :readOnlyBody         #(.isReadOnlyBody          %)
+   :readOnlyProperties   #(.isReadOnlyProperties    %)
+   :redeliveryCounter    #(.getRedeliveryCounter    %)
+   :responseRequired     #(.isResponseRequired      %)
+   :size                 #(.getSize                 %)
+   :timestamp            #(.getTimestamp            %)})
+
 (def notification-keys->jms-keys
   "Map action to map of WFL request notification keys to JMS keys."
   (->> notification-keys->jms-keys-table
@@ -124,6 +149,26 @@
                 (map (fn [[_ _ key]] key))
                 set)
           (vals params-keys->jms-keys))))
+
+(defn ednify
+  "Return a EDN representation of the JMS MESSAGE with keyword keys."
+  [message]
+  (letfn [(headerify [m [k v]] (assoc m k (v message)))
+          (unjsonify [s] (json/read-str s :key-fn keyword))]
+    (let [raw (into {} (.getProperties message))
+          keyed (zipmap (map keyword (keys raw)) (vals raw))]
+      {::Headers    (reduce headerify {} header-map)
+       ::Properties (update keyed :payload unjsonify)})))
+
+(defn jmsify
+  "Return the JMS message represented by the MESSAGE in EDN."
+  [{keys [::Headers ::Properties] :as message}]
+  (letfn [(headerify [m [k v]] (assoc m k (v message)))
+          (unjsonify [s] (json/read-str s :key-fn keyword))]
+    (let [raw (into {} (.getProperties message))
+          keyed (zipmap (map keyword (keys raw)) (vals raw))]
+      {::Headers    (reduce headerify {} header-map)
+       ::Properties (update keyed :payload unjsonify)})))
 
 (def missing-keys-message
   "Missing JMS keys:")
