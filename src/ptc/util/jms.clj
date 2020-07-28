@@ -111,7 +111,6 @@
 
 (defn handle-message
   "Push to cloud at PREFIX all the files for JMS message."
-  [jms]
-  (let [prefix "gs://broad-gotc-dev-storage/tbl/ptc"]
-    (push-params prefix jms)
-    (push-append-to-aou-request prefix jms)))
+  [prefix jms]
+  (push-params prefix jms)
+  (push-append-to-aou-request prefix jms))
