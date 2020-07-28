@@ -59,14 +59,8 @@
    ::push   :green_idat_cloud_path       :greenIDatPath
    ::push   :red_idat_cloud_path         :redIDatPath])
 
-(def all-notification-keys
-  "All the keys in the notification request to WFL."
-  (->> notification-keys->jms-keys-table
-    (partition-all 3)
-    rest
-    (map second)))
-
 (def notification-keys->jms-keys
+  "Map action to map of WFL request notification keys to JMS keys."
   (->> notification-keys->jms-keys-table
     (partition-all 3) rest (group-by first)
     (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
@@ -83,12 +77,7 @@
   [{:keys [workflow] :as jms}]
   (letfn [(rekey [m [k v]] (assoc m k (v workflow)))
           (nilval [k m] (when (nil? (k m)) k))]
-    (let [result (reduce rekey {} params-keys->jms-keys)
-          missing (vec (keep nilval (keys params-keys->jms-keys)))]
-      (when (seq missing)
-        (throw (IllegalArgumentException.
-                 (format "Missing params.txt keys: %s" missing))))
-      result)))
+    (reduce rekey {} params-keys->jms-keys)))
 
 (defn push-params
   "Push a params.txt for JMS payload into the cloud at PREFIX,
@@ -116,12 +105,7 @@
                   [cloud (last (str/split (v workflow) #"/"))])))
             (nilval [k m] (when (nil? (k m)) k))]
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
-      (let [result (reduce cloudify (reduce rekey {} copy) chip-and-push)
-            missing (vec (keep nilval all-notification-keys))]
-        (when (seq missing)
-          (throw (IllegalArgumentException.
-                   (format "Missing notification keys: %s" missing))))
-        result))))
+      (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
 (defn push-append-to-aou-request
   "Push an append_to_aou request for JMS to the cloud at PREFIX."
@@ -132,8 +116,21 @@
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str request))
     result))
 
+(def required-jms-keys
+  "Sort all the keys required to handle a JMS message."
+  (sort (into (->> notification-keys->jms-keys-table
+                (partition-all 3)
+                rest
+                (map (fn [[_ _ key]] key))
+                set)
+          (vals params-keys->jms-keys))))
+
 (defn handle-message
-  "Push to cloud at PREFIX all the files for JMS message."
-  [prefix jms]
+  "Throw or push to cloud at PREFIX all the files for JMS message."
+  [prefix {:keys [workflow] :as jms}]
+  (let [missing (keep (fn [k] (when (nil? (k workflow)) k)) required-jms-keys)]
+    (when (seq missing)
+      (throw (IllegalArgumentException.
+               (format "Missing JMS keys: %s" missing)))))
   (push-params prefix jms)
   (push-append-to-aou-request prefix jms))
