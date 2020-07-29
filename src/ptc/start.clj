@@ -32,7 +32,9 @@
     (let [queue (.createQueue session queue)]
       (with-open [consumer (.createConsumer session queue)]
         (.start connection)
-        (log/infof "Consumer %s: attempting to consume message." (.getConsumerId consumer))
+        (log/infof
+          "Consumer %s: attempting to consume message."
+          (.getConsumerId consumer))
         #_(.receive consumer)))))
 
 (defn peek-message
@@ -83,12 +85,20 @@
              (let [consumed-message (parse-message (consume connection queue))]
                (log/infof "Task complete, consumed message %s" counter)
                (if (not (misc/message-ids-equal? peek-message consumed-message))
-                 (log/warnf "Is PTC in parallel? Peeked message ID %s not equal to consumed ID %s"
+                 (log/warnf
+                   (str/join
+                     \space
+                     ["Is PTC in parallel?"
+                      "Peeked message ID %s not equal to consumed ID %s"])
                    (-> peek-message :headers :message-id)
                    (-> consumed-message :headers :message-id)))
                (recur (inc counter)))
              (do
-               (log/errorf "Task returned nil/false, not consuming message %s and instead exiting" counter)
+               (log/errorf
+                 (str/join
+                   \space ["Task returned nil/false,"
+                           "not consuming message %s and instead exiting"])
+                 counter)
                peeked-message)))
        (recur counter))))
   ([connection queue]
@@ -99,7 +109,8 @@
   [environment]
   (while true
     (try
-      (with-push-to-cloud-jms-connection environment listen-and-consume-from-queue)
+      (with-push-to-cloud-jms-connection
+        environment listen-and-consume-from-queue)
       (catch JMSException e
         (log/error e "JMS-specific exception stopped message-loop"))
       (catch Throwable e
