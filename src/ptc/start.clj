@@ -1,7 +1,7 @@
 (ns ptc.start
   (:gen-class)
-  (:require [ptc.ptc         :as ptc]
-            [ptc.util.misc   :as misc]
+  (:require [ptc.ptc               :as ptc]
+            [ptc.util.misc         :as misc]
             [clojure.tools.logging :as log])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session JMSException]))
