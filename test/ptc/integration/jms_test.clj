@@ -1,8 +1,10 @@
 (ns ptc.integration.integration-test
   (:require [clojure.data.json :as json]
             [clojure.java.io   :as io]
+            [clojure.string    :as str]
             [clojure.test      :refer [deftest is testing]]
             [clojure.edn       :as edn]
+            [clojure.set       :as set]
             [ptc.start         :as start]
             [ptc.util.gcs      :as gcs]
             [ptc.util.misc     :as misc]
@@ -51,9 +53,14 @@
       (call connection queue))))
 
 (defn list-gcs-folder
-  "Return the contents of folder in GCS."
+  "Nil or URLs for the GCS objects of folder."
   [folder]
-  (apply gcs/list-objects (gcs/parse-gs-url folder)))
+  (-> folder
+    (vector "**")
+    (->> (str/join "/")
+      (misc/shell! "gsutil" "ls"))
+    (str/split #"\n")
+    misc/do-or-nil))
 
 (defn fix-paths
   "Fix the local file paths of the JMS message in FILE."
@@ -81,42 +88,36 @@
   (-> url gcs-cat (json/read-str :key-fn keyword)))
 
 (deftest integration
-  (let [pushed  (-> jms/notification-keys->jms-keys
-                  ((juxt ::jms/chip ::jms/push))
-                  (->> (apply merge))
-                  keys
-                  (->> (apply juxt)))
-        bad     (fix-paths "./test/data/bad-jms.edn")
-        good    (fix-paths "./test/data/good-jms.edn")
-        missing (re-pattern jms/missing-keys-message)]
+  (let [push     (-> jms/notification-keys->jms-keys
+                   ((juxt ::jms/chip ::jms/push))
+                   (->> (apply merge))
+                   keys
+                   (->> (apply juxt)))
+        bad      (fix-paths "./test/data/bad-jms.edn")
+        good     (fix-paths "./test/data/good-jms.edn")
+        missing  (re-pattern jms/missing-keys-message)
+        workflow (get-in good [::jms/Properties :payload :workflow])]
     (with-temporary-gcs-folder folder
       (with-test-jms-connection
         (fn [connection queue]
-          #_(start/produce connection queue
-              "BAD" (::jms/Properties (jms/encode bad)))
-          #_(let [msg (start/consume connection queue)]
-              (is (thrown-with-msg? IllegalArgumentException missing
-                    (jms/handle-message folder msg)))
-              (is (empty? (list-gcs-folder folder))))
+          (start/produce connection queue
+            "BAD" (::jms/Properties (jms/encode bad)))
+          (let [msg (start/consume connection queue)]
+            (is (thrown-with-msg? IllegalArgumentException missing
+                  (jms/handle-message folder msg)))
+            (is (empty? (apply gcs/list-objects (gcs/parse-gs-url folder)))))
           (start/produce connection queue
             "GOOD" (::jms/Properties (jms/encode good)))
           (let [msg (start/consume connection queue)
-                url (jms/handle-message folder msg)
-                {:keys [notifications] :as request} (gcs-edn url)]
-            (misc/trace request)
-            (misc/trace (pushed (first notifications)))
-            (misc/trace (list-gcs-folder folder))))))))
-
-(comment
-  (with-temporary-gcs-folder folder
-    (misc/trace folder)
-    (apply gcs/list-objects (gcs/parse-gs-url folder)))
-  (integration)
-  (start/with-push-to-cloud-jms-connection "dev"
-    (fn [connection queue]
-      (timbre/spy :warn [connection queue])
-      #_(start/produce connection queue
-          "TBL" (misc/slurp-json "./test/data/good-jms.json"))
-      (with-open [session (start/create-session connection true)])
-      (jms/ednify (start/peek-message connection queue))))
-  )
+                [params ptc] (jms/handle-message folder msg)
+                {:keys [notifications] :as request} (gcs-edn ptc)
+                pushed (push (first notifications))
+                gcs (list-gcs-folder folder)
+                union (set/union      (set gcs) (set pushed))
+                diff  (set/difference (set gcs) (set pushed))]
+            (is (==   (count pushed) (count (set pushed))))
+            (is (==   (count gcs)    (count (set gcs))))
+            (is (==   (count union)  (count (set gcs))))
+            (is (== 2 (count diff)))
+            (is (=    diff           (set [params ptc])))
+            (is (=    (jms/jms->params workflow) (gcs-cat params)))))))))
