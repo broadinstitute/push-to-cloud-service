@@ -36,7 +36,7 @@
         (log/infof
           "Consumer %s: attempting to consume message."
           (.getConsumerId consumer))
-        #_(.receive consumer)))))
+        (.receive consumer)))))
 
 (defn peek-message
   "Peek 1 message from JMS QUEUE through CONNECTION."

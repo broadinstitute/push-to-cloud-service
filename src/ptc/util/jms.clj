@@ -160,16 +160,24 @@
       {::Headers    (reduce headerify {} header-map)
        ::Properties (update keyed :payload unjsonify)})))
 
-(def missing-keys-message
-  "Missing JMS keys:")
+(defn encode
+  "Encode EDN MESSAGE ::Properties :payload for a PTC JMS message."
+  [{:keys [::Properties] :as message}]
+  (letfn [(jsonify [payload] (json/write-str payload
+                               :escape-js-separators false
+                               :escape-slash false))]
+    (assoc message ::Properties (update Properties :payload jsonify))))
+
+(def missing-keys-message "Missing JMS keys:") ; for tests
 
 (defn handle-message
   "Throw or push to cloud at PREFIX all the files for JMS message."
-  [prefix {:keys [::Properties] :as jms}]
-  (let [{:keys [workflow]} Properties
-        missing (keep (fn [k] (when (nil? (k workflow)) k)) required-jms-keys)]
+  [prefix jms]
+  (let [workflow (get-in (ednify jms) [::Properties :payload :workflow])
+        missing? (fn [k] (when (nil? (k workflow)) k))
+        missing (keep missing? required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
-               (str/join \space missing-keys-message missing))))
+               (str/join \space [missing-keys-message (vec missing)]))))
     (push-params prefix workflow)
     (push-append-to-aou-request prefix workflow)))
