@@ -1,5 +1,6 @@
 (ns ptc.integration.integration-test
-  (:require [clojure.data.json :as json]
+  (:require [clojure.data      :as data]
+            [clojure.data.json :as json]
             [clojure.java.io   :as io]
             [clojure.string    :as str]
             [clojure.test      :refer [deftest is testing]]
@@ -88,36 +89,43 @@
   (-> url gcs-cat (json/read-str :key-fn keyword)))
 
 (deftest integration
-  (let [push     (-> jms/notification-keys->jms-keys
+  (let [path     [::jms/Properties :payload :workflow]
+        push     (-> jms/notification-keys->jms-keys
                    ((juxt ::jms/chip ::jms/push))
                    (->> (apply merge))
                    keys
                    (->> (apply juxt)))
         bad      (fix-paths "./test/data/bad-jms.edn")
         good     (fix-paths "./test/data/good-jms.edn")
-        missing  (re-pattern jms/missing-keys-message)
-        workflow (get-in good [::jms/Properties :payload :workflow])]
+        missing  (-> good (data/diff bad) first (get-in path) keys first
+                   (->> (str jms/missing-keys-message ".*"))
+                   re-pattern)
+        workflow (get-in good path)]
     (with-temporary-gcs-folder folder
       (with-test-jms-connection
         (fn [connection queue]
-          (start/produce connection queue
-            "BAD" (::jms/Properties (jms/encode bad)))
-          (let [msg (start/consume connection queue)]
-            (is (thrown-with-msg? IllegalArgumentException missing
-                  (jms/handle-message folder msg)))
-            (is (empty? (apply gcs/list-objects (gcs/parse-gs-url folder)))))
-          (start/produce connection queue
-            "GOOD" (::jms/Properties (jms/encode good)))
-          (let [msg (start/consume connection queue)
-                [params ptc] (jms/handle-message folder msg)
-                {:keys [notifications] :as request} (gcs-edn ptc)
-                pushed (push (first notifications))
-                gcs (list-gcs-folder folder)
-                union (set/union      (set gcs) (set pushed))
-                diff  (set/difference (set gcs) (set pushed))]
-            (is (==   (count pushed) (count (set pushed))))
-            (is (==   (count gcs)    (count (set gcs))))
-            (is (==   (count union)  (count (set gcs))))
-            (is (== 2 (count diff)))
-            (is (=    diff           (set [params ptc])))
-            (is (=    (jms/jms->params workflow) (gcs-cat params)))))))))
+          (testing "a BAD message"
+            (start/produce connection queue
+              "BAD" (::jms/Properties (jms/encode bad)))
+            (let [msg (start/consume connection queue)]
+              (is (thrown-with-msg? IllegalArgumentException missing
+                    (jms/handle-message folder msg)))
+              (is (empty? (->> folder
+                            gcs/parse-gs-url
+                            (apply gcs/list-objects))))))
+          (testing "a GOOD message"
+            (start/produce connection queue
+              "GOOD" (::jms/Properties (jms/encode good)))
+            (let [msg (start/consume connection queue)
+                  [params ptc] (jms/handle-message folder msg)
+                  {:keys [notifications] :as request} (gcs-edn ptc)
+                  pushed (push (first notifications))
+                  gcs (list-gcs-folder folder)
+                  union (set/union      (set gcs) (set pushed))
+                  diff  (set/difference (set gcs) (set pushed))]
+              (is (==   (count pushed)  (count (set pushed))))
+              (is (==   (count gcs)     (count (set gcs))))
+              (is (==   (count union)   (count (set gcs))))
+              (is (== 2 (count diff)))
+              (is (=    diff            (set [params ptc])))
+              (is (=    (jms/jms->params workflow) (gcs-cat params))))))))))
