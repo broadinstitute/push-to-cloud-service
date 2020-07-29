@@ -2,7 +2,7 @@
   (:gen-class)
   (:require [ptc.ptc         :as ptc]
             [ptc.util.misc   :as misc]
-            [taoensso.timbre :as timbre])
+            [clojure.tools.logging :as log])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session JMSException]))
 
@@ -26,7 +26,7 @@
       (let [queue (.createQueue session queue)]
         (with-open [consumer (.createConsumer session queue)]
           (.start connection)
-          (timbre/info (format "Consumer %s: attempting to consume message." (.getConsumerId consumer)))
+          (log/infof "Consumer %s: attempting to consume message." (.getConsumerId consumer))
           (.receive consumer))))))
 
 (defn peek-message
@@ -37,7 +37,7 @@
       (let [queue (.createQueue session queue)]
         (with-open [browser (.createBrowser session queue)]
           (.start connection)
-          (timbre/info (format "Browser: attempting to peek message."))
+          (log/infof "Browser: attempting to peek message.")
           (let [msg-enum (.getEnumeration browser)]
             (when (.hasMoreElements msg-enum)
               (.nextElement msg-enum))))))))
@@ -74,17 +74,17 @@
   ([connection queue task!]
    (loop [counter 0]
      (if-let [peeked-message (parse-message (peek-message connection queue))]
-       (do (timbre/info (format "Peeked message %s: %s" counter peeked-message))
+       (do (log/infof "Peeked message %s: %s" counter peeked-message)
            (if (task! peeked-message)
              (let [consumed-message (parse-message (consume connection queue))]
-               (timbre/info (format "Task complete, consumed message %s" counter))
+               (log/infof "Task complete, consumed message %s" counter)
                (if (not (misc/message-ids-equal? peek-message consumed-message))
-                 (timbre/warn (format "Is PTC in parallel? Peeked message ID %s not equal to consumed ID %s"
-                                      (-> peek-message :headers :message-id)
-                                      (-> consumed-message :headers :message-id))))
+                 (log/warnf "Is PTC in parallel? Peeked message ID %s not equal to consumed ID %s"
+                            (-> peek-message :headers :message-id)
+                            (-> consumed-message :headers :message-id)))
                (recur (inc counter)))
              (do
-               (timbre/warn "Task returned nil/false, not consuming message %s and instead exiting" counter)
+               (log/errorf "Task returned nil/false, not consuming message %s and instead exiting" counter)
                peeked-message)))
        (recur counter))))
   ([connection queue]
@@ -96,9 +96,12 @@
   (while true
     (try
       (with-push-to-cloud-jms-connection environment listen-and-consume-from-queue)
-      (catch JMSException e (timbre/error (str (.getMessage e)))))))
+      (catch JMSException e
+        (log/error e "JMS-specific exception stopped message-loop"))
+      (catch Throwable e
+        (log/error e "General throwable stopped message-loop")))))
 
 (defn -main []
   (let [environment (or (System/getenv "environment") "dev")]
-    (timbre/info (format "%s starting up on %s" ptc/the-name environment))
+    (log/infof "%s starting up on %s" ptc/the-name environment)
     (message-loop environment)))

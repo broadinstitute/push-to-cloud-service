@@ -85,6 +85,11 @@ To format the code, run:
 clojure -A:format
 ```
 
+#### Logging
+Logging is done with `clojure.tools.logging` (very similarly to WFL's logging).
+The backend is Log4j 2, configured in `resources/log4j2.xml`.
+Examples are in `test/unit/logging_test.clj`.
+
 ## Deployment
 
 push-to-cloud-service is designed to be a [systemd user unit](https://wiki.archlinux.org/index.php/Systemd/User).
