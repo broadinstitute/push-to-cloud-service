@@ -45,7 +45,7 @@
         (log/infof "Browser: attempting to peek message.")
         (let [msg-enum (.getEnumeration browser)]
           (when (.hasMoreElements msg-enum)
-            (timbre/spy :info (.nextElement msg-enum))))))))
+            (.nextElement msg-enum)))))))
 
 (defn produce
   "Enqueue the TEXT with PROPERTIES map to JMS QUEUE through CONNECTION."
@@ -77,7 +77,6 @@
   and call (TASK! message) until it is false."
   ([connection queue task!]
    (loop [counter 0]
-<<<<<<< HEAD
      (if-let [peeked-message (parse-message (peek-message connection queue))]
        (do (log/infof "Peeked message %s: %s" counter peeked-message)
            (if (task! peeked-message)
@@ -85,24 +84,12 @@
                (log/infof "Task complete, consumed message %s" counter)
                (if (not (misc/message-ids-equal? peek-message consumed-message))
                  (log/warnf "Is PTC in parallel? Peeked message ID %s not equal to consumed ID %s"
-                            (-> peek-message :headers :message-id)
-                            (-> consumed-message :headers :message-id)))
+                   (-> peek-message :headers :message-id)
+                   (-> consumed-message :headers :message-id)))
                (recur (inc counter)))
              (do
                (log/errorf "Task returned nil/false, not consuming message %s and instead exiting" counter)
                peeked-message)))
-=======
-     (if-let [peeked (parse-message (peek-message connection queue))]
-       (do (timbre/spy :info [counter peeked])
-           (if (task! peeked)
-             (let [consumed (parse-message (consume connection queue))]
-               (timbre/spy :info [counter consumed])
-               (when-not (= peeked consumed)
-                 (timbre/spy :warn (-> peeked   :headers :message-id))
-                 (timbre/spy :warn (-> consumed :headers :message-id)))
-               (recur (inc counter)))
-             (timbre/spy :warn peeked)))
->>>>>>> fd4aed6... Simplify and spy.
        (recur counter))))
   ([connection queue]
    (listen-and-consume-from-queue connection queue identity)))
@@ -112,17 +99,11 @@
   [environment]
   (while true
     (try
-<<<<<<< HEAD
       (with-push-to-cloud-jms-connection environment listen-and-consume-from-queue)
       (catch JMSException e
         (log/error e "JMS-specific exception stopped message-loop"))
       (catch Throwable e
         (log/error e "General throwable stopped message-loop")))))
-=======
-      (with-push-to-cloud-jms-connection
-        environment listen-and-consume-from-queue)
-      (catch JMSException e (timbre/error (str (.getMessage e)))))))
->>>>>>> fd4aed6... Simplify and spy.
 
 (defn -main
   []
