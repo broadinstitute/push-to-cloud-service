@@ -100,19 +100,20 @@
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
   [workflow]
-  (letfn [(rekey [m [k v]] (assoc m k (v workflow)))
-          (nilval [k m] (when (nil? (k m)) k))]
-    (reduce rekey {} params-keys->jms-keys)))
+  (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))
+          (rekey [m [k v]] (assoc m k (v workflow)))]
+    (->> params-keys->jms-keys
+      (reduce rekey {})
+      (map stringify)
+      (str/join \newline))))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
   then return its path in the cloud."
   [prefix workflow]
-  (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))]
-    (let [result (str/join "/" [(cloud-prefix prefix workflow) "params.txt"])
-          params (str/join \newline (map stringify (jms->params workflow)))]
-      (misc/shell! "gsutil" "cp" "-" result :in (str params \newline))
-      result)))
+  (let [result (str/join "/" [(cloud-prefix prefix workflow) "params.txt"])]
+    (misc/shell! "gsutil" "cp" "-" result :in (jms->params workflow))
+    result))
 
 ;; Push the chip files too until we figure something else out.
 ;;
@@ -179,5 +180,5 @@
     (when (seq missing)
       (throw (IllegalArgumentException.
                (str/join \space [missing-keys-message (vec missing)]))))
-    (push-params prefix workflow)
-    (push-append-to-aou-request prefix workflow)))
+    [(push-params prefix workflow)
+     (push-append-to-aou-request prefix workflow)]))
