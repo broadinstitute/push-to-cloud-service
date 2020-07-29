@@ -92,34 +92,34 @@
     (into {})))
 
 (defn cloud-prefix
-  "Return the cloud GCS URL with PREFIX for JMS payload."
-  [prefix {:keys [workflow] :as jms}]
+  "Return the cloud GCS URL with PREFIX for WORKFLOW."
+  [prefix workflow]
   (let [{:keys [analysisCloudVersion chipName chipWellBarcode]} workflow]
     (str/join "/" [prefix chipName chipWellBarcode analysisCloudVersion])))
 
 (defn jms->params
-  "Replace keys in JMS with their params.txt names."
-  [{:keys [workflow] :as jms}]
+  "Replace JMS keys in WORKFLOW with their params.txt names."
+  [workflow]
   (letfn [(rekey [m [k v]] (assoc m k (v workflow)))
           (nilval [k m] (when (nil? (k m)) k))]
     (reduce rekey {} params-keys->jms-keys)))
 
 (defn push-params
-  "Push a params.txt for JMS payload into the cloud at PREFIX,
+  "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
   then return its path in the cloud."
-  [prefix {:keys [workflow] :as jms}]
+  [prefix workflow]
   (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))]
-    (let [result (str/join "/" [(cloud-prefix prefix jms) "params.txt"])
-          params (str/join \newline (map stringify (jms->params jms)))]
+    (let [result (str/join "/" [(cloud-prefix prefix workflow) "params.txt"])
+          params (str/join \newline (map stringify (jms->params workflow)))]
       (misc/shell! "gsutil" "cp" "-" result :in (str params \newline))
       result)))
 
 ;; Push the chip files too until we figure something else out.
 ;;
 (defn jms->notification
-  "Push files and return notification for JMS payload at PREFIX."
-  [prefix {:keys [workflow] :as jms}]
-  (let [cloud (cloud-prefix prefix jms)
+  "Push files to PREFIX and return notification for WORKFLOW."
+  [prefix workflow]
+  (let [cloud (cloud-prefix prefix workflow)
         {:keys [::chip ::copy ::push]} notification-keys->jms-keys
         chip-and-push (merge chip push)
         sources (map workflow (vals chip-and-push))]
@@ -133,11 +133,11 @@
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
 (defn push-append-to-aou-request
-  "Push an append_to_aou request for JMS to the cloud at PREFIX."
-  [prefix jms]
-  (let [result (str/join "/" [(cloud-prefix prefix jms) "ptc.json"])
+  "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX."
+  [prefix workflow]
+  (let [result (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])
         request (update append-to-aou-request
-                  :notifications conj (jms->notification prefix jms))]
+                  :notifications conj (jms->notification prefix workflow))]
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str request))
     result))
 
@@ -160,25 +160,16 @@
       {::Headers    (reduce headerify {} header-map)
        ::Properties (update keyed :payload unjsonify)})))
 
-(defn jmsify
-  "Return the JMS message represented by the MESSAGE in EDN."
-  [{keys [::Headers ::Properties] :as message}]
-  (letfn [(headerify [m [k v]] (assoc m k (v message)))
-          (unjsonify [s] (json/read-str s :key-fn keyword))]
-    (let [raw (into {} (.getProperties message))
-          keyed (zipmap (map keyword (keys raw)) (vals raw))]
-      {::Headers    (reduce headerify {} header-map)
-       ::Properties (update keyed :payload unjsonify)})))
-
 (def missing-keys-message
   "Missing JMS keys:")
 
 (defn handle-message
   "Throw or push to cloud at PREFIX all the files for JMS message."
-  [prefix {:keys [workflow] :as jms}]
-  (let [missing (keep (fn [k] (when (nil? (k workflow)) k)) required-jms-keys)]
+  [prefix {:keys [::Properties] :as jms}]
+  (let [{:keys [workflow]} Properties
+        missing (keep (fn [k] (when (nil? (k workflow)) k)) required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
-               (str/join \space missing-keys-message missing)))))
-  (push-params prefix jms)
-  (push-append-to-aou-request prefix jms))
+               (str/join \space missing-keys-message missing))))
+    (push-params prefix workflow)
+    (push-append-to-aou-request prefix workflow)))

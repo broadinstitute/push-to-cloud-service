@@ -49,25 +49,41 @@
     (with-open [connection (.createQueueConnection factory)]
       (call connection queue))))
 
+(defn list-gcs-folder
+  "Return the contents of folder in GCS."
+  [folder]
+  (apply gcs/list-objects (gcs/parse-gs-url folder)))
+
 (deftest integration
-  (let [bad     (misc/slurp-json "./test/data/bad-jms.json")
-        good    (misc/slurp-json "./test/data/good-jms.json")
+  (let [{:keys [::jms/chip ::jms/push]} jms/notification-keys->jms-keys
+        push-keys (keys (merge chip push))
+        bad (edn/read-string (slurp "./test/data/bad-jms.edn"))
+        good (edn/read-string (slurp "./test/data/good-jms.edn"))
         missing (re-pattern jms/missing-keys-message)]
-    (with-temporary-gcs-folder prefix
+    (with-temporary-gcs-folder folder
       (with-test-jms-connection
         (fn [connection queue]
-          (start/produce connection queue bad bad))
-        (is (thrown-with-msg? IllegalArgumentException missing
-              (jms/handle-message prefix bad)))))))
+          (start/produce connection queue "BAD" (::jms/Properties bad))
+          (let [msg (start/consume connection queue)]
+            (is (thrown-with-msg? IllegalArgumentException missing
+                  (jms/handle-message folder msg)))
+            (is (empty? (list-gcs-folder folder))))
+          (start/produce connection queue "GOOD" (::jms/Properties good))
+          (let [msg (start/consume connection queue)
+                request (jms/handle-message folder msg)]
+            (is (jms/handle-message folder msg))
+            (list-gcs-folder folder)))))))
 
 (comment
+  (with-temporary-gcs-folder folder
+    (misc/trace folder)
+    (apply gcs/list-objects (gcs/parse-gs-url folder)))
+  (integration)
   (start/with-push-to-cloud-jms-connection "dev"
     (fn [connection queue]
       (timbre/spy :warn [connection queue])
       #_(start/produce connection queue
           "TBL" (misc/slurp-json "./test/data/good-jms.json"))
-      (-> [connection queue] identity
-        (->> (apply start/peek-message) .getProperties (into {}))
-        (get "payload")
-        (json/read-str :key-fn keyword))))
+      (with-open [session (start/create-session connection true)])
+      (jms/ednify (start/peek-message connection queue))))
   )

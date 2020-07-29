@@ -1,0 +1,36 @@
+{:jms/Properties
+ {:action "start"
+  :payload
+  {:Zamboni
+   {:workflow "IlluminaArraysWorkflow"
+    :workflowPriority 1005
+    :zamboniClientVersion "e531c5382d56d69bb72e42e44bc2672ab25fdbb6_2020-07-16T10:08:44-0400"}
+   :workflow
+   {:analysisCloudVersion 1
+    :beadPoolManifestPath "bogus-bead-pool-manifest.bpm"
+    :callRateThreshold 0.98
+    :chipManifestPath "bogus-chip-manifest.csv"
+    :chipName "HumanExome-12v1-1_A"
+    :chipWellBarcode "7991775143_R01C01"
+    :clusterFilePath "bogus-cluster.egt"
+    :collaboratorParticipantId "NA12878"
+    :cromwellWorkflowWdlFile "bogus-workflow-wdl.wdl"
+    :gender "F"
+    :genderClusterFilePath "bogus-gender-cluster.egt"
+    :greenIDatPath "bogus-green.idat"
+    :haplotypeMap "bogus-haplotype-map.txt"
+    :labBatch "ARRAY-CO-5799466"
+    :participantId "PT-97GM"
+    :productFamily "Whole Genome Genotyping"
+    :productName "Infinium Exome V1_A"
+    :productOrderId "PDO-15923"
+    :productPartNumber "P-WG-0094"
+    :productType "aou_array"
+    :redIDatPath "bogus-red.idat"
+    :regulatoryDesignation "RESEARCH_ONLY"
+    :researchProjectId "RP-45"
+    :sampleAlias "NA12878"
+    :sampleId "SM-3S2IV"
+    :sampleLsid "broadinstitute.org:bsp.prod.sample:3S2IV"
+    :zCallThresholdsPath "bogus-zcall.egt.thresholds.txt"}}
+  :sender "picard-dev"}}

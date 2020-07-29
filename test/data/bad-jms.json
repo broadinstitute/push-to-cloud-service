@@ -1,4 +1,4 @@
-{
+{"payload": {
     "Zamboni": {
         "workflow": "AllOfUsArraysWorkflow",
         "workflowPriority": 1005,
@@ -40,4 +40,5 @@
         "snapThreadCount": 0,
         "zCallThresholdsPath": "test/data/bogus-zcall.egtthresholds.txt"
     }
+}
 }
