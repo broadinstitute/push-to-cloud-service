@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [ptc.ptc               :as ptc]
             [ptc.util.misc         :as misc]
+            [clojure.string        :as str]
             [clojure.tools.logging :as log])
   (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
             [javax.jms TextMessage DeliveryMode Session JMSException]))
