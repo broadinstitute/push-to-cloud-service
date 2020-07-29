@@ -1,4 +1,4 @@
-{:jms/Properties
+{:ptc.util.jms/Properties
  {:action "start"
   :payload
   {:Zamboni
