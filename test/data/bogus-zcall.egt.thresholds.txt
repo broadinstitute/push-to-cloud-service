@@ -1,1 +1,1 @@
-test/data/bogus-zcall.egt.thresholds.txt
+bogus-zcall.egt.thresholds.txt

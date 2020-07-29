@@ -1,5 +1,6 @@
 (ns ptc.integration.integration-test
   (:require [clojure.data.json :as json]
+            [clojure.java.io   :as io]
             [clojure.test      :refer [deftest is testing]]
             [clojure.edn       :as edn]
             [ptc.start         :as start]
@@ -29,7 +30,7 @@
       ;; <- temporary folder deleted
   "
   [uri & body]
-  `(let [name# (str "ptc-test-" (UUID/randomUUID) "/")
+  `(let [name# (str "ptc-test-" (UUID/randomUUID))
          ~uri (gcs/gs-url gcs-test-bucket name#)]
      (try ~@body
           (finally
@@ -54,11 +55,39 @@
   [folder]
   (apply gcs/list-objects (gcs/parse-gs-url folder)))
 
+(defn fix-paths
+  "Fix the local file paths of the JMS message in FILE."
+  [file]
+  (letfn [(canonicalize [file] (-> file io/file .getCanonicalPath io/file))]
+    (let [{:keys [::jms/chip ::jms/push]} jms/notification-keys->jms-keys
+          push-keys (vals (merge chip push))
+          infile    (canonicalize file)
+          dir       (io/file (.getParent infile))
+          content   (edn/read-string (slurp infile))]
+      (letfn [(one [leaf] (.getCanonicalPath (io/file dir leaf)))
+              (all [workflow]
+                (let [old (select-keys workflow push-keys)]
+                  (merge workflow (zipmap (keys old) (map one (vals old))))))]
+        (update-in content [::jms/Properties :payload :workflow] all)))))
+
+(defn gcs-cat
+  "Return the content of the GCS object at URL."
+  [url]
+  (misc/shell! "gsutil" "cat" url))
+
+(defn gcs-edn
+  "Return the JSON in GCS URL as EDN."
+  [url]
+  (-> url gcs-cat (json/read-str :key-fn keyword)))
+
 (deftest integration
-  (let [{:keys [::jms/chip ::jms/push]} jms/notification-keys->jms-keys
-        push-keys (keys (merge chip push))
-        bad (edn/read-string (slurp "./test/data/bad-jms.edn"))
-        good (edn/read-string (slurp "./test/data/good-jms.edn"))
+  (let [pushed  (-> jms/notification-keys->jms-keys
+                  ((juxt ::jms/chip ::jms/push))
+                  (->> (apply merge))
+                  keys
+                  (->> (apply juxt)))
+        bad     (fix-paths "./test/data/bad-jms.edn")
+        good    (fix-paths "./test/data/good-jms.edn")
         missing (re-pattern jms/missing-keys-message)]
     (with-temporary-gcs-folder folder
       (with-test-jms-connection
@@ -72,8 +101,10 @@
           (start/produce connection queue
             "GOOD" (::jms/Properties (jms/encode good)))
           (let [msg (start/consume connection queue)
-                request (jms/handle-message folder msg)]
-            (is (jms/handle-message folder msg))
+                url (jms/handle-message folder msg)
+                {:keys [notifications] :as request} (gcs-edn url)]
+            (misc/trace request)
+            (misc/trace (pushed (first notifications)))
             (misc/trace (list-gcs-folder folder))))))))
 
 (comment
