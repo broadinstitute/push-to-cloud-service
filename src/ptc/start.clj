@@ -54,7 +54,7 @@
   "Enqueue the TEXT with PROPERTIES map to JMS QUEUE through CONNECTION."
   [connection queue text properties]
   (letfn [(add-property [^TextMessage message k v]
-            (.setStringProperty message k v))
+            (.setStringProperty message (name k) v))
           (send [connection queue]
             (with-open [session (create-session connection true)]
               (let [queue (.createQueue session queue)
