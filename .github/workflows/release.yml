@@ -91,8 +91,8 @@ jobs:
 
       - name: package
         env:
-          VERSION=${{ github.event.inputs.version }}
-          NOTE=${{ github.event.input.release_note }}
+          VERSION: ${{ github.event.inputs.version }}
+          NOTE: ${{ github.event.input.release_note }}
         run: contrib/package.sh
 
       - name: create release
