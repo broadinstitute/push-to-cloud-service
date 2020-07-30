@@ -10,8 +10,8 @@
             [ptc.util.gcs      :as gcs]
             [ptc.util.jms      :as jms]
             [ptc.util.misc     :as misc])
-  (:import [org.apache.activemq ActiveMQSslConnectionFactory]
-           (java.util UUID)))
+  (:import [java.util UUID]
+           [org.apache.activemq ActiveMQSslConnectionFactory]))
 
 (def gcs-test-bucket
   "Throw test files in this bucket."
