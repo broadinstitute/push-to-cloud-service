@@ -12,7 +12,6 @@
   [environment use]
   (let [path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
         {:keys [url username password queue]} (misc/vault-secrets path)
-        queue "broad.workflowlauncher.enqueue.dev"
         factory (new ActiveMQSslConnectionFactory url)]
     (with-open [connection (.createQueueConnection factory username password)]
       (use connection queue))))
