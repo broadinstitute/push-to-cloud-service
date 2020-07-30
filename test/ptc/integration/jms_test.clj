@@ -1,15 +1,15 @@
 (ns ptc.integration.jms-test
   (:require [clojure.data      :as data]
             [clojure.data.json :as json]
+            [clojure.edn       :as edn]
             [clojure.java.io   :as io]
+            [clojure.set       :as set]
             [clojure.string    :as str]
             [clojure.test      :refer [deftest is testing]]
-            [clojure.edn       :as edn]
-            [clojure.set       :as set]
             [ptc.start         :as start]
             [ptc.util.gcs      :as gcs]
-            [ptc.util.misc     :as misc]
-            [ptc.util.jms      :as jms])
+            [ptc.util.jms      :as jms]
+            [ptc.util.misc     :as misc])
   (:import [org.apache.activemq ActiveMQSslConnectionFactory]
            (java.util UUID)))
 
