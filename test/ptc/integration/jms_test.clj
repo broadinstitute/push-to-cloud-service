@@ -9,17 +9,13 @@
             [ptc.start         :as start]
             [ptc.util.gcs      :as gcs]
             [ptc.util.misc     :as misc]
-            [ptc.util.jms      :as jms]
-            [taoensso.timbre   :as timbre])
+            [ptc.util.jms      :as jms])
   (:import [org.apache.activemq ActiveMQSslConnectionFactory]
            (java.util UUID)))
 
 (def gcs-test-bucket
   "Throw test files in this bucket."
   "broad-gotc-dev-zero-test")
-
-(def delete-test-object
-  (comp (partial gcs/delete-object gcs-test-bucket) :name))
 
 (defmacro with-temporary-gcs-folder
   "
@@ -35,11 +31,12 @@
   [uri & body]
   `(let [name# (str "ptc-test-" (UUID/randomUUID))
          ~uri (gcs/gs-url gcs-test-bucket name#)]
-     (try ~@body
-          (finally
-            (->>
-              (gcs/list-objects gcs-test-bucket name#)
-              (run! delete-test-object))))))
+     (try
+       ~@body
+       (finally
+         (->>
+           (gcs/list-objects gcs-test-bucket name#)
+           (run! (comp (partial gcs/delete-object gcs-test-bucket) :name)))))))
 
 ;; Local testing for ActiveMQ
 ;; https://activemq.apache.org/how-do-i-embed-a-broker-inside-a-connection
@@ -88,7 +85,7 @@
   [url]
   (-> url gcs-cat (json/read-str :key-fn keyword)))
 
-(deftest integration
+(deftest push-notification-for-jms
   (let [path     [::jms/Properties :payload :workflow]
         push     (-> jms/notification-keys->jms-keys
                    ((juxt ::jms/chip ::jms/push))
