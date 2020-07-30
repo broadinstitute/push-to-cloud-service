@@ -1,4 +1,4 @@
-(ns ptc.integration.integration-test
+(ns ptc.integration.jms-test
   (:require [clojure.data      :as data]
             [clojure.data.json :as json]
             [clojure.java.io   :as io]
