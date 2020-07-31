@@ -1,12 +1,16 @@
 (ns ptc.util.misc
   "Miscellaneous utility functions shared across this program."
-  (:require [clojure.pprint     :refer [pprint]]
-            [clojure.string     :as str]
+  (:require [clojure.data.json     :as json]
+            [clojure.java.io       :as io]
+            [clojure.java.shell    :as shell]
+            [clojure.pprint        :refer [pprint]]
+            [clojure.string        :as str]
             [clojure.tools.logging :as log]
-            [vault.core         :as vault]
-            [clojure.java.shell :as shell]
-            [ptc.ptc            :as ptc])
-  (:import [org.apache.commons.mail SimpleEmail]))
+            [ptc.ptc               :as ptc]
+            [vault.client.http]         ; vault.core needs this
+            [vault.core            :as vault])
+  (:import [java.util UUID]
+           [org.apache.commons.mail SimpleEmail]))
 
 (defmacro do-or-nil
   "Value of BODY or nil if it throws."
@@ -14,6 +18,23 @@
   `(try (do ~@body)
         (catch Exception x#
           (println x#))))
+
+(defmacro dump
+  "Dump [EXPRESSION VALUE] where VALUE is EXPRESSION's value."
+  [expression]
+  `(let [x# ~expression]
+     (do
+       (pprint ['~expression x#])
+       x#)))
+
+(defmacro trace
+  "Like DUMP but include location metadata."
+  [expression]
+  (let [{:keys [line column]} (meta &form)]
+    `(let [x# ~expression]
+       (do
+         (pprint {:file ~*file* :line ~line '~expression x#})
+         x#))))
 
 (defn vault-secrets
   "Return the vault-secrets at PATH."
@@ -66,7 +87,18 @@
    (str "Bearer" \space (shell! "gcloud" "auth" "print-access-token"))})
 
 (defn message-ids-equal?
-  "Are the ids of each given message the same?"
+  "True when the IDs of MESSAGES are the same. Otherwise false."
   [& messages]
   (or (empty? messages)
-      (apply = (map #(-> % :headers :message-id) messages))))
+      (apply = (map (comp :message-id :headers) messages))))
+
+(defn slurp-json
+  "Nil or the JSON in FILE."
+  [file]
+  (do-or-nil
+   (with-open [^java.io.Reader in (io/reader file)]
+     (json/read in :key-fn keyword))))
+
+(def uuid-nil
+  "The nil UUID."
+  (UUID/fromString "00000000-0000-0000-0000-000000000000"))
