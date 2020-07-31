@@ -87,9 +87,9 @@
 (def notification-keys->jms-keys
   "Map action to map of WFL request notification keys to JMS keys."
   (->> notification-keys->jms-keys-table
-    (partition-all 3) rest (group-by first)
-    (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
-    (into {})))
+       (partition-all 3) rest (group-by first)
+       (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
+       (into {})))
 
 (defn cloud-prefix
   "Return the cloud GCS URL with PREFIX for WORKFLOW."
@@ -103,9 +103,9 @@
   (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))
           (rekey [m [k v]] (assoc m k (v workflow)))]
     (->> params-keys->jms-keys
-      (reduce rekey {})
-      (map stringify)
-      (str/join \newline))))
+         (reduce rekey {})
+         (map stringify)
+         (str/join \newline))))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
@@ -127,8 +127,8 @@
     (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
             (cloudify [m [k v]]
               (assoc m k
-                (str/join "/"
-                  [cloud (last (str/split (v workflow) #"/"))])))
+                     (str/join "/"
+                               [cloud (last (str/split (v workflow) #"/"))])))
             (nilval [k m] (when (nil? (k m)) k))]
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
@@ -138,18 +138,18 @@
   [prefix workflow]
   (let [result (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])
         request (update append-to-aou-request
-                  :notifications conj (jms->notification prefix workflow))]
+                        :notifications conj (jms->notification prefix workflow))]
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str request))
     result))
 
 (def required-jms-keys
   "Sort all the keys required to handle a JMS message."
   (sort (into (->> notification-keys->jms-keys-table
-                (partition-all 3)
-                rest
-                (map (fn [[_ _ key]] key))
-                set)
-          (vals params-keys->jms-keys))))
+                   (partition-all 3)
+                   rest
+                   (map (fn [[_ _ key]] key))
+                   set)
+              (vals params-keys->jms-keys))))
 
 (defn ednify
   "Return a EDN representation of the JMS MESSAGE with keyword keys."
@@ -165,8 +165,8 @@
   "Encode EDN MESSAGE ::Properties :payload for a PTC JMS message."
   [{:keys [::Properties] :as message}]
   (letfn [(jsonify [payload] (json/write-str payload
-                               :escape-js-separators false
-                               :escape-slash false))]
+                                             :escape-js-separators false
+                                             :escape-slash false))]
     (assoc message ::Properties (update Properties :payload jsonify))))
 
 (def missing-keys-message "Missing JMS keys:") ; for tests
@@ -179,6 +179,6 @@
         missing (keep missing? required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
-               (str/join \space [missing-keys-message (vec missing)]))))
+              (str/join \space [missing-keys-message (vec missing)]))))
     [(push-params prefix workflow)
      (push-append-to-aou-request prefix workflow)]))

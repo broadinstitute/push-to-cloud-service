@@ -20,7 +20,7 @@
   "Open a JMS session on CONNECTION, conditionally TRANSACTED?"
   [connection transacted?]
   (.createSession connection transacted?
-    (if transacted? Session/SESSION_TRANSACTED Session/AUTO_ACKNOWLEDGE)))
+                  (if transacted? Session/SESSION_TRANSACTED Session/AUTO_ACKNOWLEDGE)))
 
 ;; We are using sync receipt for now
 ;; https://activemq.apache.org/maven/apidocs/org/apache/activemq/ActiveMQMessageConsumer.html
@@ -33,8 +33,8 @@
       (with-open [consumer (.createConsumer session queue)]
         (.start connection)
         (log/infof
-          "Consumer %s: attempting to consume message."
-          (.getConsumerId consumer))
+         "Consumer %s: attempting to consume message."
+         (.getConsumerId consumer))
         (.receive consumer)))))
 
 (defn peek-message
@@ -72,7 +72,7 @@
   [^TextMessage message]
   (let [parsed {:headers (.getText message)}]
     (assoc parsed :properties
-      (into {} (for [[k v] (.getProperties message)] [k v])))))
+           (into {} (for [[k v] (.getProperties message)] [k v])))))
 
 (defn listen-and-consume-from-queue
   "Listen to QUEUE on CONNECTION for messages,
@@ -86,19 +86,19 @@
                (log/infof "Task complete, consumed message %s" counter)
                (if (not (misc/message-ids-equal? peek-message consumed-message))
                  (log/warnf
-                   (str/join
-                     \space
-                     ["Is PTC in parallel?"
-                      "Peeked message ID %s not equal to consumed ID %s"])
-                   (-> peek-message :headers :message-id)
-                   (-> consumed-message :headers :message-id)))
+                  (str/join
+                   \space
+                   ["Is PTC in parallel?"
+                    "Peeked message ID %s not equal to consumed ID %s"])
+                  (-> peek-message :headers :message-id)
+                  (-> consumed-message :headers :message-id)))
                (recur (inc counter)))
              (do
                (log/errorf
-                 (str/join
-                   \space ["Task returned nil/false,"
-                           "not consuming message %s and instead exiting"])
-                 counter)
+                (str/join
+                 \space ["Task returned nil/false,"
+                         "not consuming message %s and instead exiting"])
+                counter)
                peeked-message)))
        (recur counter))))
   ([connection queue]

@@ -35,8 +35,8 @@
        ~@body
        (finally
          (->>
-           (gcs/list-objects gcs-test-bucket name#)
-           (run! (comp (partial gcs/delete-object gcs-test-bucket) :name)))))))
+          (gcs/list-objects gcs-test-bucket name#)
+          (run! (comp (partial gcs/delete-object gcs-test-bucket) :name)))))))
 
 ;; Local testing for ActiveMQ
 ;; https://activemq.apache.org/how-do-i-embed-a-broker-inside-a-connection
@@ -54,11 +54,11 @@
   "Nil or URLs for the GCS objects of folder."
   [folder]
   (-> folder
-    (vector "**")
-    (->> (str/join "/")
-      (misc/shell! "gsutil" "ls"))
-    (str/split #"\n")
-    misc/do-or-nil))
+      (vector "**")
+      (->> (str/join "/")
+           (misc/shell! "gsutil" "ls"))
+      (str/split #"\n")
+      misc/do-or-nil))
 
 (defn fix-paths
   "Fix the local file paths of the JMS message in FILE."
@@ -88,31 +88,31 @@
 (deftest push-notification-for-jms
   (let [path     [::jms/Properties :payload :workflow]
         push     (-> jms/notification-keys->jms-keys
-                   ((juxt ::jms/chip ::jms/push))
-                   (->> (apply merge))
-                   keys
-                   (->> (apply juxt)))
+                     ((juxt ::jms/chip ::jms/push))
+                     (->> (apply merge))
+                     keys
+                     (->> (apply juxt)))
         bad      (fix-paths "./test/data/bad-jms.edn")
         good     (fix-paths "./test/data/good-jms.edn")
         missing  (-> good (data/diff bad) first (get-in path) keys first
-                   (->> (str jms/missing-keys-message ".*"))
-                   re-pattern)
+                     (->> (str jms/missing-keys-message ".*"))
+                     re-pattern)
         workflow (get-in good path)]
     (with-temporary-gcs-folder folder
       (with-test-jms-connection
         (fn [connection queue]
           (testing "a BAD message"
             (start/produce connection queue
-              "BAD" (::jms/Properties (jms/encode bad)))
+                           "BAD" (::jms/Properties (jms/encode bad)))
             (let [msg (start/consume connection queue)]
               (is (thrown-with-msg? IllegalArgumentException missing
-                    (jms/handle-message folder msg)))
+                                    (jms/handle-message folder msg)))
               (is (empty? (->> folder
-                            gcs/parse-gs-url
-                            (apply gcs/list-objects))))))
+                               gcs/parse-gs-url
+                               (apply gcs/list-objects))))))
           (testing "a GOOD message"
             (start/produce connection queue
-              "GOOD" (::jms/Properties (jms/encode good)))
+                           "GOOD" (::jms/Properties (jms/encode good)))
             (let [msg (start/consume connection queue)
                   [params ptc] (jms/handle-message folder msg)
                   {:keys [notifications] :as request} (gcs-edn ptc)

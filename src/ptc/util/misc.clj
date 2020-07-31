@@ -41,9 +41,9 @@
   [path]
   (let [token-path (str (System/getProperty "user.home") "/.vault-token")]
     (try (vault/read-secret
-           (doto (vault/new-client "https://clotho.broadinstitute.org:8200/")
-             (vault/authenticate! :token (slurp token-path)))
-           path)
+          (doto (vault/new-client "https://clotho.broadinstitute.org:8200/")
+            (vault/authenticate! :token (slurp token-path)))
+          path)
          (catch Throwable e
            (log/warn e "Issue with Vault")
            (log/debug "Perhaps run 'vault login' and try again")))))
@@ -56,9 +56,9 @@
     (let [from (str ptc/the-name "@broadinstitute.org")
           subject "This thing is from PTC service"]
       (doto (-> (new SimpleEmail)
-              (.setFrom from)
-              (.setSubject subject)
-              (.setMsg message))
+                (.setFrom from)
+                (.setSubject subject)
+                (.setMsg message))
         (add-to-list to-list)
         (.setAuthentication from "fake-password")
         (.setHostName "smtp.gmail.com")
@@ -68,8 +68,8 @@
   "Notify everyone on the TO-LIST with MSG using METHOD."
   [method msg to-list]
   (method (with-out-str (pprint msg))
-    (or (seq to-list) ["tbl@broadinstitute.org"
-                       "chengche@broadinstitute.org"])))
+          (or (seq to-list) ["tbl@broadinstitute.org"
+                             "chengche@broadinstitute.org"])))
 
 (defn shell!
   "Run ARGS in a shell and return stdout or throw."
@@ -77,7 +77,7 @@
   (let [{:keys [exit err out]} (apply shell/sh args)]
     (when-not (zero? exit)
       (throw (Exception. (format "%s: %s exit status from: %s : %s"
-                           ptc/the-name exit args err))))
+                                 ptc/the-name exit args err))))
     (str/trim out)))
 
 (defn get-auth-header!
@@ -90,14 +90,14 @@
   "True when the IDs of MESSAGES are the same. Otherwise false."
   [& messages]
   (or (empty? messages)
-    (apply = (map (comp :message-id :headers) messages))))
+      (apply = (map (comp :message-id :headers) messages))))
 
 (defn slurp-json
   "Nil or the JSON in FILE."
   [file]
   (do-or-nil
-    (with-open [^java.io.Reader in (io/reader file)]
-      (json/read in :key-fn keyword))))
+   (with-open [^java.io.Reader in (io/reader file)]
+     (json/read in :key-fn keyword))))
 
 (def uuid-nil
   "The nil UUID."

@@ -35,7 +35,7 @@
   [url]
   (let [[gs-colon nada bucket object] (str/split url #"/" 4)]
     (when-not
-        (and (every? seq [gs-colon bucket])
+     (and (every? seq [gs-colon bucket])
           (= "gs:" gs-colon)
           (= "" nada))
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
@@ -45,8 +45,8 @@
   "Format BUCKET and OBJECT into a gs://bucket/object URL."
   [bucket object]
   (when-not (and (string?        bucket)
-              (seq            bucket)
-              (not-any? #{\/} bucket))
+                 (seq            bucket)
+                 (not-any? #{\/} bucket))
     (let [fmt "The bucket (%s) must be a non-empty string."
           msg (format fmt bucket)]
       (throw (IllegalArgumentException. msg))))
@@ -64,9 +64,9 @@
                         :query-params {:prefix prefix
                                        :maxResults 999
                                        :pageToken pageToken}}
-                     http/request
-                     :body
-                     (json/read-str :key-fn keyword))]
+                       http/request
+                       :body
+                       (json/read-str :key-fn keyword))]
                (lazy-cat items (when nextPageToken (each nextPageToken)))))]
      (each "")))
   ([bucket]
@@ -94,9 +94,9 @@
           :content-type (.detect (new Tika) body)
           :headers      headers
           :body         body}
-       http/request
-       :body
-       (json/read-str :key-fn keyword))))
+         http/request
+         :body
+         (json/read-str :key-fn keyword))))
   ([file bucket object]
    (upload-file file bucket object (misc/get-auth-header!)))
   ([file url]
