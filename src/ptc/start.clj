@@ -1,11 +1,13 @@
 (ns ptc.start
   (:gen-class)
-  (:require [ptc.ptc               :as ptc]
-            [ptc.util.misc         :as misc]
+  (:require [clojure.data          :as data]
+            [clojure.pprint        :refer [pprint]]
             [clojure.string        :as str]
-            [clojure.tools.logging :as log])
-  (:import  [org.apache.activemq ActiveMQSslConnectionFactory]
-            [javax.jms TextMessage DeliveryMode Session JMSException]))
+            [clojure.tools.logging :as log]
+            [ptc.ptc               :as ptc]
+            [ptc.util.misc         :as misc])
+  (:import [javax.jms TextMessage DeliveryMode Session JMSException]
+           [org.apache.activemq ActiveMQSslConnectionFactory]))
 
 (defn with-push-to-cloud-jms-connection
   "Call (use connection queue) for the JMS queue in ENVIRONMENT."
@@ -20,7 +22,9 @@
   "Open a JMS session on CONNECTION, conditionally TRANSACTED?"
   [connection transacted?]
   (.createSession connection transacted?
-                  (if transacted? Session/SESSION_TRANSACTED Session/AUTO_ACKNOWLEDGE)))
+    (if transacted?
+      Session/SESSION_TRANSACTED
+      Session/AUTO_ACKNOWLEDGE)))
 
 ;; We are using sync receipt for now
 ;; https://activemq.apache.org/maven/apidocs/org/apache/activemq/ActiveMQMessageConsumer.html
@@ -79,27 +83,23 @@
   and call (TASK! message) until it is false."
   ([connection queue task!]
    (loop [counter 0]
-     (if-let [peeked-message (parse-message (peek-message connection queue))]
-       (do (log/infof "Peeked message %s: %s" counter peeked-message)
-           (if (task! peeked-message)
-             (let [consumed-message (parse-message (consume connection queue))]
+     (if-let [peeked (parse-message (peek-message connection queue))]
+       (do (log/infof "Peeked message %s: %s" counter peeked)
+           (if (task! peeked)
+             (let [consumed (parse-message (consume connection queue))]
                (log/infof "Task complete, consumed message %s" counter)
-               (if (not (misc/message-ids-equal? peek-message consumed-message))
+               (if (not (= peeked consumed))
                  (log/warnf
-                  (str/join
-                   \space
-                   ["Is PTC in parallel?"
-                    "Peeked message ID %s not equal to consumed ID %s"])
-                  (-> peek-message :headers :message-id)
-                  (-> consumed-message :headers :message-id)))
+                   (str/join \space ["Messages differ: "
+                                     (pprint (data/diff peeked consumed))])))
                (recur (inc counter)))
              (do
                (log/errorf
-                (str/join
-                 \space ["Task returned nil/false,"
-                         "not consuming message %s and instead exiting"])
-                counter)
-               peeked-message)))
+                 (str/join
+                   \space ["Task returned nil/false,"
+                           "not consuming message %s and instead exiting"])
+                 counter)
+               peeked)))
        (recur counter))))
   ([connection queue]
    (listen-and-consume-from-queue connection queue identity)))
