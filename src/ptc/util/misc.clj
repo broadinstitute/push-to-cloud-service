@@ -90,8 +90,8 @@
   "Nil or the JSON in FILE."
   [file]
   (do-or-nil
-    (with-open [^java.io.Reader in (io/reader file)]
-      (json/read in :key-fn keyword))))
+   (with-open [^java.io.Reader in (io/reader file)]
+     (json/read in :key-fn keyword))))
 
 (def uuid-nil
   "The nil UUID."
