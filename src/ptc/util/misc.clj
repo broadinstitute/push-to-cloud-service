@@ -86,18 +86,12 @@
   {"Authorization"
    (str "Bearer" \space (shell! "gcloud" "auth" "print-access-token"))})
 
-(defn message-ids-equal?
-  "True when the IDs of MESSAGES are the same. Otherwise false."
-  [& messages]
-  (or (empty? messages)
-      (apply = (map (comp :message-id :headers) messages))))
-
 (defn slurp-json
   "Nil or the JSON in FILE."
   [file]
   (do-or-nil
-   (with-open [^java.io.Reader in (io/reader file)]
-     (json/read in :key-fn keyword))))
+    (with-open [^java.io.Reader in (io/reader file)]
+      (json/read in :key-fn keyword))))
 
 (def uuid-nil
   "The nil UUID."
