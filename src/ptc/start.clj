@@ -51,8 +51,9 @@
         (.start connection)
         (log/infof "Browser: attempting to peek message.")
         (let [msg-enum (.getEnumeration browser)]
-          (when (.hasMoreElements msg-enum)
-            (.nextElement msg-enum)))))))
+          (while (not (.hasMoreElements msg-enum))
+            (Thread/sleep 10000))
+          (.nextElement msg-enum))))))
 
 (defn produce
   "Enqueue the TEXT with PROPERTIES map to JMS QUEUE through CONNECTION."
@@ -98,15 +99,14 @@
   ([connection queue]
    (listen-and-consume-from-queue identity connection queue)))
 
-(defn trace [msg] (misc/trace msg) false)
-
 (defn message-loop
   "Loop with a JMS connection in ENVIRONMENT."
   [environment]
   (while true
     (try
       (with-push-to-cloud-jms-connection
-        environment (partial listen-and-consume-from-queue trace))
+        environment
+        listen-and-consume-from-queue)
       (catch Throwable x
         (log/error x "caught in message-loop")))))
 
@@ -115,7 +115,3 @@
   (let [environment (or (System/getenv "environment") "dev")]
     (log/infof "%s starting up on %s" ptc/the-name environment)
     (message-loop environment)))
-
-(comment
-  (-main)
-  )
