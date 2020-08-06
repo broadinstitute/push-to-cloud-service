@@ -88,31 +88,31 @@
 (deftest push-notification-for-jms
   (let [path     [::jms/Properties :payload :workflow]
         push     (-> jms/notification-keys->jms-keys
-                   ((juxt ::jms/chip ::jms/push))
-                   (->> (apply merge))
-                   keys
-                   (->> (apply juxt)))
+                     ((juxt ::jms/chip ::jms/push))
+                     (->> (apply merge))
+                     keys
+                     (->> (apply juxt)))
         bad      (fix-paths "./test/data/bad-jms.edn")
         good     (fix-paths "./test/data/good-jms.edn")
         missing  (-> good (data/diff bad) first (get-in path) keys first
-                   (->> (str jms/missing-keys-message ".*"))
-                   re-pattern)
+                     (->> (str jms/missing-keys-message ".*"))
+                     re-pattern)
         workflow (get-in good path)]
     (with-temporary-gcs-folder folder
       (with-test-jms-connection
         (fn [connection queue]
           (testing "a BAD message"
             (start/produce connection queue
-              "BAD" (::jms/Properties (jms/encode bad)))
+                           "BAD" (::jms/Properties (jms/encode bad)))
             (let [msg (start/consume connection queue)]
               (is (thrown-with-msg? IllegalArgumentException missing
-                    (jms/handle-message folder msg)))
+                                    (jms/handle-message folder msg)))
               (is (empty? (->> folder
-                            gcs/parse-gs-url
-                            (apply gcs/list-objects))))))
+                               gcs/parse-gs-url
+                               (apply gcs/list-objects))))))
           (testing "a GOOD message"
             (start/produce connection queue
-              "GOOD" (::jms/Properties (jms/encode good)))
+                           "GOOD" (::jms/Properties (jms/encode good)))
             (let [msg (start/consume connection queue)
                   [params ptc] (jms/handle-message folder msg)
                   {:keys [notifications] :as request} (gcs-edn ptc)
@@ -134,13 +134,13 @@
         blame   (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")
         message (fix-paths "./test/data/good-jms.edn")]
     (letfn [(make [n] (-> message
-                        (assoc-in where n)
-                        jms/encode
-                        ::jms/Properties))]
+                          (assoc-in where n)
+                          jms/encode
+                          ::jms/Properties))]
       (start/with-push-to-cloud-jms-connection "dev"
         (fn [connection queue]
           (run! (partial start/produce connection queue blame)
-            (map make (range 1 (inc n)))))))))
+                (map make (range 1 (inc n)))))))))
 
 (defn -main
   [& args]

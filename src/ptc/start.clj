@@ -85,15 +85,15 @@
                (log/infof "Task complete, consumed message %s" counter)
                (if (not (= peeked consumed))
                  (log/warnf
-                   (str/join \space ["Messages differ:"
-                                     (pprint (data/diff peeked consumed))])))
+                  (str/join \space ["Messages differ:"
+                                    (pprint (data/diff peeked consumed))])))
                (recur (inc counter)))
              (do
                (log/errorf
-                 (str/join
-                   \space ["Task returned nil/false,"
-                           "not consuming message %s and instead exiting"])
-                 counter)
+                (str/join
+                 \space ["Task returned nil/false,"
+                         "not consuming message %s and instead exiting"])
+                counter)
                peeked)))
        (recur counter))))
   ([connection queue]
