@@ -156,17 +156,19 @@
   [message]
   (letfn [(headerify [m [k v]] (assoc m k (v message)))
           (unjsonify [s] (json/read-str s :key-fn keyword))]
-    (let [raw (into {} (.getProperties message))
-          keyed (zipmap (map keyword (keys raw)) (vals raw))]
-      {::Headers    (reduce headerify {} header-map)
-       ::Properties (update keyed :payload unjsonify)})))
+    (let [headers {::Headers (reduce headerify {} header-map)}
+          raw     (into {} (.getProperties message))
+          keyed   (zipmap (map keyword (keys raw)) (vals raw))]
+      (if (:payload keyed)
+        (assoc headers ::Properties (update keyed :payload unjsonify))
+        headers))))
 
 (defn encode
   "Encode EDN MESSAGE ::Properties :payload for a PTC JMS message."
   [{:keys [::Properties] :as message}]
   (letfn [(jsonify [payload] (json/write-str payload
-                                             :escape-js-separators false
-                                             :escape-slash false))]
+                               :escape-js-separators false
+                               :escape-slash false))]
     (assoc message ::Properties (update Properties :payload jsonify))))
 
 (def missing-keys-message "Missing JMS keys:") ; for tests
@@ -179,6 +181,6 @@
         missing (keep missing? required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
-              (str/join \space [missing-keys-message (vec missing)]))))
+               (str/join \space [missing-keys-message (vec missing)]))))
     [(push-params prefix workflow)
      (push-append-to-aou-request prefix workflow)]))
