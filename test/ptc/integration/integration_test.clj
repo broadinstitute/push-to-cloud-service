@@ -28,13 +28,6 @@
   "Storage bucket for running ptc.integration test with."
   "broad-gotc-dev-zero-test")
 
-(defn cleanup-object-test
-  "Clean up the testing bucket after the FILE-test."
-  [file]
-  (doseq [object (map :name (gcs/list-objects bucket))]
-    (when (= (:name file) object)
-      (gcs/delete-object bucket object))))
-
 (deftest integration
   (let [prefix (str "test/" (UUID/randomUUID))
         properties (::jms/Properties (jms/encode message))]
@@ -46,7 +39,7 @@
                       (is (= prefix (:name upload)))
                       (is (= bucket (:bucket upload)))
                       (is (= [upload] (gcs/list-objects bucket prefix))))))
-                (finally (cleanup-object-test prefix)))
+                (finally (gcs/delete-object bucket prefix)))
               false)
             (flow [connection queue]
               (start/produce connection queue "text" properties)
