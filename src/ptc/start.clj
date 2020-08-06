@@ -14,7 +14,7 @@
   "Call (use connection queue) for the JMS queue in ENVIRONMENT."
   [environment use]
   (let [path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
-        {:keys [url username password queue]} (misc/trace (misc/vault-secrets path))
+        {:keys [url username password queue]} (misc/vault-secrets path)
         factory (new ActiveMQSslConnectionFactory url)]
     (with-open [connection (.createQueueConnection factory username password)]
       (use connection queue))))
@@ -98,7 +98,7 @@
   ([connection queue]
    (listen-and-consume-from-queue identity connection queue)))
 
-(defn trace [msg] (do (misc/trace msg) false))
+(defn trace [msg] (misc/trace msg) false)
 
 (defn message-loop
   "Loop with a JMS connection in ENVIRONMENT."
@@ -107,10 +107,8 @@
     (try
       (with-push-to-cloud-jms-connection
         environment (partial listen-and-consume-from-queue trace))
-      #_(catch JMSException e
-          (log/error e "JMS-specific exception stopped message-loop"))
-      #_(catch Throwable e
-          (log/error e "General throwable stopped message-loop")))))
+      (catch Throwable x
+        (log/error x "caught in message-loop")))))
 
 (defn -main
   []
