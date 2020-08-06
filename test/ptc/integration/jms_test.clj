@@ -141,3 +141,8 @@
         (fn [connection queue]
           (run! (partial start/produce connection queue blame)
             (map make (range 1 (inc n)))))))))
+
+(defn -main
+  [& args]
+  (let [n (edn/read-string (first args))]
+    (queue-messages n)))
