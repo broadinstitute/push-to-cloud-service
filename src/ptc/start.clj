@@ -5,6 +5,7 @@
             [clojure.string        :as str]
             [clojure.tools.logging :as log]
             [ptc.ptc               :as ptc]
+            [ptc.util.jms          :as jms]
             [ptc.util.misc         :as misc])
   (:import [javax.jms TextMessage DeliveryMode Session JMSException]
            [org.apache.activemq ActiveMQSslConnectionFactory]))
@@ -13,7 +14,7 @@
   "Call (use connection queue) for the JMS queue in ENVIRONMENT."
   [environment use]
   (let [path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
-        {:keys [url username password queue]} (misc/vault-secrets path)
+        {:keys [url username password queue]} (misc/trace (misc/vault-secrets path))
         factory (new ActiveMQSslConnectionFactory url)]
     (with-open [connection (.createQueueConnection factory username password)]
       (use connection queue))))
@@ -71,38 +72,33 @@
                   (.commit session)))))]
     (send connection queue)))
 
-(defn parse-message
-  "Parse the JMS MESSAGE."
-  [^TextMessage message]
-  (let [parsed {:headers (.getText message)}]
-    (assoc parsed :properties
-           (into {} (for [[k v] (.getProperties message)] [k v])))))
-
 (defn listen-and-consume-from-queue
   "Listen to QUEUE on CONNECTION for messages,
   and call (TASK! message) until it is false."
-  ([connection queue task!]
+  ([task! connection queue]
    (loop [counter 0]
-     (if-let [peeked (parse-message (peek-message connection queue))]
+     (if-let [peeked (jms/ednify (peek-message connection queue))]
        (do (log/infof "Peeked message %s: %s" counter peeked)
            (if (task! peeked)
-             (let [consumed (parse-message (consume connection queue))]
+             (let [consumed (jms/ednify (consume connection queue))]
                (log/infof "Task complete, consumed message %s" counter)
                (if (not (= peeked consumed))
                  (log/warnf
-                  (str/join \space ["Messages differ: "
-                                    (pprint (data/diff peeked consumed))])))
+                   (str/join \space ["Messages differ:"
+                                     (pprint (data/diff peeked consumed))])))
                (recur (inc counter)))
              (do
                (log/errorf
-                (str/join
-                 \space ["Task returned nil/false,"
-                         "not consuming message %s and instead exiting"])
-                counter)
+                 (str/join
+                   \space ["Task returned nil/false,"
+                           "not consuming message %s and instead exiting"])
+                 counter)
                peeked)))
        (recur counter))))
   ([connection queue]
-   (listen-and-consume-from-queue connection queue identity)))
+   (listen-and-consume-from-queue identity connection queue)))
+
+(defn trace [msg] (do (misc/trace msg) false))
 
 (defn message-loop
   "Loop with a JMS connection in ENVIRONMENT."
@@ -110,14 +106,18 @@
   (while true
     (try
       (with-push-to-cloud-jms-connection
-        environment listen-and-consume-from-queue)
-      (catch JMSException e
-        (log/error e "JMS-specific exception stopped message-loop"))
-      (catch Throwable e
-        (log/error e "General throwable stopped message-loop")))))
+        environment (partial listen-and-consume-from-queue trace))
+      #_(catch JMSException e
+          (log/error e "JMS-specific exception stopped message-loop"))
+      #_(catch Throwable e
+          (log/error e "General throwable stopped message-loop")))))
 
 (defn -main
   []
   (let [environment (or (System/getenv "environment") "dev")]
     (log/infof "%s starting up on %s" ptc/the-name environment)
     (message-loop environment)))
+
+(comment
+  (-main)
+  )
