@@ -126,3 +126,23 @@
               (is (== 2 (count diff)))
               (is (=    diff            (set [params ptc])))
               (is (=    (jms/jms->params workflow) (gcs-cat params))))))))))
+
+(defn queue-messages
+  "Queue N messages to the 'dev' queue."
+  [n]
+  (let [where   [::jms/Properties :payload :workflow :analysisCloudVersion]
+        blame   (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")
+        message (fix-paths "./test/data/good-jms.edn")]
+    (letfn [(make [n] (-> message
+                          (assoc-in where n)
+                          jms/encode
+                          ::jms/Properties))]
+      (start/with-push-to-cloud-jms-connection "dev"
+        (fn [connection queue]
+          (run! (partial start/produce connection queue blame)
+                (map make (range 1 (inc n)))))))))
+
+(defn -main
+  [& args]
+  (let [n (edn/read-string (first args))]
+    (queue-messages n)))

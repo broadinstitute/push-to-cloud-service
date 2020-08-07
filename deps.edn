@@ -14,9 +14,9 @@
            org.apache.commons/commons-email          {:mvn/version "1.5"}
            com.google.cloud/google-cloud-storage     {:mvn/version "1.108.0"}}
 
- :aliases {:test   {:extra-paths ["test"]
-                    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.0.629"}}
-                    :main-opts   ["-m" "kaocha.runner"]}
+ :aliases {:test {:extra-paths ["test"]
+                  :extra-deps  {lambdaisland/kaocha {:mvn/version "1.0.629"}}
+                  :main-opts   ["-m" "kaocha.runner"]}
            :build  {:extra-deps  {uberdeps {:mvn/version "0.1.10"}}
                     :main-opts   ["-e" "(compile,'ptc.start)"
                                   "-m" "uberdeps.uberjar"
@@ -25,5 +25,7 @@
            :lint   {:extra-deps  {cljfmt {:mvn/version "0.6.8"}}
                     :main-opts   ["-m" "cljfmt.main" "check"]}
            :format {:extra-deps  {cljfmt {:mvn/version "0.6.8"}}
-                    :main-opts   ["-m" "cljfmt.main" "fix"]}}
+                    :main-opts   ["-m" "cljfmt.main" "fix"]}
+           :queue  {:extra-paths ["test"]
+                    :main-opts   ["-m" "ptc.integration.jms-test"]}}
  }

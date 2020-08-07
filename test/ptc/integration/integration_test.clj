@@ -1,9 +1,10 @@
 (ns ptc.integration.integration-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [clojure.edn :as edn]
-            [clojure.walk :as walk]
-            [ptc.start :as start]
-            [ptc.util.gcs    :as gcs])
+  (:require [clojure.test  :refer [deftest is testing]]
+            [clojure.edn   :as edn]
+            [clojure.walk  :as walk]
+            [ptc.start     :as start]
+            [ptc.util.gcs  :as gcs]
+            [ptc.util.jms  :as jms])
   (:import [org.apache.activemq ActiveMQSslConnectionFactory]
            (java.util UUID)))
 
@@ -21,69 +22,42 @@
 
 (def message
   "Example JMS message for testing."
-  (edn/read-string (slurp "test/data/test_msg.edn")))
+  (edn/read-string (slurp "test/data/good-jms.edn")))
 
-(def testing-bucket
+(def bucket
   "Storage bucket for running ptc.integration test with."
   "broad-gotc-dev-zero-test")
 
-(defn cleanup-object-test
-  "Clean up the testing bucket after the FILE-test."
-  [file]
-  (doseq [object (map :name (gcs/list-objects testing-bucket))]
-    (when (= (:name file) object)
-      (gcs/delete-object testing-bucket object))))
-
-(defn lazy-contains? [coll x]
-  (some #(= x %) coll))
-
 (deftest integration
-  (let [object {:name (str "test/" (UUID/randomUUID)) :contentType "text/plain"}
-        test-file "deps.edn"
-        message-text  (prn-str             (:headers message))
-        message-props (walk/stringify-keys (:properties message))]
-    (letfn [(custom-task [_]
+  (let [prefix (str "test/" (UUID/randomUUID))
+        properties (::jms/Properties (jms/encode message))]
+    (letfn [(task [_]
               (try
                 (testing "end-to-end: "
                   (testing "upload a file to the bucket"
-                    (let [result (gcs/upload-file test-file testing-bucket (:name object))]
-                      (is (= object (select-keys result (keys object))))
-                      (is (= testing-bucket (:bucket result)))))
-                  (testing "uploaded object can be found with list-objects"
-                    (let [result (gcs/list-objects testing-bucket)]
-                      (is (= true (lazy-contains? (map (fn [x] (select-keys x (keys object))) result) object))))))
-                (finally (cleanup-object-test object)))
-              ;; return false to break the loop
-              false)]
-      (if-let [parsed-msg (with-test-jms-connection
-                            (fn [connection queue]
-                              (start/produce connection queue message-text message-props)
-                              (start/listen-and-consume-from-queue connection queue custom-task)))]
-        (testing "Message is not nil and can be properly read"
-          (is (= message-text
-                 (:headers parsed-msg)))
-          (doseq [[k v] (:properties parsed-msg)]
-            (is (= (get message-props k)
-                   v))))
-        (is false)))))
+                    (let [upload (gcs/upload-file "deps.edn" bucket prefix)]
+                      (is (= prefix (:name upload)))
+                      (is (= bucket (:bucket upload)))
+                      (is (= [upload] (gcs/list-objects bucket prefix))))))
+                (finally (gcs/delete-object bucket prefix)))
+              false)
+            (flow [connection queue]
+              (start/produce connection queue "text" properties)
+              (start/listen-and-consume-from-queue task connection queue))]
+      (testing "Message is not nil and can be properly read"
+        (if-let [msg (with-test-jms-connection flow)]
+          (is (= message (select-keys msg [::jms/Properties])))
+          (is false))))))
 
 (deftest peeking
-  (let [message-text (prn-str (:headers message))
-        message-props (walk/stringify-keys (:properties message))]
-    (letfn [(custom-task [message]
-              (testing "Message given to task isn't nil"
-                (is (not (nil? message))))
-              ;; return false to break the loop (as if the task failed)
-              false)]
+  (let [properties (::jms/Properties (jms/encode message))]
+    (letfn [(task [message] (is message) false)]
       (with-test-jms-connection
         (fn [connection queue]
-          (start/produce connection queue message-text message-props)
-          (start/listen-and-consume-from-queue connection queue custom-task)
+          (testing "Message given to task isn't nil"
+            (start/produce connection queue "text" properties)
+            (start/listen-and-consume-from-queue task connection queue))
           (testing "The message was only peeked and can still be consumed"
-            (let [message (start/parse-message (start/consume connection queue))]
+            (let [msg (jms/ednify (start/consume connection queue))]
               (testing "Message is not nil and can be properly read"
-                (is (= message-text
-                       (:headers message)))
-                (doseq [[k v] (:properties message)]
-                  (is (= (get message-props k)
-                         v)))))))))))
+                (is (= message (select-keys msg [::jms/Properties])))))))))))
