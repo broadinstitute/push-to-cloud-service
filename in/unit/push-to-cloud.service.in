@@ -4,10 +4,12 @@ After=network.target
 StartLimitIntervalSec=0
 
 [Service]
-ExecStart=%INSTALL_PREFIX%/bin/start
+EnvironmentFile=-/etc/sysconfig/push-to-cloud
+ExecStart=java -cp %PTC_BIN clojure.main -m ptc.start
 Restart=Always
 RestartSec=1
 SuccessExitStatus=143
+User=${USER}
 
 [Install]
 WantedBy=default.target
