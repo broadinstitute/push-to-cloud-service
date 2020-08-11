@@ -7,7 +7,7 @@
             [clojure.string    :as str]
             [clojure.test      :refer [deftest is testing]]
             [ptc.start         :as start]
-            [ptc.util.gcs      :as gcs]
+            [ptc.tools.gcs      :as gcs]
             [ptc.util.jms      :as jms]
             [ptc.util.misc     :as misc])
   (:import [java.util UUID]

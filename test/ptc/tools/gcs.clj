@@ -1,4 +1,4 @@
-(ns ptc.util.gcs
+(ns ptc.tools.gcs
   "Utility functions for Google Cloud Storage shared across this program."
   (:require [clojure.pprint    :refer [pprint]]
             [clojure.data.json :as json]
