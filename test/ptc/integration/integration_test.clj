@@ -1,9 +1,8 @@
 (ns ptc.integration.integration-test
   (:require [clojure.test  :refer [deftest is testing]]
             [clojure.edn   :as edn]
-            [clojure.walk  :as walk]
             [ptc.start     :as start]
-            [ptc.util.gcs  :as gcs]
+            [ptc.tools.gcs  :as gcs]
             [ptc.util.jms  :as jms])
   (:import [org.apache.activemq ActiveMQSslConnectionFactory]
            (java.util UUID)))

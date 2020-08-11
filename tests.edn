@@ -7,5 +7,5 @@
                         :kaocha/ns-patterns ["ptc\\.integration\\..*-test$"]}]
 
      :color?          true
-     :reporter        [kaocha.report.progress/report]
+     :reporter        [kaocha.report/documentation]
      :capture-output? true}
