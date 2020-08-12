@@ -77,6 +77,3 @@
           (let [workflow-timeout 1800000
                 result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
             (is (= result "Succeeded"))))))))
-
-(comment
-  (test-end-to-end))
