@@ -20,6 +20,7 @@ main() {
 
     sed "s|%PTC_BIN|${LIB_DIR}/push-to-cloud.jar|" \
         in/unit/push-to-cloud.service.in > ${UNIT_DIR}/push-to-cloud.service \
+        && sed -i '/User=ptc/d' ${UNIT_DIR}/push-to-cloud.service \
         && systemctl --user daemon-reload
 }
 
