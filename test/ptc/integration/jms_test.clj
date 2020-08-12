@@ -1,5 +1,5 @@
 (ns ptc.integration.jms-test
-  (:require [clojure.data      :as data]
+  (:require [clojure.data :as data]
             [clojure.data.json :as json]
             [clojure.edn       :as edn]
             [clojure.java.io   :as io]
@@ -44,9 +44,9 @@
 (defn with-test-jms-connection
   "CALL with a local JMS connection for testing."
   [call]
-  (let [url     "vm://localhost?broker.persistent=false"
+  (let [url "vm://localhost?broker.persistent=false"
         factory (new ActiveMQSslConnectionFactory url)
-        queue   "test.queue"]
+        queue "test.queue"]
     (with-open [connection (.createQueueConnection factory)]
       (call connection queue))))
 
@@ -66,9 +66,9 @@
   (letfn [(canonicalize [file] (-> file io/file .getCanonicalPath io/file))]
     (let [{:keys [::jms/chip ::jms/push]} jms/notification-keys->jms-keys
           push-keys (vals (merge chip push))
-          infile    (canonicalize file)
-          dir       (io/file (.getParent infile))
-          content   (edn/read-string (slurp infile))]
+          infile (canonicalize file)
+          dir (io/file (.getParent infile))
+          content (edn/read-string (slurp infile))]
       (letfn [(one [leaf] (.getCanonicalPath (io/file dir leaf)))
               (all [workflow]
                 (let [old (select-keys workflow push-keys)]
@@ -86,17 +86,17 @@
   (-> url gcs-cat (json/read-str :key-fn keyword)))
 
 (deftest push-notification-for-jms
-  (let [path     [::jms/Properties :payload :workflow]
-        push     (-> jms/notification-keys->jms-keys
-                     ((juxt ::jms/chip ::jms/push))
-                     (->> (apply merge))
-                     keys
-                     (->> (apply juxt)))
-        bad      (fix-paths "./test/data/bad-jms.edn")
-        good     (fix-paths "./test/data/good-jms.edn")
-        missing  (-> good (data/diff bad) first (get-in path) keys first
-                     (->> (str jms/missing-keys-message ".*"))
-                     re-pattern)
+  (let [path [::jms/Properties :payload :workflow]
+        push (-> jms/notification-keys->jms-keys
+                 ((juxt ::jms/chip ::jms/push))
+                 (->> (apply merge))
+                 keys
+                 (->> (apply juxt)))
+        bad (fix-paths "./test/data/bad-jms.edn")
+        good (fix-paths "./test/data/good-jms.edn")
+        missing (-> good (data/diff bad) first (get-in path) keys first
+                    (->> (str jms/missing-keys-message ".*"))
+                    re-pattern)
         workflow (get-in good path)]
     (with-temporary-gcs-folder folder
       (with-test-jms-connection
@@ -118,31 +118,32 @@
                   {:keys [notifications] :as request} (gcs-edn ptc)
                   pushed (push (first notifications))
                   gcs (list-gcs-folder folder)
-                  union (set/union      (set gcs) (set pushed))
-                  diff  (set/difference (set gcs) (set pushed))]
-              (is (==   (count pushed)  (count (set pushed))))
-              (is (==   (count gcs)     (count (set gcs))))
-              (is (==   (count union)   (count (set gcs))))
+                  union (set/union (set gcs) (set pushed))
+                  diff (set/difference (set gcs) (set pushed))]
+              (is (== (count pushed) (count (set pushed))))
+              (is (== (count gcs) (count (set gcs))))
+              (is (== (count union) (count (set gcs))))
               (is (== 2 (count diff)))
-              (is (=    diff            (set [params ptc])))
-              (is (=    (jms/jms->params workflow) (gcs-cat params))))))))))
+              (is (= diff (set [params ptc])))
+              (is (= (jms/jms->params workflow) (gcs-cat params))))))))))
 
 (defn queue-messages
   "Queue N messages to the 'dev' queue."
-  [n]
-  (let [where   [::jms/Properties :payload :workflow :analysisCloudVersion]
-        blame   (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")
-        message (fix-paths "./test/data/good-jms.edn")]
+  [n message env]
+  (let [where [::jms/Properties :payload :workflow :analysisCloudVersion]
+        blame (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")]
     (letfn [(make [n] (-> message
                           (assoc-in where n)
                           jms/encode
                           ::jms/Properties))]
-      (start/with-push-to-cloud-jms-connection "dev"
+      (start/with-push-to-cloud-jms-connection env
         (fn [connection queue]
           (run! (partial start/produce connection queue blame)
                 (map make (range 1 (inc n)))))))))
 
 (defn -main
   [& args]
-  (let [n (edn/read-string (first args))]
-    (queue-messages n)))
+  (let [n (edn/read-string (first args))
+        message (fix-paths "./test/data/good-jms.edn")
+        env "dev"]
+    (queue-messages n message env)))

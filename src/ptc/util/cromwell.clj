@@ -39,7 +39,7 @@
           now (status cromwell-url id)]
       (if (#{"Submitted" "Running"} now)
         (do (log/infof "%s: Sleeping %s seconds on status: %s"
-                   id seconds now)
+                       id seconds now)
             (misc/sleep-seconds seconds)
             (recur cromwell-url id))
         (status cromwell-url id)))))
