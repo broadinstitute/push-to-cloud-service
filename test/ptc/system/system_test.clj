@@ -1,11 +1,10 @@
 (ns ptc.system.system-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.set :as set]
-            [clj-http.client :as client]
             [ptc.start :as start]
-            [ptc.util.cromwell :as cromwell]
+            [ptc.tools.cromwell :as cromwell]
+            [ptc.tools.wfl :as wfl]
             [ptc.util.jms :as jms]
-            [ptc.util.misc :as misc]
             [ptc.integration.jms-test :as jms-test])
   (:import [java.util UUID]))
 
@@ -21,47 +20,8 @@
 (def wfl-url
   "https://workflow-launcher.gotc-dev.broadinstitute.org")
 
-(defn get-aou-workloads
-  "Query WFL for AllOfUsArrays workloads"
-  [wfl-url]
-  (let [auth-header (misc/get-auth-header!)
-        response (client/get (str wfl-url "/api/v1/workload")
-                             {:headers auth-header})]
-    (letfn [(array-workload? [workload]
-              (= (:pipeline workload) "AllOfUsArrays"))]
-      (->> (:body response)
-           (misc/parse-json-string)
-           (filter array-workload?)))))
-
-(defn is-aou-workflow?
-  [chipwell-barcode analysis-version workflow]
-  (and (= (:chip_well_barcode workflow) chipwell-barcode)
-       (= (:analysis_version_number workflow) analysis-version)))
-
-(defn get-workflow-id
-  [wfl-url chipwell-barcode analysis-version]
-  (remove nil? (for [workload (get-aou-workloads wfl-url)]
-                 (let [workflows (:workflows workload)]
-                   (if (seq workflows)
-                     (->> workflows
-                          (filter #(is-aou-workflow? chipwell-barcode analysis-version %))
-                          (first)
-                          (:uuid)))))))
-
-(defn wait-for-workflow-creation
-  [wfl-url chipwell-barcode analysis-version]
-  (loop [wfl-url wfl-url
-         chipwell-barcode chipwell-barcode
-         analysis-version analysis-version]
-    (let [seconds 15
-          workflow-id (get-workflow-id wfl-url chipwell-barcode analysis-version)]
-      (if (nil? (first workflow-id))
-        (do (print "Sleeping %s seconds" seconds)
-            (misc/sleep-seconds seconds)
-            (recur wfl-url chipwell-barcode analysis-version))
-        (first (get-workflow-id wfl-url chipwell-barcode analysis-version))))))
-
 (defn timeout
+  "Timeout FUNCTION after MILLISECONDS."
   [milliseconds function]
   (let [f (future (function))
         return (deref f milliseconds ::timed-out)]
@@ -70,6 +30,7 @@
     return))
 
 (defn queue-message-placeholder
+  "Upload files to FOLDER in MESSAGE using a test jms connection."
   [folder message]
   (jms-test/with-test-jms-connection
     (fn [connection queue]
@@ -105,7 +66,7 @@
       (is (== 2 (count diff)))
       ;(is (= diff (set [params ptc])))
       ;(is (= (jms/jms->params workflow) (gcs-cat params)))
-      (let [workflow-id (timeout 300000 #(wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
+      (let [workflow-id (timeout 300000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
         (println (str "Found workflow: " workflow-id))
         (let [workflow-timeout 1800000
               result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
