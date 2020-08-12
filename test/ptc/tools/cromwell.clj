@@ -10,17 +10,17 @@
   [cromwell-url id]
   (let [auth-header (misc/get-auth-header!)
         response (client/get (str cromwell-url "/api/workflows/v1/" id "/status")
-                   {:headers auth-header})]
+                             {:headers auth-header})]
     (->> (:body response)
-      (misc/parse-json-string)
-      (:status))))
+         (misc/parse-json-string)
+         (:status))))
 
 (defn query
   "Query for a workflow with ID at CROMWELL-URL."
   [cromwell-url id]
   (let [auth-header (misc/get-auth-header!)
         response (client/get (str cromwell-url "/api/workflows/v1/" id "/query")
-                   {:headers auth-header})]
+                             {:headers auth-header})]
     (->> (:body response)
-      (misc/parse-json-string)
-      (:results))))
+         (misc/parse-json-string)
+         (:results))))

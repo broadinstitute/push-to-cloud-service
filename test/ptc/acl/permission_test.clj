@@ -25,11 +25,11 @@
   "Generate auth header from the ACL test user service account."
   []
   (let [token (some-> test-user misc/vault-secrets (:value) .getBytes
-                io/input-stream GoogleCredentials/fromStream
-                (.createScoped ["https://www.googleapis.com/auth/cloud-platform"
-                                "https://www.googleapis.com/auth/userinfo.email"
-                                "https://www.googleapis.com/auth/userinfo.profile"])
-                .refreshAccessToken .getTokenValue)]
+                      io/input-stream GoogleCredentials/fromStream
+                      (.createScoped ["https://www.googleapis.com/auth/cloud-platform"
+                                      "https://www.googleapis.com/auth/userinfo.email"
+                                      "https://www.googleapis.com/auth/userinfo.profile"])
+                      .refreshAccessToken .getTokenValue)]
     {"Authorization" (str/join \space ["Bearer" token])}))
 
 (deftest bucket-permission-test
@@ -39,21 +39,21 @@
         (hash (gcs/list-objects aou-bucket)))
       (catch Exception e
         (is (= 403 (:status (ex-data e)))
-          "The user is able to list the bucket!!"))))
+            "The user is able to list the bucket!!"))))
   (testing "Unauthorized user cannot upload object to the PTC bucket."
     (try
       (with-redefs [misc/get-auth-header! get-test-user-header]
         (hash (gcs/upload-file "deps.edn" aou-bucket "deps.edn")))
       (catch Exception e
         (is (= 403 (:status (ex-data e)))
-          "The user is able to upload object to the bucket!!"))))
+            "The user is able to upload object to the bucket!!"))))
   (testing "Unauthorized user cannot delete object from the PTC bucket."
     (try
       (with-redefs [misc/get-auth-header! get-test-user-header]
         (hash (gcs/delete-object aou-bucket "deps.edn")))
       (catch Exception e
-        (is (contains? #{403 404} (:status (ex-data e)) )
-          "The user is able to delete object from the bucket!!")))))
+        (is (contains? #{403 404} (:status (ex-data e)))
+            "The user is able to delete object from the bucket!!")))))
 
 (deftest workflow-permission-test
   (testing "Unauthorized users cannot query for workflows in the AoU Cromwell."
@@ -62,11 +62,11 @@
         (hash (cromwell/query aou-cromwell misc/uuid-nil)))
       (catch Exception e
         (is (= 401 (:status (ex-data e)))
-          "The user is able to query for a workflow!!"))))
+            "The user is able to query for a workflow!!"))))
   (testing "Unauthorized users cannot get statuses of workflows in the AoU Cromwell."
     (try
       (with-redefs [misc/get-auth-header! get-test-user-header]
         (hash (cromwell/status aou-cromwell misc/uuid-nil)))
       (catch Exception e
         (is (= 401 (:status (ex-data e)))
-          "The user is able to get status of a workflow!!")))))
+            "The user is able to get status of a workflow!!")))))
