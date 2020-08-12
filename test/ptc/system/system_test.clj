@@ -69,14 +69,14 @@
         (is (== 2 (count diff)))
         (is (= diff (set [params ptc])))
         (is (= (jms/jms->params workflow) (jms-test/gcs-cat params)))))
-      (testing "Cromwell workflow is started by WFL"
-        (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
-          (is (not= workflow-id :ptc.system.system-test/timed-out))
-          (is (uuid? (UUID/fromString workflow-id)))
-          (testing "Cromwell workflow succeeds"
-            (let [workflow-timeout 1800000
-                  result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
-              (is (= result "Succeeded"))))))))
+    (testing "Cromwell workflow is started by WFL"
+      (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
+        (is (not= workflow-id :ptc.system.system-test/timed-out))
+        (is (uuid? (UUID/fromString workflow-id)))
+        (testing "Cromwell workflow succeeds"
+          (let [workflow-timeout 1800000
+                result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
+            (is (= result "Succeeded"))))))))
 
 (comment
   (test-end-to-end))
