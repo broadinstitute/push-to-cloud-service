@@ -1,4 +1,4 @@
-(ns ptc.integration.system-test
+(ns ptc.system.system-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.set :as set]
             [clj-http.client :as client]

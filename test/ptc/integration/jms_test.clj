@@ -129,7 +129,7 @@
 
 (defn queue-messages
   "Queue N messages to the 'dev' queue."
-  [n message env]
+  [n env message]
   (let [where [::jms/Properties :payload :workflow :analysisCloudVersion]
         blame (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")]
     (letfn [(make [n] (-> message
@@ -144,6 +144,6 @@
 (defn -main
   [& args]
   (let [n (edn/read-string (first args))
-        message (fix-paths "./test/data/good-jms.edn")
-        env "dev"]
-    (queue-messages n message env)))
+        env "dev"
+        message (fix-paths "./test/data/good-jms.edn")]
+    (queue-messages n env message)))
