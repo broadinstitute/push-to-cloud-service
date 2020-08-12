@@ -2,7 +2,6 @@
   "Frob JMS messages into upload actions and workflow parameters."
   (:require [clojure.data.json :as json]
             [clojure.string    :as str]
-            [ptc.util.gcs      :as gcs]
             [ptc.util.misc     :as misc]))
 
 (def cromwell

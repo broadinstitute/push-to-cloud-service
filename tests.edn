@@ -9,5 +9,5 @@
                         :kaocha/ns-patterns ["ptc\\.acl\\..*-test$"]}]
 
      :color?          true
-     :reporter        [kaocha.report.progress/report]
+     :reporter        [kaocha.report/documentation]
      :capture-output? true}
