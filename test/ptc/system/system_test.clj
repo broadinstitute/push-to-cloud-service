@@ -1,6 +1,7 @@
 (ns ptc.system.system-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.set :as set]
+            [clojure.tools.logging :as log]
             [ptc.start :as start]
             [ptc.tools.cromwell :as cromwell]
             [ptc.tools.wfl :as wfl]
@@ -18,7 +19,7 @@
   "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org")
 
 (def wfl-url
-  "https://workflow-launcher.gotc-dev.broadinstitute.org")
+  "https://dev-wfl.gotc-dev.broadinstitute.org")
 
 (defn timeout
   "Timeout FUNCTION after MILLISECONDS."
@@ -54,23 +55,28 @@
                  (->> (apply juxt)))]
     ;(jms-test/queue-messages 1 message environment)
     (queue-message-placeholder bucket message)
-    (let [ptc (str cloud-prefix "/ptc.json")
-          {:keys [notifications] :as request} (jms-test/gcs-edn ptc)
-          pushed (push (first notifications))
-          gcs (jms-test/list-gcs-folder bucket)
-          union (set/union (set gcs) (set pushed))
-          diff (set/difference (set gcs) (set pushed))]
-      (is (== (count pushed) (count (set pushed))))
-      (is (== (count gcs) (count (set gcs))))
-      (is (== (count union) (count (set gcs))))
-      (is (== 2 (count diff)))
-      ;(is (= diff (set [params ptc])))
-      ;(is (= (jms/jms->params workflow) (gcs-cat params)))
-      (let [workflow-id (timeout 300000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
-        (println (str "Found workflow: " workflow-id))
-        (let [workflow-timeout 1800000
-              result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
-          (is (= result "Succeeded")))))))
+    (testing "Files are uploaded to the input bucket"
+      (let [params (str cloud-prefix "/params.txt")
+            ptc (str cloud-prefix "/ptc.json")
+            {:keys [notifications] :as request} (jms-test/gcs-edn ptc)
+            pushed (push (first notifications))
+            gcs (jms-test/list-gcs-folder cloud-prefix)
+            union (set/union (set gcs) (set pushed))
+            diff (set/difference (set gcs) (set pushed))]
+        (is (== (count pushed) (count (set pushed))))
+        (is (== (count gcs) (count (set gcs))))
+        (is (== (count union) (count (set gcs))))
+        (is (== 2 (count diff)))
+        (is (= diff (set [params ptc])))
+        (is (= (jms/jms->params workflow) (jms-test/gcs-cat params)))))
+      (testing "Cromwell workflow is started by WFL"
+        (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
+          (is (not= workflow-id :ptc.system.system-test/timed-out))
+          (is (uuid? (UUID/fromString workflow-id)))
+          (testing "Cromwell workflow succeeds"
+            (let [workflow-timeout 1800000
+                  result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
+              (is (= result "Succeeded"))))))))
 
 (comment
   (test-end-to-end))

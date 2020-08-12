@@ -42,7 +42,7 @@
     (let [seconds 15
           workflow-id (get-workflow-id wfl-url chipwell-barcode analysis-version)]
       (if (nil? (first workflow-id))
-        (do (print "Sleeping %s seconds" seconds)
+        (do (log/infof "Sleeping %s seconds" seconds)
             (misc/sleep-seconds seconds)
             (recur wfl-url chipwell-barcode analysis-version))
         (first (get-workflow-id wfl-url chipwell-barcode analysis-version))))))
