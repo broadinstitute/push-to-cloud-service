@@ -11,13 +11,13 @@
            [org.apache.activemq ActiveMQSslConnectionFactory]))
 
 (defn with-push-to-cloud-jms-connection
-  "Call (use connection queue) for the JMS queue in ENVIRONMENT."
-  [environment use]
+  "Call (use connection queue) for the JMS queue in ENVIRONMENT with PUSH-TO as the parameter."
+  [environment push-to use]
   (let [path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
         {:keys [url username password queue]} (misc/vault-secrets path)
         factory (new ActiveMQSslConnectionFactory url)]
     (with-open [connection (.createQueueConnection factory username password)]
-      (use connection queue))))
+      (use connection queue push-to))))
 
 (defn create-session
   "Open a JMS session on CONNECTION, conditionally TRANSACTED?"
@@ -75,43 +75,49 @@
 
 (defn listen-and-consume-from-queue
   "Listen to QUEUE on CONNECTION for messages,
-  and call (TASK! message) until it is false."
-  ([task! connection queue]
-   (loop [counter 0]
-     (if-let [peeked (jms/ednify (peek-message connection queue))]
-       (do (log/infof "Peeked message %s: %s" counter peeked)
-           (if (task! peeked)
-             (let [consumed (jms/ednify (consume connection queue))]
-               (log/infof "Task complete, consumed message %s" counter)
-               (if (not (= peeked consumed))
-                 (log/warnf
-                  (str/join \space ["Messages differ:"
-                                    (pprint (data/diff peeked consumed))])))
-               (recur (inc counter)))
-             (do
-               (log/errorf
-                (str/join
-                 \space ["Task returned nil/false,"
-                         "not consuming message %s and instead exiting"])
-                counter)
-               peeked)))
-       (recur counter))))
-  ([connection queue]
-   (listen-and-consume-from-queue identity connection queue)))
+  and call (TASK! message) with PUSH-TO param
+  until it is false."
+  ([task! connection queue push-to]
+   (letfn [(task-push-to! [msg] ((partial task! push-to) msg))]
+     (loop [counter 0]
+       (if-let [peeked (peek-message connection queue)]
+         (let [ednified-peeked (jms/ednify peeked)]
+           (do (log/infof "Peeked message %s: %s" counter ednified-peeked)
+               (if (task-push-to! peeked)
+                 (let [consumed (jms/ednify (consume connection queue))]
+                   (log/infof "Task complete, consumed message %s" counter)
+                   (if (not (= ednified-peeked consumed))
+                     (log/warnf
+                      (str/join \space ["Messages differ:"
+                                        (pprint (data/diff ednified-peeked consumed))])))
+                   (recur (inc counter)))
+                 (do
+                   (log/errorf
+                    (str/join
+                     \space ["Task returned nil/false,"
+                             "not consuming message %s and instead exiting"])
+                    counter)
+                   ednified-peeked))))
+         (recur counter)))))
+  ([connection queue push-to]
+   (listen-and-consume-from-queue jms/handle-message connection queue push-to)))
 
 (defn message-loop
-  "Loop with a JMS connection in ENVIRONMENT."
-  [environment]
+  "Loop with a JMS connection in ENVIRONMENT that pushes data to PTC-BUCKET-NAME."
+  [environment push-to]
   (while true
     (try
       (with-push-to-cloud-jms-connection
         environment
+        push-to
         listen-and-consume-from-queue)
       (catch Throwable x
         (log/error x "caught in message-loop")))))
 
 (defn -main
   []
-  (let [environment (or (System/getenv "environment") "dev")]
+  (let [ptc-bucket-name (or (System/getenv "ptc_bucket_name") "broad-gotc-dev-zero-test")
+        push-to (misc/gs-url ptc-bucket-name)
+        environment (or (System/getenv "environment") "dev")]
     (log/infof "%s starting up on %s" ptc/the-name environment)
-    (message-loop environment)))
+    (message-loop environment push-to)))

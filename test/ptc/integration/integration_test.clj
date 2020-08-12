@@ -3,6 +3,7 @@
             [clojure.edn   :as edn]
             [ptc.start     :as start]
             [ptc.tools.gcs  :as gcs]
+            [ptc.util.misc  :as misc]
             [ptc.util.jms  :as jms])
   (:import [org.apache.activemq ActiveMQSslConnectionFactory]
            (java.util UUID)))
@@ -29,12 +30,13 @@
 
 (deftest integration
   (let [prefix (str "test/" (UUID/randomUUID))
-        properties (::jms/Properties (jms/encode message))]
-    (letfn [(task [_]
+        properties (::jms/Properties (jms/encode message))
+        push-to    (misc/gs-url bucket prefix)]
+    (letfn [(task [push-to _]
               (try
                 (testing "end-to-end: "
                   (testing "upload a file to the bucket"
-                    (let [upload (gcs/upload-file "deps.edn" bucket prefix)]
+                    (let [upload (gcs/upload-file "deps.edn" push-to)]
                       (is (= prefix (:name upload)))
                       (is (= bucket (:bucket upload)))
                       (is (= [upload] (gcs/list-objects bucket prefix))))))
@@ -42,20 +44,21 @@
               false)
             (flow [connection queue]
               (start/produce connection queue "text" properties)
-              (start/listen-and-consume-from-queue task connection queue))]
+              (start/listen-and-consume-from-queue task connection queue push-to))]
       (testing "Message is not nil and can be properly read"
         (if-let [msg (with-test-jms-connection flow)]
           (is (= message (select-keys msg [::jms/Properties])))
           (is false))))))
 
 (deftest peeking
-  (let [properties (::jms/Properties (jms/encode message))]
-    (letfn [(task [message] (is message) false)]
+  (let [properties (::jms/Properties (jms/encode message))
+        push-to    (misc/gs-url bucket "")]
+    (letfn [(task [push-to message] (is push-to) (is message) false)]
       (with-test-jms-connection
         (fn [connection queue]
           (testing "Message given to task isn't nil"
             (start/produce connection queue "text" properties)
-            (start/listen-and-consume-from-queue task connection queue))
+            (start/listen-and-consume-from-queue task connection queue push-to))
           (testing "The message was only peeked and can still be consumed"
             (let [msg (jms/ednify (start/consume connection queue))]
               (testing "Message is not nil and can be properly read"

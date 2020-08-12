@@ -173,7 +173,7 @@
 (def missing-keys-message "Missing JMS keys:") ; for tests
 
 (defn handle-message
-  "Throw or push to cloud at PREFIX all the files for JMS message."
+  "Throw or push to cloud at PREFIX all the files for un-ednified JMS message."
   [prefix jms]
   (let [workflow (get-in (ednify jms) [::Properties :payload :workflow])
         missing? (fn [k] (when (nil? (k workflow)) k))

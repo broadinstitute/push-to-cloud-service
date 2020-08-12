@@ -30,7 +30,7 @@
   "
   [uri & body]
   `(let [name# (str "ptc-test-" (UUID/randomUUID))
-         ~uri (gcs/gs-url gcs-test-bucket name#)]
+         ~uri (misc/gs-url gcs-test-bucket name#)]
      (try
        ~@body
        (finally
@@ -137,8 +137,8 @@
                           (assoc-in where n)
                           jms/encode
                           ::jms/Properties))]
-      (start/with-push-to-cloud-jms-connection "dev"
-        (fn [connection queue]
+      (start/with-push-to-cloud-jms-connection "dev" "bogus-bucket-url"
+        (fn [connection queue _]
           (run! (partial start/produce connection queue blame)
                 (map make (range 1 (inc n)))))))))
 

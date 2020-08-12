@@ -96,3 +96,18 @@
 (def uuid-nil
   "The nil UUID."
   (UUID/fromString "00000000-0000-0000-0000-000000000000"))
+
+(defn gs-url
+  "Format BUCKET and OBJECT into a gs://bucket/object URL."
+  ([bucket object]
+   (when-not (and (string?        bucket)
+                  (seq            bucket)
+                  (not-any? #{\/} bucket))
+     (let [fmt "The bucket (%s) must be a non-empty string."
+           msg (format fmt bucket)]
+       (throw (IllegalArgumentException. msg))))
+   (if (nil? object)
+     (str "gs://" bucket)
+     (str "gs://" bucket "/" object)))
+  ([bucket]
+   (gs-url bucket nil)))
