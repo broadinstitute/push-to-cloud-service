@@ -103,7 +103,7 @@
    (listen-and-consume-from-queue jms/handle-message connection queue push-to)))
 
 (defn message-loop
-  "Loop with a JMS connection in ENVIRONMENT that pushes data to PTC-BUCKET-NAME."
+  "Loop with a JMS connection in ENVIRONMENT that pushes data to PUSH-TO."
   [environment push-to]
   (while true
     (try
