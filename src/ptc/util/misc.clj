@@ -116,3 +116,9 @@
   "Parse the json string STR into a keyword-string map"
   [str]
   (json/read-str str :key-fn keyword))
+
+(defn message-ids-equal?
+  "True when the IDs of MESSAGES are the same. Otherwise false."
+  [& messages]
+  (or (empty? messages)
+    (apply = (map :properties messages))))

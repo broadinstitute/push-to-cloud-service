@@ -86,10 +86,10 @@
                (if (task-push-to! peeked)
                  (let [consumed (jms/ednify (consume connection queue))]
                    (log/infof "Task complete, consumed message %s" counter)
-                   (if (not (= ednified-peeked consumed))
+                   (if (not (misc/message-ids-equal? ednified-peeked consumed))
                      (log/warnf
                       (str/join \space ["Messages differ:"
-                                        (pprint (data/diff ednified-peeked consumed))])))
+                                        (with-out-str (pprint (data/diff ednified-peeked consumed)))])))
                    (recur (inc counter)))
                  (do
                    (log/errorf
