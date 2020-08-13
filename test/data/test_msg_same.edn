@@ -1,4 +1,4 @@
-; Like test_msg.edn but with different memory address and timestamp (so not conceptually equal to test_msg.edn)
+; Like test_msg.edn but with only different memory address, timestamp (so conceptually equal to test_msg.edn)
 {:headers {:readOnlyBody true,
            :redeliveryCounter 0,
            :arrival 0,
@@ -8,7 +8,7 @@
            :size 2810,
            :droppable false,
            :compressed false,
-           :brokerOutTime 1597344353047,
+           :brokerOutTime 1597344366123,
            :priority 4,
            :groupSequence 0,
            :readOnlyProperties true,
@@ -17,7 +17,7 @@
            :producerId "ID:wm8d7-5e4-56463-1597342355067-1:1:1:1",
            :destination "queue://wfl.broad.pushtocloud.enqueue.dev",
            :commandId 6,
-           :brokerInTime 1597342355456,
+           :brokerInTime 1597344366123,
            :marshalledProperties "org.apache.activemq.util.ByteSequence@3ba3f40d"},
  :properties {:action "start",
               :payload {:Zamboni {:workflow "IlluminaArraysWorkflow",
