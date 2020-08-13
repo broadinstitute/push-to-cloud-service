@@ -11,13 +11,13 @@
            [org.apache.activemq ActiveMQSslConnectionFactory]))
 
 (defn with-push-to-cloud-jms-connection
-  "Call (use connection queue) for the JMS queue in ENVIRONMENT with PUSH-TO as the parameter."
-  [environment push-to use]
+  "Call (use connection queue) for the JMS queue in ENVIRONMENT."
+  [environment use]
   (let [path (format "secret/dsde/gotc/%s/activemq/logins/zamboni" environment)
         {:keys [url username password queue]} (misc/vault-secrets path)
         factory (new ActiveMQSslConnectionFactory url)]
     (with-open [connection (.createQueueConnection factory username password)]
-      (use connection queue push-to))))
+      (use connection queue))))
 
 (defn create-session
   "Open a JMS session on CONNECTION, conditionally TRANSACTED?"
@@ -75,15 +75,14 @@
 
 (defn listen-and-consume-from-queue
   "Listen to QUEUE on CONNECTION for messages,
-  and call (TASK! message) with PUSH-TO param
-  until it is false."
-  ([task! connection queue push-to]
+  and call (TASK! message) until it is false."
+  ([task! connection queue]
    (loop [counter 0]
      (if-let [peeked (peek-message connection queue)]
        ; to avoid NPE on ednify
        (let [peeked (jms/ednify peeked)]
          (do (log/infof "Peeked message %s: %s" counter peeked)
-             (if (task! push-to peeked)
+             (if (task! peeked)
                (let [consumed (jms/ednify (consume connection queue))]
                  (log/infof "Task complete, consumed message %s" counter)
                  (if (not (misc/message-ids-equal? peeked consumed))
@@ -99,25 +98,25 @@
                    counter)
                  peeked))))
        (recur counter))))
-  ([connection queue push-to]
-   (listen-and-consume-from-queue jms/handle-message connection queue push-to)))
+  ([connection queue]
+   (let [ptc-bucket-name (or (System/getenv "ptc_bucket_name") "broad-gotc-dev-zero-test")
+         push-to (misc/gs-url ptc-bucket-name)
+         upload-sample! (fn [msg] (jms/handle-message push-to msg))]
+     (listen-and-consume-from-queue upload-sample! connection queue))))
 
 (defn message-loop
-  "Loop with a JMS connection in ENVIRONMENT that pushes data to PUSH-TO."
-  [environment push-to]
+  "Loop with a JMS connection in ENVIRONMENT."
+  [environment]
   (while true
     (try
       (with-push-to-cloud-jms-connection
         environment
-        push-to
         listen-and-consume-from-queue)
       (catch Throwable x
         (log/error x "caught in message-loop")))))
 
 (defn -main
   []
-  (let [ptc-bucket-name (or (System/getenv "ptc_bucket_name") "broad-gotc-dev-zero-test")
-        push-to (misc/gs-url ptc-bucket-name)
-        environment (or (System/getenv "environment") "dev")]
+  (let [environment (or (System/getenv "environment") "dev")]
     (log/infof "%s starting up on %s" ptc/the-name environment)
-    (message-loop environment push-to)))
+    (message-loop environment)))

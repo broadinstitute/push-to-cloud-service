@@ -137,8 +137,8 @@
                           (assoc-in where n)
                           jms/encode
                           ::jms/Properties))]
-      (start/with-push-to-cloud-jms-connection "dev" "bogus-bucket-url"
-        (fn [connection queue _]
+      (start/with-push-to-cloud-jms-connection "dev"
+        (fn [connection queue]
           (run! (partial start/produce connection queue blame)
                 (map make (range 1 (inc n)))))))))
 
