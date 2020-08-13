@@ -1,5 +1,6 @@
 (ns ptc.unit.util-test
   (:require [clojure.test  :refer [deftest is testing]]
+            [clojure.edn   :as edn]
             [ptc.util.misc :as misc]
             [ptc.tools.gcs  :as gcs]))
 
@@ -29,3 +30,21 @@
       (is (thrown? IllegalArgumentException (gcs/parse-gs-url "gs:")))
       (is (thrown? IllegalArgumentException (gcs/parse-gs-url "gs:/b/o")))
       (is (thrown? IllegalArgumentException (gcs/parse-gs-url "gs:///o/"))))))
+
+(deftest test-message-id-equality
+  (let [test-msg (edn/read-string (slurp "test/data/test_msg.edn"))
+        test-msg-different (edn/read-string (slurp "test/data/test_msg_diff.edn"))
+        test-msg-same (edn/read-string (slurp "test/data/test_msg_same.edn"))]
+    (testing "message ID equality"
+      (testing "true with no arguments"
+        (is (misc/message-ids-equal?)))
+      (testing "true with one argument"
+        (is (misc/message-ids-equal? test-msg)))
+      (testing "test_msg equal to itself"
+        (is (misc/message-ids-equal? test-msg test-msg)))
+      (testing "test_msg equal to a different message with same properties"
+        (is (misc/message-ids-equal? test-msg test-msg-same)))
+      (testing "test_msg not equal to different message with different properties"
+        (is (not (misc/message-ids-equal? test-msg test-msg-different))))
+      (testing "not equal even if only one argument isn't"
+        (is (not (misc/message-ids-equal? test-msg test-msg test-msg-different)))))))

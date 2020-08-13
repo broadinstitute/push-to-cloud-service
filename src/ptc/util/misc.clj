@@ -97,7 +97,28 @@
   "The nil UUID."
   (UUID/fromString "00000000-0000-0000-0000-000000000000"))
 
+(defn gs-url
+  "Format BUCKET and OBJECT into a gs://bucket/object URL."
+  ([bucket object]
+   (when-not (and (string?        bucket)
+                  (seq            bucket)
+                  (not-any? #{\/} bucket))
+     (let [fmt "The bucket (%s) must be a non-empty string."
+           msg (format fmt bucket)]
+       (throw (IllegalArgumentException. msg))))
+   (if (nil? object)
+     (str "gs://" bucket)
+     (str "gs://" bucket "/" object)))
+  ([bucket]
+   (gs-url bucket nil)))
+
 (defn parse-json-string
   "Parse the json string STR into a keyword-string map"
   [str]
   (json/read-str str :key-fn keyword))
+
+(defn message-ids-equal?
+  "True when the IDs of MESSAGES are the same. Otherwise false."
+  [& messages]
+  (or (empty? messages)
+      (apply = (map :properties messages))))

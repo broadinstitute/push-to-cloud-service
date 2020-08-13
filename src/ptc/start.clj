@@ -49,9 +49,9 @@
     (let [queue (.createQueue session queue)]
       (with-open [browser (.createBrowser session queue)]
         (.start connection)
-        (log/infof "Browser: attempting to peek message.")
+        (log/debugf "Browser: attempting to peek message.")
         (let [msg-enum (.getEnumeration browser)]
-          (while (not (.hasMoreElements msg-enum))
+          (when (not (.hasMoreElements msg-enum))
             (Thread/sleep 10000))
           (.nextElement msg-enum))))))
 
@@ -78,26 +78,31 @@
   and call (TASK! message) until it is false."
   ([task! connection queue]
    (loop [counter 0]
-     (if-let [peeked (jms/ednify (peek-message connection queue))]
-       (do (log/infof "Peeked message %s: %s" counter peeked)
-           (if (task! peeked)
-             (let [consumed (jms/ednify (consume connection queue))]
-               (log/infof "Task complete, consumed message %s" counter)
-               (if (not (= peeked consumed))
-                 (log/warnf
-                  (str/join \space ["Messages differ:"
-                                    (pprint (data/diff peeked consumed))])))
-               (recur (inc counter)))
-             (do
-               (log/errorf
-                (str/join
-                 \space ["Task returned nil/false,"
-                         "not consuming message %s and instead exiting"])
-                counter)
-               peeked)))
+     (if-let [peeked (peek-message connection queue)]
+       ; to avoid NPE on ednify
+       (let [peeked (jms/ednify peeked)]
+         (do (log/infof "Peeked message %s: %s" counter peeked)
+             (if (task! peeked)
+               (let [consumed (jms/ednify (consume connection queue))]
+                 (log/infof "Task complete, consumed message %s" counter)
+                 (if (not (misc/message-ids-equal? peeked consumed))
+                   (log/warnf
+                    (str/join \space ["Messages differ:"
+                                      (with-out-str (pprint (data/diff peeked consumed)))])))
+                 (recur (inc counter)))
+               (do
+                 (log/errorf
+                  (str/join
+                   \space ["Task returned nil/false,"
+                           "not consuming message %s and instead exiting"])
+                  counter)
+                 peeked))))
        (recur counter))))
   ([connection queue]
-   (listen-and-consume-from-queue identity connection queue)))
+   (let [ptc-bucket-name (or (System/getenv "PTC_BUCKET_NAME") "broad-gotc-dev-zero-test")
+         push-to (misc/gs-url ptc-bucket-name)
+         upload-sample! (fn [msg] (jms/handle-message push-to msg))]
+     (listen-and-consume-from-queue upload-sample! connection queue))))
 
 (defn message-loop
   "Loop with a JMS connection in ENVIRONMENT."
@@ -112,6 +117,6 @@
 
 (defn -main
   []
-  (let [environment (or (System/getenv "environment") "dev")]
+  (let [environment (or (System/getenv "ENVIRONMENT") "dev")]
     (log/infof "%s starting up on %s" ptc/the-name environment)
     (message-loop environment)))
