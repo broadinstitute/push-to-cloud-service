@@ -1,7 +1,7 @@
 (ns ptc.system.system-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.set :as set]
-            [clojure.tools.logging :as log]
+            [clojure.edn :as edn]
             [ptc.start :as start]
             [ptc.tools.cromwell :as cromwell]
             [ptc.tools.wfl :as wfl]
@@ -13,13 +13,20 @@
   (or (System/getenv "environment") "dev"))
 
 (def bucket
-  "gs://dev-aou-arrays-input")
+  (or (System/getenv "ptc_bucket_name") "gs://dev-aou-arrays-input"))
 
 (def cromwell-url
-  "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org")
+  (if (= environment "prod")
+    "https://cromwell-aou.gotc-prod.broadinstitute.org"
+    "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org"))
 
 (def wfl-url
-  "https://dev-wfl.gotc-dev.broadinstitute.org")
+  (if (= environment "prod")
+    "https://aou-wfl.gotc-dev.broadinstitute.org"
+    "https://dev-wfl.gotc-dev.broadinstitute.org"))
+
+(def jms-message
+  (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn")))
 
 (defn timeout
   "Timeout FUNCTION after MILLISECONDS."
@@ -43,7 +50,7 @@
 
 (deftest test-end-to-end
   (let [chipwell-barcode (str (UUID/randomUUID))
-        message (assoc-in (jms-test/fix-paths "./test/data/good-jms.edn")
+        message (assoc-in jms-message
                           [::jms/Properties :payload :workflow :chipWellBarcode] chipwell-barcode)
         analysis-version (get-in message [::jms/Properties :payload :workflow :analysisCloudVersion])
         workflow (get-in message [::jms/Properties :payload :workflow])
