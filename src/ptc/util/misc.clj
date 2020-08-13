@@ -96,3 +96,8 @@
 (def uuid-nil
   "The nil UUID."
   (UUID/fromString "00000000-0000-0000-0000-000000000000"))
+
+(defn parse-json-string
+  "Parse the json string STR into a keyword-string map"
+  [str]
+  (json/read-str str :key-fn keyword))
