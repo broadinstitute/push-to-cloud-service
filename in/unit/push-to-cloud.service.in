@@ -4,6 +4,7 @@ After=network.target
 StartLimitIntervalSec=0
 
 [Service]
+EnvironmentFile=-/etc/sysconfig/push-to-cloud
 ExecStart=java -cp %PTC_BIN clojure.main -m ptc.start
 Restart=always
 RestartSec=1
