@@ -121,4 +121,4 @@
   "True when the IDs of MESSAGES are the same. Otherwise false."
   [& messages]
   (or (empty? messages)
-    (apply = (map :properties messages))))
+      (apply = (map :properties messages))))
