@@ -36,6 +36,12 @@ network and run:
  clojure -A:test integration
 ```
 
+There's also an `ACL` testing to check if the permissions of (AoU) Bucket and Cromwell are in general set properly. You could invoke it with:
+
+```bash
+ clojure -A:test acl
+ ```
+
 which will run the end to end test including uploading some files to the
 testing Google Cloud Storage Bucket.
 

@@ -111,3 +111,8 @@
      (str "gs://" bucket "/" object)))
   ([bucket]
    (gs-url bucket nil)))
+
+(defn parse-json-string
+  "Parse the json string STR into a keyword-string map"
+  [str]
+  (json/read-str str :key-fn keyword))
