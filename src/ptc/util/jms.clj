@@ -162,9 +162,6 @@
         (assoc headers ::Properties (update keyed :payload unjsonify))
         headers))))
 
-(comment
-  (ednify nil))
-
 (defn encode
   "Encode EDN MESSAGE ::Properties :payload for a PTC JMS message."
   [{:keys [::Properties] :as message}]
