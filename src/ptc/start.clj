@@ -99,7 +99,7 @@
                  peeked))))
        (recur counter))))
   ([connection queue]
-   (let [ptc-bucket-name (or (System/getenv "ptc_bucket_name") "broad-gotc-dev-zero-test")
+   (let [ptc-bucket-name (or (System/getenv "PTC_BUCKET_NAME") "broad-gotc-dev-zero-test")
          push-to (misc/gs-url ptc-bucket-name)
          upload-sample! (fn [msg] (jms/handle-message push-to msg))]
      (listen-and-consume-from-queue upload-sample! connection queue))))
@@ -117,6 +117,6 @@
 
 (defn -main
   []
-  (let [environment (or (System/getenv "environment") "dev")]
+  (let [environment (or (System/getenv "ENVIRONMENT") "dev")]
     (log/infof "%s starting up on %s" ptc/the-name environment)
     (message-loop environment)))
