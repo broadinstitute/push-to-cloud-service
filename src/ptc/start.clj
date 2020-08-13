@@ -78,27 +78,26 @@
   and call (TASK! message) with PUSH-TO param
   until it is false."
   ([task! connection queue push-to]
-   (letfn [(task-push-to! [msg] ((partial task! push-to) msg))]
-     (loop [counter 0]
-       (if-let [peeked (peek-message connection queue)]
-         (let [ednified-peeked (jms/ednify peeked)]
-           (do (log/infof "Peeked message %s: %s" counter ednified-peeked)
-               (if (task-push-to! peeked)
-                 (let [consumed (jms/ednify (consume connection queue))]
-                   (log/infof "Task complete, consumed message %s" counter)
-                   (if (not (misc/message-ids-equal? ednified-peeked consumed))
-                     (log/warnf
-                      (str/join \space ["Messages differ:"
-                                        (with-out-str (pprint (data/diff ednified-peeked consumed)))])))
-                   (recur (inc counter)))
-                 (do
-                   (log/errorf
-                    (str/join
+   (loop [counter 0]
+     (if-let [peeked (peek-message connection queue)]
+       (let [peeked (jms/ednify peeked)]
+         (do (log/infof "Peeked message %s: %s" counter peeked)
+             (if (task! push-to peeked)
+               (let [consumed (jms/ednify (consume connection queue))]
+                 (log/infof "Task complete, consumed message %s" counter)
+                 (if (not (misc/message-ids-equal? peeked consumed))
+                   (log/warnf
+                     (str/join \space ["Messages differ:"
+                                       (with-out-str (pprint (data/diff peeked consumed)))])))
+                 (recur (inc counter)))
+               (do
+                 (log/errorf
+                   (str/join
                      \space ["Task returned nil/false,"
                              "not consuming message %s and instead exiting"])
-                    counter)
-                   ednified-peeked))))
-         (recur counter)))))
+                   counter)
+                 peeked))))
+       (recur counter))))
   ([connection queue push-to]
    (listen-and-consume-from-queue jms/handle-message connection queue push-to)))
 

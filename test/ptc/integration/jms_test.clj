@@ -106,7 +106,7 @@
                            "BAD" (::jms/Properties (jms/encode bad)))
             (let [msg (start/consume connection queue)]
               (is (thrown-with-msg? IllegalArgumentException missing
-                                    (jms/handle-message folder msg)))
+                                    (jms/handle-message folder (jms/ednify msg))))
               (is (empty? (->> folder
                                gcs/parse-gs-url
                                (apply gcs/list-objects))))))
@@ -114,7 +114,7 @@
             (start/produce connection queue
                            "GOOD" (::jms/Properties (jms/encode good)))
             (let [msg (start/consume connection queue)
-                  [params ptc] (jms/handle-message folder msg)
+                  [params ptc] (jms/handle-message folder (jms/ednify msg))
                   {:keys [notifications] :as request} (gcs-edn ptc)
                   pushed (push (first notifications))
                   gcs (list-gcs-folder folder)

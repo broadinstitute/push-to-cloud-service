@@ -162,6 +162,9 @@
         (assoc headers ::Properties (update keyed :payload unjsonify))
         headers))))
 
+(comment
+  (ednify nil))
+
 (defn encode
   "Encode EDN MESSAGE ::Properties :payload for a PTC JMS message."
   [{:keys [::Properties] :as message}]
@@ -173,9 +176,9 @@
 (def missing-keys-message "Missing JMS keys:") ; for tests
 
 (defn handle-message
-  "Throw or push to cloud at PREFIX all the files for un-ednified JMS message."
+  "Throw or push to cloud at PREFIX all the files for ednified JMS message."
   [prefix jms]
-  (let [workflow (get-in (ednify jms) [::Properties :payload :workflow])
+  (let [workflow (get-in jms [::Properties :payload :workflow])
         missing? (fn [k] (when (nil? (k workflow)) k))
         missing (keep missing? required-jms-keys)]
     (when (seq missing)
