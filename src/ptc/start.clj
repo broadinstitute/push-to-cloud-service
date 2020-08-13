@@ -49,9 +49,9 @@
     (let [queue (.createQueue session queue)]
       (with-open [browser (.createBrowser session queue)]
         (.start connection)
-        (log/infof "Browser: attempting to peek message.")
+        (log/debugf "Browser: attempting to peek message.")
         (let [msg-enum (.getEnumeration browser)]
-          (while (not (.hasMoreElements msg-enum))
+          (when (not (.hasMoreElements msg-enum))
             (Thread/sleep 10000))
           (.nextElement msg-enum))))))
 
@@ -80,6 +80,7 @@
   ([task! connection queue push-to]
    (loop [counter 0]
      (if-let [peeked (peek-message connection queue)]
+       ; to avoid NPE on ednify
        (let [peeked (jms/ednify peeked)]
          (do (log/infof "Peeked message %s: %s" counter peeked)
              (if (task! push-to peeked)
