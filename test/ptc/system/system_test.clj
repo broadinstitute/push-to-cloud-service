@@ -60,8 +60,8 @@
                  (->> (apply merge))
                  keys
                  (->> (apply juxt)))]
-    ;(jms-test/queue-messages 1 message environment)
-    (queue-message-placeholder bucket message)
+    (jms-test/queue-messages 1 environment message)
+    ;(queue-message-placeholder bucket message)
     (testing "Files are uploaded to the input bucket"
       (let [params (str cloud-prefix "/params.txt")
             ptc (str cloud-prefix "/ptc.json")
