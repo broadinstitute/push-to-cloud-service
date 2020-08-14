@@ -99,7 +99,7 @@
                  peeked))))
        (recur counter))))
   ([connection queue]
-   (let [ptc-bucket-name (or (System/getenv "PTC_BUCKET_NAME") "dev-aou-arrays-input")
+   (let [ptc-bucket-name (or (System/getenv "PTC_BUCKET_NAME") "broad-gotc-dev-zero-test")
          push-to (misc/gs-url ptc-bucket-name)
          upload-sample! (fn [msg] (jms/handle-message push-to msg))]
      (listen-and-consume-from-queue upload-sample! connection queue))))
