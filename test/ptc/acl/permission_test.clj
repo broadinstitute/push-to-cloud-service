@@ -8,10 +8,15 @@
             [clojure.test  :refer [deftest is testing]])
   (:import [com.google.auth.oauth2 GoogleCredentials]))
 
-(def aou-bucket
+(def aou-in-bucket
   "Storage bucket for running ptc.acl test with. Note this
   is the actual bucket PTC pushes data to."
-  "gcf-sources-163624468465-us-central1")
+  "broad-aou-arrays-input")
+
+(def aou-out-bucket
+  "Storage bucket for running ptc.acl test with. Note this
+  is the actual bucket storing arrays pipeline outputs."
+  "broad-aou-arrays-output")
 
 (def aou-cromwell
   "URL to the AoU Cromwell."
@@ -33,27 +38,42 @@
     {"Authorization" (str/join \space ["Bearer" token])}))
 
 (deftest bucket-permission-test
-  (testing "Unauthorized user cannot list the PTC bucket."
-    (try
-      (with-redefs [misc/get-auth-header! get-test-user-header]
-        (hash (gcs/list-objects aou-bucket)))
-      (catch Exception e
-        (is (= 403 (:status (ex-data e)))
-            "The user is able to list the bucket!!"))))
-  (testing "Unauthorized user cannot upload object to the PTC bucket."
-    (try
-      (with-redefs [misc/get-auth-header! get-test-user-header]
-        (hash (gcs/upload-file "deps.edn" aou-bucket "deps.edn")))
-      (catch Exception e
-        (is (= 403 (:status (ex-data e)))
-            "The user is able to upload object to the bucket!!"))))
-  (testing "Unauthorized user cannot delete object from the PTC bucket."
-    (try
-      (with-redefs [misc/get-auth-header! get-test-user-header]
-        (hash (gcs/delete-object aou-bucket "deps.edn")))
-      (catch Exception e
-        (is (contains? #{403 404} (:status (ex-data e)))
-            "The user is able to delete object from the bucket!!")))))
+  (testing "Unauthorized user cannot list the PTC buckets."
+    (with-redefs [misc/get-auth-header! get-test-user-header]
+      (try
+        (hash (gcs/list-objects aou-in-bucket))
+        (catch Exception e
+          (is (= 403 (:status (ex-data e)))
+              "The user is able to list the input bucket!!")))
+      (try
+        (hash (gcs/list-objects aou-out-bucket))
+        (catch Exception e
+          (is (= 403 (:status (ex-data e)))
+              "The user is able to list the output bucket!!")))))
+  (testing "Unauthorized user cannot upload object to the PTC buckets."
+    (with-redefs [misc/get-auth-header! get-test-user-header]
+      (try
+        (hash (gcs/upload-file "deps.edn" aou-in-bucket "deps.edn"))
+        (catch Exception e
+          (is (= 403 (:status (ex-data e)))
+              "The user is able to upload object to the input bucket!!")))
+      (try
+        (hash (gcs/upload-file "deps.edn" aou-out-bucket "deps.edn"))
+        (catch Exception e
+          (is (= 403 (:status (ex-data e)))
+              "The user is able to upload object to the output bucket!!")))))
+  (testing "Unauthorized user cannot delete object from the PTC buckets."
+    (with-redefs [misc/get-auth-header! get-test-user-header]
+      (try
+        (hash (gcs/delete-object aou-in-bucket "deps.edn"))
+        (catch Exception e
+          (is (contains? #{403 404} (:status (ex-data e)))
+              "The user is able to delete object from the input bucket!!")))
+      (try
+        (hash (gcs/delete-object aou-out-bucket "deps.edn"))
+        (catch Exception e
+          (is (contains? #{403 404} (:status (ex-data e)))
+              "The user is able to delete object from the output bucket!!"))))))
 
 (deftest workflow-permission-test
   (testing "Unauthorized users cannot query for workflows in the AoU Cromwell."
