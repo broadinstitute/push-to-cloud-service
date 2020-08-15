@@ -134,11 +134,12 @@
 
 (defn push-append-to-aou-request
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX."
-  [prefix workflow]
+  [prefix workflow params]
   (let [result (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])
         request (update append-to-aou-request
-                        :notifications conj (jms->notification prefix workflow))]
-    (misc/shell! "gsutil" "cp" "-" result :in (json/write-str request))
+                        :notifications conj (jms->notification prefix workflow))
+        contents (assoc-in request [:notifications 0 :params_file] params)]
+    (misc/shell! "gsutil" "cp" "-" result :in (json/write-str contents))
     result))
 
 (def required-jms-keys
@@ -181,5 +182,5 @@
     (when (seq missing)
       (throw (IllegalArgumentException.
               (str/join \space [missing-keys-message (vec missing)]))))
-    [(push-params prefix workflow)
-     (push-append-to-aou-request prefix workflow)]))
+    (let [params (push-params prefix workflow)]
+      [params (push-append-to-aou-request prefix workflow params)])))
