@@ -38,17 +38,6 @@
       (future-cancel f))
     return))
 
-(defn queue-message-placeholder
-  "Upload files to FOLDER in MESSAGE using a test jms connection."
-  [folder message]
-  (jms-test/with-test-jms-connection
-    (fn [connection queue]
-      (start/produce connection queue
-                     "GOOD" (::jms/Properties (jms/encode message)))
-      (let [msg (start/consume connection queue)
-            [params ptc] (jms/handle-message folder msg)]
-        (print "Pushed message")))))
-
 (defn wait-for-file-upload
   [file-name]
   (loop [file-name file-name]
@@ -88,7 +77,6 @@
                  keys
                  (->> (apply juxt)))]
     (jms-test/queue-messages 1 environment message)
-    ;(queue-message-placeholder bucket message)
     (testing "Files are uploaded to the input bucket"
       (let [params (str cloud-prefix "/params.txt")
             ptc (str cloud-prefix "/ptc.json")
