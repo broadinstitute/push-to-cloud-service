@@ -22,7 +22,7 @@
 
 (def wfl-url
   (if (= environment "prod")
-    "https://aou-wfl.gotc-dev.broadinstitute.org"
+    "https://aou-wfl.gotc-prod.broadinstitute.org"
     "https://dev-wfl.gotc-dev.broadinstitute.org"))
 
 (def jms-message
