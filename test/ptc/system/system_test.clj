@@ -2,13 +2,13 @@
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.set :as set]
             [clojure.edn :as edn]
-            [ptc.start :as start]
             [ptc.tools.cromwell :as cromwell]
             [ptc.tools.wfl :as wfl]
             [ptc.util.jms :as jms]
             [ptc.util.misc :as misc]
             [ptc.integration.jms-test :as jms-test])
-  (:import [java.util UUID]))
+  (:import [java.util UUID]
+           [java.lang Integer]))
 
 (def environment
   (or (System/getenv "environment") "dev"))
@@ -65,10 +65,10 @@
         (jms-test/list-gcs-folder cloud-prefix)))))
 
 (deftest test-end-to-end
-  (let [chipwell-barcode (str (UUID/randomUUID))
+  (let [analysis-version (rand-int Integer/MAX_VALUE)
         message (assoc-in jms-message
-                          [::jms/Properties :payload :workflow :chipWellBarcode] chipwell-barcode)
-        analysis-version (get-in message [::jms/Properties :payload :workflow :analysisCloudVersion])
+                          [::jms/Properties :payload :workflow :analysisCloudVersion] analysis-version)
+        chipwell-barcode (get-in message [::jms/Properties :payload :workflow :chipWellBarcode])
         workflow (get-in message [::jms/Properties :payload :workflow])
         cloud-prefix (jms/cloud-prefix bucket workflow)
         push (-> jms/notification-keys->jms-keys
