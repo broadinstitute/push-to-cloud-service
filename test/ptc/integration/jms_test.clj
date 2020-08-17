@@ -107,10 +107,8 @@
 (defn queue-messages
   "Queue N messages to the 'dev' queue."
   [n env message]
-  (let [where [::jms/Properties :payload :workflow :analysisCloudVersion]
-        blame (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")]
+  (let [blame (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")]
     (letfn [(make [n] (-> message
-                          (assoc-in where n)
                           jms/encode
                           ::jms/Properties))]
       (start/with-push-to-cloud-jms-connection env
@@ -122,5 +120,8 @@
   [& args]
   (let [n (edn/read-string (first args))
         env "dev"
-        message (fix-paths "./test/data/good-jms.edn")]
+        analysis-version (rand-int Integer/MAX_VALUE)
+        where [::jms/Properties :payload :workflow :analysisCloudVersion]
+        jms-message (fix-paths "./test/data/good-jms.edn")
+        message (assoc-in where analysis-version jms-message)]
     (queue-messages n env message)))
