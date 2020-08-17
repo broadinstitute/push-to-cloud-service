@@ -6,6 +6,7 @@
             [ptc.tools.cromwell :as cromwell]
             [ptc.tools.wfl :as wfl]
             [ptc.util.jms :as jms]
+            [ptc.util.misc :as misc]
             [ptc.integration.jms-test :as jms-test])
   (:import [java.util UUID]))
 
@@ -48,6 +49,32 @@
             [params ptc] (jms/handle-message folder msg)]
         (print "Pushed message")))))
 
+(defn wait-for-file-upload
+  [file-name]
+  (loop [file-name file-name]
+    (let [seconds 15
+          contents (try
+                      (jms-test/gcs-cat file-name)
+                      (catch Exception e
+                        (print (.getMessage e))
+                        nil))]
+      (if (nil? contents)
+        (do (print "Sleeping %s seconds" seconds)
+            (misc/sleep-seconds seconds)
+            (recur file-name))
+        (jms-test/gcs-cat file-name)))))
+
+(defn wait-for-files-in-bucket
+  [cloud-prefix files]
+  (loop [cloud-prefix cloud-prefix files files]
+    (let [seconds 15
+          gcs (jms-test/list-gcs-folder cloud-prefix)]
+      (if (not= (set gcs) (set files))
+        (do (print "Sleeping %s seconds" seconds)
+            (misc/sleep-seconds seconds)
+            (recur cloud-prefix files))
+        (jms-test/list-gcs-folder cloud-prefix)))))
+
 (deftest test-end-to-end
   (let [chipwell-barcode (str (UUID/randomUUID))
         message (assoc-in jms-message
@@ -65,17 +92,18 @@
     (testing "Files are uploaded to the input bucket"
       (let [params (str cloud-prefix "/params.txt")
             ptc (str cloud-prefix "/ptc.json")
-            {:keys [notifications] :as request} (jms-test/gcs-edn ptc)
+            {:keys [notifications] :as request} (timeout 180000 #(wait-for-file-upload ptc))
             pushed (push (first notifications))
-            gcs (jms-test/list-gcs-folder cloud-prefix)
-            union (set/union (set gcs) (set pushed))
-            diff (set/difference (set gcs) (set pushed))]
-        (is (== (count pushed) (count (set pushed))))
-        (is (== (count gcs) (count (set gcs))))
-        (is (== (count union) (count (set gcs))))
-        (is (== 2 (count diff)))
-        (is (= diff (set [params ptc])))
-        (is (= (jms/jms->params workflow) (jms-test/gcs-cat params)))))
+            gcs (timeout 180000 #(wait-for-files-in-bucket cloud-prefix pushed))]
+        (is (not= gcs :ptc.system.system-test/timed-out))
+        (let [union (set/union (set gcs) (set pushed))
+              diff (set/difference (set gcs) (set pushed))]
+          (is (== (count pushed) (count (set pushed))))
+          (is (== (count gcs) (count (set gcs))))
+          (is (== (count union) (count (set gcs))))
+          (is (== 1 (count diff)))
+          (is (= diff (set [ptc])))
+          (is (= (jms/jms->params workflow) (jms-test/gcs-cat params))))))
     (testing "Cromwell workflow is started by WFL"
       (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
         (is (not= workflow-id :ptc.system.system-test/timed-out))
