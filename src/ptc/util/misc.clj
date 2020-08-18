@@ -97,7 +97,6 @@
   "The nil UUID."
   (UUID/fromString "00000000-0000-0000-0000-000000000000"))
 
-
 (defn gs-url
   "Format BUCKET and OBJECT into a gs://bucket/object URL."
   ([bucket object]
@@ -117,7 +116,6 @@
   "Sleep for N seconds."
   [n]
   (Thread/sleep (* n 1000)))
-
 
 (defn parse-json-string
   "Parse the json string STR into a keyword-string map"

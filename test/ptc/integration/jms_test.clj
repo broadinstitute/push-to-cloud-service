@@ -6,7 +6,8 @@
             [clojure.test      :refer [deftest is testing]]
             [ptc.start         :as start]
             [ptc.tools.gcs      :as gcs]
-            [ptc.util.jms      :as jms])
+            [ptc.util.jms      :as jms]
+            [ptc.util.misc      :as misc])
   (:import [java.util UUID]
            [org.apache.activemq ActiveMQSslConnectionFactory]))
 
