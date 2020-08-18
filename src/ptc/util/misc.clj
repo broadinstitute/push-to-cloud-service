@@ -80,12 +80,6 @@
                                  ptc/the-name exit args err))))
     (str/trim out)))
 
-(defn get-auth-header!
-  "Return an Authorization header with a Bearer token."
-  []
-  {"Authorization"
-   (str "Bearer" \space (shell! "gcloud" "auth" "print-access-token"))})
-
 (defn slurp-json
   "Nil or the JSON in FILE."
   [file]
@@ -122,3 +116,11 @@
   [& messages]
   (or (empty? messages)
       (apply = (map :properties messages))))
+
+(defn getenv!
+  "Get value of environment variable NAME or throw if nil."
+  [name]
+  (let [value (System/getenv name)]
+    (when (nil? value)
+      (throw (IllegalStateException. (str name " must not be nil"))))
+    value))
