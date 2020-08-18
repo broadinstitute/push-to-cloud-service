@@ -1,36 +1,19 @@
 (ns ptc.integration.integration-test
-  (:require [clojure.test  :refer [deftest is testing]]
-            [clojure.edn   :as edn]
-            [ptc.start     :as start]
-            [ptc.tools.gcs  :as gcs]
-            [ptc.util.misc  :as misc]
-            [ptc.util.jms  :as jms])
-  (:import [org.apache.activemq ActiveMQSslConnectionFactory]
-           (java.util UUID)))
+  (:require [clojure.test :refer [deftest is testing]]
+            [ptc.start :as start]
+            [ptc.tools.gcs :as gcs]
+            [ptc.util.jms :as jms]
+            [ptc.tools.jms :refer [with-test-queue-connection message]])
+  (:import (java.util UUID)))
 
-;; Local testing for ActiveMQ
-;; https://activemq.apache.org/how-do-i-embed-a-broker-inside-a-connection
-;;
-(defn with-test-jms-connection
-  "CALL with a local JMS connection for testing."
-  [call]
-  (let [url     "vm://localhost?broker.persistent=false"
-        factory (new ActiveMQSslConnectionFactory url)
-        queue   "test.queue"]
-    (with-open [connection (.createQueueConnection factory)]
-      (call connection queue))))
-
-(def message
-  "Example JMS message for testing."
-  (edn/read-string (slurp "test/data/good-jms.edn")))
 
 (def bucket
   "Storage bucket for running ptc.integration test with."
   "broad-gotc-dev-zero-test")
 
 (deftest integration
-  (let [prefix (str "test/" (UUID/randomUUID))
-        properties (::jms/Properties (jms/encode message))]
+  (let [prefix     (str "test/" (UUID/randomUUID))
+        properties (::jms/Properties (jms/encode @message))]
     (letfn [(task [_]
               (try
                 (testing "end-to-end: "
@@ -45,14 +28,14 @@
               (start/produce connection queue "text" properties)
               (start/listen-and-consume-from-queue task connection queue))]
       (testing "Message is not nil and can be properly read"
-        (if-let [msg (with-test-jms-connection flow)]
-          (is (= message (select-keys msg [::jms/Properties])))
+        (if-let [msg (with-test-queue-connection flow)]
+          (is (= @message (select-keys msg [::jms/Properties])))
           (is false))))))
 
 (deftest peeking
-  (let [properties (::jms/Properties (jms/encode message))]
+  (let [properties (::jms/Properties (jms/encode @message))]
     (letfn [(task [message] (is message) false)]
-      (with-test-jms-connection
+      (with-test-queue-connection
         (fn [connection queue]
           (testing "Message given to task isn't nil"
             (start/produce connection queue "text" properties)
@@ -60,4 +43,4 @@
           (testing "The message was only peeked and can still be consumed"
             (let [msg (jms/ednify (start/consume connection queue))]
               (testing "Message is not nil and can be properly read"
-                (is (= message (select-keys msg [::jms/Properties])))))))))))
+                (is (= @message (select-keys msg [::jms/Properties])))))))))))
