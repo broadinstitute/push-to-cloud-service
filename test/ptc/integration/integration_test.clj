@@ -6,7 +6,6 @@
             [ptc.tools.jms :refer [with-test-queue-connection message]])
   (:import (java.util UUID)))
 
-
 (def bucket
   "Storage bucket for running ptc.integration test with."
   "broad-gotc-dev-zero-test")
