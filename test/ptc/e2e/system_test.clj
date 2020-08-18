@@ -1,4 +1,4 @@
-(ns ptc.system.system-test
+(ns ptc.e2e.system-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.set :as set]
             [clojure.edn :as edn]
