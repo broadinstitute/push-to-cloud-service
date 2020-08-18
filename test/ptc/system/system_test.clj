@@ -11,10 +11,10 @@
            [java.lang Integer]))
 
 (def environment
-  (or (System/getenv "environment") "dev"))
+  (or (System/getenv "ENVIRONMENT") "dev"))
 
 (def bucket
-  (or (System/getenv "ptc_bucket_name") "gs://dev-aou-arrays-input"))
+  (or (System/getenv "PTC_BUCKET_NAME") "gs://dev-aou-arrays-input"))
 
 (def cromwell-url
   (if (= environment "prod")
