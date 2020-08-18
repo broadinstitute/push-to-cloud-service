@@ -101,16 +101,16 @@
 (defn- message-loop
   "Loop and consume messages using the Zamboni ActiveMQ server."
   []
-  (let [queue      (misc/getenv! "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-        url        (misc/getenv! "ZAMBONI_ACTIVEMQ_URL")
-        vault-path (misc/getenv! "ZAMBONI_ACTIVEMQ_SECRET_PATH")
-        bucket-url (misc/getenv! "PTC_BUCKET_URL")
+  (let [queue          (misc/getenv! "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+        url            (misc/getenv! "ZAMBONI_ACTIVEMQ_URL")
+        vault-path     (misc/getenv! "ZAMBONI_ACTIVEMQ_SECRET_PATH")
+        bucket-url     (misc/getenv! "PTC_BUCKET_URL")
+        upload-sample! (partial jms/handle-message bucket-url)
         {:keys [username password]} (misc/vault-secrets vault-path)]
     (while true
       (try
         (with-open [connection (create-queue-connection url username password)]
-          (let [upload-sample! (partial jms/handle-message bucket-url)]
-            (listen-and-consume-from-queue upload-sample! connection queue)))
+          (listen-and-consume-from-queue upload-sample! connection queue))
         (catch Throwable x
           (log/error x "caught in message-loop"))))))
 
