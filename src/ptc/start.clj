@@ -14,12 +14,12 @@
   "Create a javax.jms.QueueConnection to an ActiveMQ server"
   ([url username password]
    (->
-     (new ActiveMQSslConnectionFactory url)
-     (.createQueueConnection username password)))
+    (new ActiveMQSslConnectionFactory url)
+    (.createQueueConnection username password)))
   ([url]
    (->
-     (new ActiveMQSslConnectionFactory url)
-     (.createQueueConnection))))
+    (new ActiveMQSslConnectionFactory url)
+    (.createQueueConnection))))
 
 (defn create-session
   "Create a transacted JMS session on CONNECTION."
@@ -41,7 +41,7 @@
               consumer (.createConsumer session (.createQueue session queue))]
     (.start connection)
     (log/infof "Consumer %s: attempting to consume message."
-      (.getConsumerId consumer))
+               (.getConsumerId consumer))
     (.receive consumer)))
 
 (defn peek-message
@@ -86,15 +86,15 @@
               (log/infof "Task complete, consumed message %s" counter)
               (if (not (misc/message-ids-equal? peeked consumed))
                 (log/warnf
-                  (str/join \space ["Messages differ:"
-                                    (with-out-str (pprint (data/diff peeked consumed)))])))
+                 (str/join \space ["Messages differ:"
+                                   (with-out-str (pprint (data/diff peeked consumed)))])))
               (recur (inc counter)))
             (do
               (log/errorf
-                (str/join
-                  \space ["Task returned nil/false,"
-                          "not consuming message %s and instead exiting"])
-                counter)
+               (str/join
+                \space ["Task returned nil/false,"
+                        "not consuming message %s and instead exiting"])
+               counter)
               peeked))))
       (recur counter))))
 
