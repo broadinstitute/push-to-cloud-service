@@ -54,13 +54,14 @@
     (testing "Files are uploaded to the input bucket"
       (let [params (str cloud-prefix "/params.txt")
             ptc (str cloud-prefix "/ptc.json")
-            {:keys [notifications] :as request} (timeout 180000 #(gcs/wait-for-file-upload ptc))
-            pushed (push (first notifications))
+            wait (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix [ptc]))
+            {:keys [notifications] :as request} (gcs/gcs-edn ptc)
+            pushed (conj (push (first notifications)) params)
             gcs (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
+        (is (== (count pushed) (count (set pushed))))
         (is (not= gcs :ptc.system.system-test/timed-out))
         (let [union (set/union (set gcs) (set pushed))
               diff (set/difference (set gcs) (set pushed))]
-          (is (== (count pushed) (count (set pushed))))
           (is (== (count gcs) (count (set gcs))))
           (is (== (count union) (count (set gcs))))
           (is (== 1 (count diff)))
