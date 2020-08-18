@@ -28,7 +28,8 @@
 (defn work-around-cromwell-fail-bug
   "Wait 2 seconds and ignore up to N times a bogus failure response from
   Cromwell for workflow ID in ENVIRONMENT.  Work around the 'sore spot'
-  reported in https://github.com/broadinstitute/cromwell/issues/2671"
+  reported in https://github.com/broadinstitute/cromwell/issues/2671.
+  From https://github.com/broadinstitute/wfl/blob/master/api/src/zero/service/cromwell.clj#L266"
   [n cromwell-url id]
   (misc/sleep-seconds 2)
   (let [fail {"status" "fail" "message" (str "Unrecognized workflow ID: " id)}
