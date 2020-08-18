@@ -59,17 +59,17 @@
             pushed (conj (push (first notifications)) params)
             gcs (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
         (is (== (count pushed) (count (set pushed))) "Duplicate files in PTC.json")
-        (is (not= gcs :ptc.system.system-test/timed-out) "Timeout waiting for files to upload")
+        (is (not= gcs :ptc.e2e.system-test/timed-out) "Timeout waiting for files to upload")
         (let [union (set/union (set gcs) (set pushed))
               diff (set/difference (set gcs) (set pushed))]
           (is (== (count gcs) (count (set gcs))) "Duplicate files in bucket")
-          (is (== (count union) (count (set pushed))) "Missing files in bucket")
+          (is (== (count union) (count (set gcs))) "Missing files in bucket")
           (is (== 1 (count diff)) "Unexpected number of files in bucket")
           (is (= diff (set [ptc])) "Files in bucket do not match expected files")
           (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))
     (testing "Cromwell workflow is started by WFL"
       (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
-        (is (not= workflow-id :ptc.system.system-test/timed-out) "Timeout waiting for workflow creation")
+        (is (not= workflow-id :ptc.e2e.system-test/timed-out) "Timeout waiting for workflow creation")
         (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
           (let [workflow-timeout 1800000
