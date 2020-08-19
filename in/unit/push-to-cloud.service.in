@@ -1,13 +1,14 @@
 [Unit]
 Description=All-of-Us Arrays Push-to-Cloud Daemon
 After=network.target
-StartLimitIntervalSec=0
+StartLimitIntervalSec=300
+StartLimitBust=3
 
 [Service]
 EnvironmentFile=-/etc/sysconfig/push-to-cloud
 ExecStart=java -cp %PTC_BIN clojure.main -m ptc.start
 Restart=always
-RestartSec=1
+RestartSec=60
 SuccessExitStatus=143
 User=ptc
 
