@@ -67,9 +67,9 @@
   (let [path [::jms/Properties :payload :workflow]
         push (-> jms/notification-keys->jms-keys
                  ((juxt ::jms/chip ::jms/push))
-                 (->> (apply merge))
-                 keys
-                 (->> (apply juxt)))
+                 (->> (apply merge)
+                      keys
+                      (apply juxt)))
         bad (fix-paths "./test/data/bad-jms.edn")
         good (fix-paths "./test/data/good-jms.edn")
         missing (-> good (data/diff bad) first (get-in path) keys first

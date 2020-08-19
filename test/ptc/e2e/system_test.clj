@@ -1,14 +1,14 @@
 (ns ptc.e2e.system-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.edn :as edn]
             [clojure.set :as set]
-            [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing]]
+            [ptc.integration.jms-test :as jms-test]
             [ptc.tools.cromwell :as cromwell]
             [ptc.tools.gcs :as gcs]
             [ptc.tools.wfl :as wfl]
-            [ptc.util.jms :as jms]
-            [ptc.integration.jms-test :as jms-test])
-  (:import [java.util UUID]
-           [java.lang Integer]))
+            [ptc.util.jms :as jms])
+  (:import [java.lang Integer]
+           [java.util UUID]))
 
 (def environment
   (or (System/getenv "ENVIRONMENT") "dev"))
@@ -47,9 +47,9 @@
         cloud-prefix (jms/cloud-prefix bucket workflow)
         push (-> jms/notification-keys->jms-keys
                  ((juxt ::jms/chip ::jms/push))
-                 (->> (apply merge))
-                 keys
-                 (->> (apply juxt)))]
+                 (->> (apply merge)
+                      keys
+                      (apply juxt)))]
     (jms-test/queue-messages 1 environment message)
     (testing "Files are uploaded to the input bucket"
       (let [params (str cloud-prefix "/params.txt")
@@ -59,17 +59,16 @@
             pushed (conj (push (first notifications)) params)
             gcs (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
         (is (== (count pushed) (count (set pushed))) "Duplicate files in PTC.json")
-        (is (not= gcs :ptc.e2e.system-test/timed-out) "Timeout waiting for files to upload")
+        (is (not= gcs ::timed-out) "Timeout waiting for files to upload")
         (let [union (set/union (set gcs) (set pushed))
               diff (set/difference (set gcs) (set pushed))]
-          (is (== (count gcs) (count (set gcs))) "Duplicate files in bucket")
           (is (== (count union) (count (set gcs))) "Missing files in bucket")
           (is (== 1 (count diff)) "Unexpected number of files in bucket")
           (is (= diff (set [ptc])) "Files in bucket do not match expected files")
           (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))
     (testing "Cromwell workflow is started by WFL"
       (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
-        (is (not= workflow-id :ptc.e2e.system-test/timed-out) "Timeout waiting for workflow creation")
+        (is (not= workflow-id ::timed-out) "Timeout waiting for workflow creation")
         (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
           (let [workflow-timeout 1800000

@@ -1,14 +1,14 @@
 (ns ptc.tools.gcs
   "Utility functions for Google Cloud Storage shared across this program."
-  (:require [clojure.pprint :refer [pprint]]
-            [clojure.data.json :as json]
+  (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
+            [clojure.pprint :refer [pprint]]
+            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
-            [clojure.java.io :as io]
             [clj-http.client :as http]
-            [clj-http.util :as http-util]
             [ptc.util.misc :as misc]
-            [clojure.set :as set])
+            [clj-http.util :as http-util])
   (:import [org.apache.tika Tika]))
 
 (def api-url
@@ -111,16 +111,15 @@
 (defn gcs-edn
   "Return the JSON in GCS URL as EDN."
   [url]
-  (-> url gcs-cat (json/read-str :key-fn keyword)))
+  (-> url gcs-cat misc/parse-json-string))
 
 (defn wait-for-files-in-bucket
   "Wait for files at CLOUD-PREFIX URL to match expected FILES."
   [cloud-prefix files]
-  (loop [cloud-prefix cloud-prefix files files]
-    (let [seconds 15
-          gcs (list-gcs-folder cloud-prefix)]
+  (let [seconds 15
+        gcs (list-gcs-folder cloud-prefix)]
       (if (set/subset? (set gcs) (set files))
         (do (log/infof "Sleeping %s seconds" seconds)
             (misc/sleep-seconds seconds)
             (recur cloud-prefix files))
-        (list-gcs-folder cloud-prefix)))))
+        (list-gcs-folder cloud-prefix))))
