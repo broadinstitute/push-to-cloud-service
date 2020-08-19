@@ -115,7 +115,7 @@
 (defn -main
   [& args]
   (let [n (edn/read-string (first args))
-        env "dev"
+        env (edn/read-string (second args))
         analysis-version (rand-int Integer/MAX_VALUE)
         where [::jms/Properties :payload :workflow :analysisCloudVersion]
         jms-message (fix-paths "./test/data/good-jms.edn")
