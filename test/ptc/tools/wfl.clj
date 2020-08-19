@@ -36,12 +36,12 @@
   "Wait for a workflow with CHIPWELL-BARCODE and ANALYSIS-VERSION-NUMBER
   to appear in an AllOfUsArrays workload in WFL-URL."
   [wfl-url chipwell-barcode analysis-version-number]
-  (let [seconds 15]
-    (loop []
-      (let [ids (get-aou-workflow-ids
-                  wfl-url chipwell-barcode analysis-version-number)]
+  (letfn [(fetch! [] (get-aou-workflow-ids
+                       wfl-url chipwell-barcode analysis-version-number))]
+    (let [seconds 15]
+      (loop [ids (fetch!)]
         (if (empty? ids)
           (do (log/infof "Sleeping %s seconds" seconds)
               (misc/sleep-seconds seconds)
-              (recur))
+              (recur (fetch!)))
           (first ids))))))
