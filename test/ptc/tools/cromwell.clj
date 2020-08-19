@@ -3,7 +3,8 @@
   (:require [clojure.data.json :as json]
             [clj-http.client :as client]
             [clojure.tools.logging :as log]
-            [ptc.util.misc     :as misc]))
+            [ptc.util.misc     :as misc])
+  (:import [java.util.concurrent TimeUnit]))
 
 (defn status
   "Status of the workflow with ID at CROMWELL-URL."
@@ -31,7 +32,7 @@
   reported in https://github.com/broadinstitute/cromwell/issues/2671.
   From https://github.com/broadinstitute/wfl/blob/master/api/src/zero/service/cromwell.clj#L266"
   [n cromwell-url id]
-  (misc/sleep-seconds 2)
+  (.sleep TimeUnit/SECONDS 2)
   (let [fail {"status" "fail" "message" (str "Unrecognized workflow ID: " id)}
         {:keys [body] :as bug} (try (status cromwell-url id)
                                     (catch Exception e (ex-data e)))]
@@ -51,6 +52,6 @@
       (if (#{"Submitted" "Running"} now)
         (do (log/infof "%s: Sleeping %s seconds on status: %s"
                        id seconds now)
-            (misc/sleep-seconds seconds)
+            (.sleep TimeUnit/SECONDS seconds)
             (recur cromwell-url id))
         (status cromwell-url id)))))

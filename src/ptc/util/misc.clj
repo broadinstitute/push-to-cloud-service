@@ -9,7 +9,8 @@
             [ptc.ptc               :as ptc]
             [vault.client.http]         ; vault.core needs this
             [vault.core            :as vault])
-  (:import [java.util UUID]
+  (:import [java.util.concurrent TimeUnit]
+           [java.util UUID]
            [org.apache.commons.mail SimpleEmail]))
 
 (defmacro do-or-nil
@@ -111,11 +112,6 @@
      (str "gs://" bucket "/" object)))
   ([bucket]
    (gs-url bucket nil)))
-
-(defn sleep-seconds
-  "Sleep for N seconds."
-  [n]
-  (Thread/sleep (* n 1000)))
 
 (defn parse-json-string
   "Parse the json string STR into a keyword-string map"

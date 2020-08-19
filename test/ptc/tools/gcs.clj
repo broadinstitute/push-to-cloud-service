@@ -9,7 +9,8 @@
             [clj-http.client :as http]
             [ptc.util.misc :as misc]
             [clj-http.util :as http-util])
-  (:import [org.apache.tika Tika]))
+  (:import [org.apache.tika Tika]
+           [java.util.concurrent TimeUnit]))
 
 (def api-url
   "The Google Cloud API URL."
@@ -120,6 +121,6 @@
         gcs (list-gcs-folder cloud-prefix)]
       (if (set/subset? (set gcs) (set files))
         (do (log/infof "Sleeping %s seconds" seconds)
-            (misc/sleep-seconds seconds)
+            (.sleep TimeUnit/SECONDS seconds)
             (recur cloud-prefix files))
         (list-gcs-folder cloud-prefix))))

@@ -2,7 +2,8 @@
   "Utility functions for WFL."
   (:require [clj-http.client :as client]
             [clojure.tools.logging :as log]
-            [ptc.util.misc     :as misc]))
+            [ptc.util.misc     :as misc])
+  (:import [java.util.concurrent TimeUnit]))
 
 (defn get-aou-workloads
   "Query WFL for AllOfUsArrays workloads"
@@ -42,5 +43,5 @@
         (if (seq workflow-ids)
           (first workflow-ids)
         (do (log/infof "Sleeping %s seconds" seconds)
-            (misc/sleep-seconds seconds)
+            (.sleep TimeUnit/SECONDS seconds)
             (recur)))))))
