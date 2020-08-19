@@ -14,8 +14,8 @@
       (->> (filter aou?)))))
 
 (defn aou-uuid
-  "Return a semipredicate that returns nil or the UUID of WORKFLOW if it
-  has CHIPWELL-BARCODE ANALYSIS-VERSION-NUMBER."
+  "Return a semipredicate that returns nil or the UUID of WORKFLOW when
+  it has CHIPWELL-BARCODE ANALYSIS-VERSION-NUMBER."
   [chipwell-barcode analysis-version-number]
   (let [match? (juxt :chip_well_barcode :analysis_version_number)]
     (fn [workflow] (when (= [chipwell-barcode analysis-version-number]
