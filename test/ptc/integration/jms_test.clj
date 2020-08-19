@@ -94,10 +94,10 @@
             (let [msg (start/consume connection queue)
                   [params ptc] (jms/handle-message folder (jms/ednify msg))
                   {:keys [notifications] :as request} (gcs/gcs-edn ptc)
-                  pushed (push (first notifications))
+                  pushed (conj (push (first notifications)) params)
                   gcs (gcs/list-gcs-folder folder)
                   diff (set/difference (set gcs) (set pushed))]
-              (is (= diff (set [ptc])))
+              (is (= diff (set [ptc])) "Error")
               (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))))))
 
 (defn queue-messages
