@@ -23,7 +23,7 @@
   (and (= (:chip_well_barcode workflow) chipwell-barcode)
        (= (:analysis_version_number workflow) analysis-version)))
 
-(defn get-workflow-ids
+(defn get-aou-workflow-ids
   "Get the AllOfUsArrays workflow started in WFL-URL by its CHIPWELL-BARCODE and ANALYSIS-VERSION."
   [wfl-url chipwell-barcode analysis-version]
   (remove nil? (for [workload (get-aou-workloads wfl-url)]
@@ -39,7 +39,7 @@
   [wfl-url chipwell-barcode analysis-version]
   (let [seconds 15]
     (loop []
-      (let [workflow-ids (get-workflow-ids wfl-url chipwell-barcode analysis-version)]
+      (let [workflow-ids (get-aou-workflow-ids wfl-url chipwell-barcode analysis-version)]
         (if (seq workflow-ids)
           (first workflow-ids)
         (do (log/infof "Sleeping %s seconds" seconds)
