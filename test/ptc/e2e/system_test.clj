@@ -58,12 +58,8 @@
             {:keys [notifications] :as request} (gcs/gcs-edn ptc)
             pushed (conj (push (first notifications)) params)
             gcs (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
-        (is (== (count pushed) (count (set pushed))) "Duplicate files in PTC.json")
         (is (not= gcs ::timed-out) "Timeout waiting for files to upload")
-        (let [union (set/union (set gcs) (set pushed))
-              diff (set/difference (set gcs) (set pushed))]
-          (is (== (count union) (count (set gcs))) "Missing files in bucket")
-          (is (== 1 (count diff)) "Unexpected number of files in bucket")
+        (let [diff (set/difference (set gcs) (set pushed))]
           (is (= diff (set [ptc])) "Files in bucket do not match expected files")
           (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))
     (testing "Cromwell workflow is started by WFL"

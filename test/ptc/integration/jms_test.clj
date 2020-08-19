@@ -96,13 +96,8 @@
                   {:keys [notifications] :as request} (gcs/gcs-edn ptc)
                   pushed (push (first notifications))
                   gcs (gcs/list-gcs-folder folder)
-                  union (set/union (set gcs) (set pushed))
                   diff (set/difference (set gcs) (set pushed))]
-              (is (== (count pushed) (count (set pushed))))
-              (is (== (count gcs) (count (set gcs))))
-              (is (== (count union) (count (set gcs))))
-              (is (== 2 (count diff)))
-              (is (= diff (set [params ptc])))
+              (is (= diff (set [ptc])))
               (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))))))
 
 (defn queue-messages
