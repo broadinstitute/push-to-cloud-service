@@ -119,8 +119,8 @@
   [cloud-prefix files]
   (let [seconds 15
         gcs (list-gcs-folder cloud-prefix)]
-      (if (set/subset? (set gcs) (set files))
-        (do (log/infof "Sleeping %s seconds" seconds)
-            (.sleep TimeUnit/SECONDS seconds)
-            (recur cloud-prefix files))
-        (list-gcs-folder cloud-prefix))))
+    (if (set/subset? (set gcs) (set files))
+      (do (log/infof "Sleeping %s seconds" seconds)
+          (.sleep TimeUnit/SECONDS seconds)
+          (recur cloud-prefix files))
+      (list-gcs-folder cloud-prefix))))

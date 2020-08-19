@@ -42,6 +42,6 @@
       (let [workflow-ids (get-aou-workflow-ids wfl-url chipwell-barcode analysis-version)]
         (if (seq workflow-ids)
           (first workflow-ids)
-        (do (log/infof "Sleeping %s seconds" seconds)
-            (.sleep TimeUnit/SECONDS seconds)
-            (recur)))))))
+          (do (log/infof "Sleeping %s seconds" seconds)
+              (.sleep TimeUnit/SECONDS seconds)
+              (recur)))))))
