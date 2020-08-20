@@ -107,12 +107,12 @@
         bucket-url     (misc/getenv-or-throw "PTC_BUCKET_URL")
         upload-sample! (partial jms/handle-message bucket-url)
         {:keys [username password]} (misc/vault-secrets vault-path)]
-      (try
-        (with-open [connection (create-queue-connection url username password)]
-          (listen-and-consume-from-queue upload-sample! connection queue))
-        (catch Throwable x
-          (log/fatal x "Fatal error in message loop")
-          (System/exit 1)))))
+    (try
+      (with-open [connection (create-queue-connection url username password)]
+        (listen-and-consume-from-queue upload-sample! connection queue))
+      (catch Throwable x
+        (log/fatal x "Fatal error in message loop")
+        (System/exit 1)))))
 
 (defn -main
   []
