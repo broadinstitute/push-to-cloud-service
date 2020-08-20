@@ -50,6 +50,7 @@
    ::copy   :reported_gender             :gender
    ::copy   :sample_alias                :sampleAlias
    ::copy   :sample_lsid                 :sampleLsid
+   ::copy   :call_rate_threshold         :callRateThreshold
    ::chip   :bead_pool_manifest_file     :beadPoolManifestPath
    ::chip   :cluster_file                :clusterFilePath
    ::chip   :extended_chip_manifest_file :chipManifestPath
