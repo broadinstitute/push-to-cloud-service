@@ -119,7 +119,7 @@
   (or (empty? messages)
       (apply = (map :properties messages))))
 
-(defn getenv!
+(defn getenv-or-throw
   "Get value of environment variable NAME or throw if nil."
   [name]
   (let [value (System/getenv name)]

@@ -101,10 +101,10 @@
 (defn- message-loop
   "Loop and consume messages using the Zamboni ActiveMQ server."
   []
-  (let [queue          (misc/getenv! "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-        url            (misc/getenv! "ZAMBONI_ACTIVEMQ_URL")
-        vault-path     (misc/getenv! "ZAMBONI_ACTIVEMQ_SECRET_PATH")
-        bucket-url     (misc/getenv! "PTC_BUCKET_URL")
+  (let [queue          (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+        url            (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_URL")
+        vault-path     (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
+        bucket-url     (misc/getenv-or-throw "PTC_BUCKET_URL")
         upload-sample! (partial jms/handle-message bucket-url)
         {:keys [username password]} (misc/vault-secrets vault-path)]
     (while true
