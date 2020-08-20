@@ -9,7 +9,8 @@
             [ptc.util.jms :as jms]
             [ptc.tools.jms :as jms-tools])
   (:import [java.lang Integer]
-           [java.util UUID]))
+           [java.util UUID]
+           [java.util.concurrent TimeUnit]))
 
 (def environment
   (keyword (or (System/getenv "ENVIRONMENT") "dev")))
