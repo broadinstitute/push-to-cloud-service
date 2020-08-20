@@ -44,6 +44,12 @@
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
 
+(defn get-auth-header!
+  "Return an Authorization header with a Bearer token."
+  []
+  {"Authorization"
+   (str "Bearer" \space (misc/shell! "gcloud" "auth" "print-access-token"))})
+
 (defn list-objects
   "The objects in BUCKET with PREFIX in a lazy sequence."
   ([bucket prefix]
@@ -52,7 +58,7 @@
                    (-> {:method       :get   ;; :debug true :debug-body true
                         :url          (str bucket-url bucket "/o")
                         :content-type :application/json
-                        :headers      (misc/get-auth-header!)
+                        :headers      (get-auth-header!)
                         :query-params {:prefix prefix
                                        :maxResults 999
                                        :pageToken pageToken}}
@@ -81,7 +87,7 @@
                   :url     (bucket-object-url bucket object)
                   :headers headers}))
   ([bucket object]
-   (delete-object bucket object (misc/get-auth-header!)))
+   (delete-object bucket object (get-auth-header!)))
   ([url]
    (apply delete-object (parse-gs-url url))))
 
@@ -100,7 +106,7 @@
          :body
          (json/read-str :key-fn keyword))))
   ([file bucket object]
-   (upload-file file bucket object (misc/get-auth-header!)))
+   (upload-file file bucket object (get-auth-header!)))
   ([file url]
    (apply upload-file file (parse-gs-url url))))
 

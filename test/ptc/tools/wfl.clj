@@ -2,7 +2,8 @@
   "Utility functions for WFL."
   (:require [clj-http.client :as client]
             [clojure.tools.logging :as log]
-            [ptc.util.misc     :as misc])
+            [ptc.util.misc :as misc]
+            [ptc.tools.gcs :as gcs])
   (:import [java.util.concurrent TimeUnit]))
 
 (defn get-aou-workloads
@@ -10,7 +11,7 @@
   [wfl-url]
   (letfn [(aou? [workload] (= (:pipeline workload) "AllOfUsArrays"))]
     (-> (str wfl-url "/api/v1/workload")
-        (client/get {:headers (misc/get-auth-header!)})
+        (client/get {:headers (gcs/get-auth-header!)})
         :body misc/parse-json-string
         (->> (filter aou?)))))
 

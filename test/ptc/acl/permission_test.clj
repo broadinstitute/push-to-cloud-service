@@ -1,11 +1,11 @@
 (ns ptc.acl.permission-test
   "Test that the right permissions are granted for AoU project."
-  (:require [ptc.tools.gcs  :as gcs]
-            [ptc.tools.cromwell  :as cromwell]
-            [ptc.util.misc     :as misc]
-            [clojure.string      :as str]
-            [clojure.java.io   :as io]
-            [clojure.test  :refer [deftest is testing]])
+  (:require [ptc.tools.gcs :as gcs]
+            [ptc.tools.cromwell :as cromwell]
+            [ptc.util.misc :as misc]
+            [clojure.string :as str]
+            [clojure.java.io :as io]
+            [clojure.test :refer [deftest is testing]])
   (:import [com.google.auth.oauth2 GoogleCredentials]))
 
 (def aou-in-bucket
@@ -39,7 +39,7 @@
 
 (deftest bucket-permission-test
   (testing "Unauthorized user cannot list the PTC buckets."
-    (with-redefs [misc/get-auth-header! get-test-user-header]
+    (with-redefs [gcs/get-auth-header! get-test-user-header]
       (try
         (hash (gcs/list-objects aou-in-bucket))
         (catch Exception e
@@ -51,7 +51,7 @@
           (is (= 403 (:status (ex-data e)))
               "The user is able to list the output bucket!!")))))
   (testing "Unauthorized user cannot upload object to the PTC buckets."
-    (with-redefs [misc/get-auth-header! get-test-user-header]
+    (with-redefs [gcs/get-auth-header! get-test-user-header]
       (try
         (hash (gcs/upload-file "deps.edn" aou-in-bucket "deps.edn"))
         (catch Exception e
@@ -63,7 +63,7 @@
           (is (= 403 (:status (ex-data e)))
               "The user is able to upload object to the output bucket!!")))))
   (testing "Unauthorized user cannot delete object from the PTC buckets."
-    (with-redefs [misc/get-auth-header! get-test-user-header]
+    (with-redefs [gcs/get-auth-header! get-test-user-header]
       (try
         (hash (gcs/delete-object aou-in-bucket "deps.edn"))
         (catch Exception e
@@ -78,14 +78,14 @@
 (deftest workflow-permission-test
   (testing "Unauthorized users cannot query for workflows in the AoU Cromwell."
     (try
-      (with-redefs [misc/get-auth-header! get-test-user-header]
+      (with-redefs [gcs/get-auth-header! get-test-user-header]
         (hash (cromwell/query aou-cromwell misc/uuid-nil)))
       (catch Exception e
         (is (= 401 (:status (ex-data e)))
             "The user is able to query for a workflow!!"))))
   (testing "Unauthorized users cannot get statuses of workflows in the AoU Cromwell."
     (try
-      (with-redefs [misc/get-auth-header! get-test-user-header]
+      (with-redefs [gcs/get-auth-header! get-test-user-header]
         (hash (cromwell/status aou-cromwell misc/uuid-nil)))
       (catch Exception e
         (is (= 401 (:status (ex-data e)))
