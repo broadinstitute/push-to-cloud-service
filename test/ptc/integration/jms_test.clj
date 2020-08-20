@@ -6,6 +6,7 @@
             [clojure.test      :refer [deftest is testing]]
             [ptc.start         :as start]
             [ptc.tools.gcs      :as gcs]
+            [ptc.tools.utils :as utils]
             [ptc.util.jms      :as jms]
             [ptc.util.misc      :as misc])
   (:import [java.util UUID]
@@ -65,11 +66,6 @@
 
 (deftest push-notification-for-jms
   (let [path [::jms/Properties :payload :workflow]
-        push (-> jms/notification-keys->jms-keys
-                 ((juxt ::jms/chip ::jms/push))
-                 (->> (apply merge)
-                      keys
-                      (apply juxt)))
         bad (fix-paths "./test/data/bad-jms.edn")
         good (fix-paths "./test/data/good-jms.edn")
         missing (-> good (data/diff bad) first (get-in path) keys first
@@ -94,10 +90,10 @@
             (let [msg (start/consume connection queue)
                   [params ptc] (jms/handle-message folder (jms/ednify msg))
                   {:keys [notifications] :as request} (gcs/gcs-edn ptc)
-                  pushed (conj (push (first notifications)) params)
+                  pushed (utils/pushed-files (first notifications) params)
                   gcs (gcs/list-gcs-folder folder)
                   diff (set/difference (set gcs) (set pushed))]
-              (is (= diff (set [ptc])) "Error")
+              (is (= diff (set [ptc])))
               (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))))))
 
 (defn queue-messages

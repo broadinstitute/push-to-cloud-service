@@ -6,6 +6,7 @@
             [ptc.tools.cromwell :as cromwell]
             [ptc.tools.gcs :as gcs]
             [ptc.tools.wfl :as wfl]
+            [ptc.tools.utils :as utils]
             [ptc.util.jms :as jms])
   (:import [java.lang Integer]
            [java.util UUID]))
@@ -44,19 +45,14 @@
                           [::jms/Properties :payload :workflow :analysisCloudVersion] analysis-version)
         chipwell-barcode (get-in message [::jms/Properties :payload :workflow :chipWellBarcode])
         workflow (get-in message [::jms/Properties :payload :workflow])
-        cloud-prefix (jms/cloud-prefix bucket workflow)
-        push (-> jms/notification-keys->jms-keys
-                 ((juxt ::jms/chip ::jms/push))
-                 (->> (apply merge)
-                      keys
-                      (apply juxt)))]
+        cloud-prefix (jms/cloud-prefix bucket workflow)]
     (jms-test/queue-messages 1 environment message)
     (testing "Files are uploaded to the input bucket"
       (let [params (str cloud-prefix "/params.txt")
             ptc (str cloud-prefix "/ptc.json")
             wait (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix [ptc]))
             {:keys [notifications] :as request} (gcs/gcs-edn ptc)
-            pushed (conj (push (first notifications)) params)
+            pushed (utils/pushed-files (first notifications) params)
             gcs (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
         (is (not= gcs ::timed-out) "Timeout waiting for files to upload")
         (let [diff (set/difference (set gcs) (set pushed))]
