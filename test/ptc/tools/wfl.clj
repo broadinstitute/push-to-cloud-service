@@ -10,9 +10,9 @@
   [wfl-url]
   (letfn [(aou? [workload] (= (:pipeline workload) "AllOfUsArrays"))]
     (-> (str wfl-url "/api/v1/workload")
-      (client/get {:headers (misc/get-auth-header!)})
-      :body misc/parse-json-string
-      (->> (filter aou?)))))
+        (client/get {:headers (misc/get-auth-header!)})
+        :body misc/parse-json-string
+        (->> (filter aou?)))))
 
 (defn aou-uuid
   "Return a semipredicate that returns nil or the UUID of WORKFLOW when
@@ -20,7 +20,7 @@
   [chipwell-barcode analysis-version-number]
   (let [match? (juxt :chip_well_barcode :analysis_version_number)]
     (fn [workflow] (when (= [chipwell-barcode analysis-version-number]
-                           (match? workflow))
+                            (match? workflow))
                      (:uuid workflow)))))
 
 (defn get-aou-workflow-ids
@@ -29,16 +29,16 @@
   [wfl-url chipwell-barcode analysis-version-number]
   (let [match? (aou-uuid chipwell-barcode analysis-version-number)]
     (->> wfl-url
-      get-aou-workloads
-      (mapcat :workflows)
-      (keep match?))))
+         get-aou-workloads
+         (mapcat :workflows)
+         (keep match?))))
 
 (defn wait-for-workflow-creation
   "Wait for a workflow with CHIPWELL-BARCODE and ANALYSIS-VERSION-NUMBER
   to appear in an AllOfUsArrays workload in WFL-URL."
   [wfl-url chipwell-barcode analysis-version-number]
   (letfn [(fetch! [] (get-aou-workflow-ids
-                       wfl-url chipwell-barcode analysis-version-number))]
+                      wfl-url chipwell-barcode analysis-version-number))]
     (let [seconds 15]
       (loop [ids (fetch!)]
         (if (empty? ids)
