@@ -9,7 +9,8 @@
             [ptc.tools.utils :as utils]
             [ptc.util.jms :as jms])
   (:import [java.lang Integer]
-           [java.util UUID]))
+           [java.util UUID]
+           [java.util.concurrent TimeUnit]))
 
 (def environment
   (or (System/getenv "ENVIRONMENT") "dev"))
@@ -51,6 +52,7 @@
       (let [params (str cloud-prefix "/params.txt")
             ptc (str cloud-prefix "/ptc.json")
             wait (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix [ptc]))
+            wait-after-upload (.sleep TimeUnit/SECONDS 3)
             {:keys [notifications] :as request} (gcs/gcs-edn ptc)
             pushed (utils/pushed-files (first notifications) params)
             gcs (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
