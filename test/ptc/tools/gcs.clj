@@ -1,13 +1,16 @@
 (ns ptc.tools.gcs
   "Utility functions for Google Cloud Storage shared across this program."
-  (:require [clojure.pprint    :refer [pprint]]
-            [clojure.data.json :as json]
-            [clojure.string    :as str]
-            [clojure.java.io   :as io]
-            [clj-http.client   :as http]
-            [clj-http.util     :as http-util]
-            [ptc.util.misc     :as misc])
-  (:import [org.apache.tika Tika]))
+  (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
+            [clojure.pprint :refer [pprint]]
+            [clojure.set :as set]
+            [clojure.string :as str]
+            [clojure.tools.logging :as log]
+            [clj-http.client :as http]
+            [ptc.util.misc :as misc]
+            [clj-http.util :as http-util])
+  (:import [org.apache.tika Tika]
+           [java.util.concurrent TimeUnit]))
 
 (def api-url
   "The Google Cloud API URL."
@@ -61,6 +64,16 @@
   ([bucket]
    (list-objects bucket "")))
 
+(defn list-gcs-folder
+  "Nil or URLs for the GCS objects of folder."
+  [folder]
+  (-> folder
+      (vector "**")
+      (->> (str/join "/")
+           (misc/shell! "gsutil" "ls"))
+      (str/split #"\n")
+      misc/do-or-nil))
+
 (defn delete-object
   "Delete URL or OBJECT from BUCKET"
   ([bucket object headers]
@@ -90,3 +103,24 @@
    (upload-file file bucket object (misc/get-auth-header!)))
   ([file url]
    (apply upload-file file (parse-gs-url url))))
+
+(defn gcs-cat
+  "Return the content of the GCS object at URL."
+  [url]
+  (misc/shell! "gsutil" "cat" url))
+
+(defn gcs-edn
+  "Return the JSON in GCS URL as EDN."
+  [url]
+  (-> url gcs-cat misc/parse-json-string))
+
+(defn wait-for-files-in-bucket
+  "Wait for files at CLOUD-PREFIX URL to match expected FILES."
+  [cloud-prefix files]
+  (let [seconds 15
+        gcs (list-gcs-folder cloud-prefix)]
+    (if (set/subset? (set gcs) (set files))
+      (do (log/infof "Sleeping %s seconds" seconds)
+          (.sleep TimeUnit/SECONDS seconds)
+          (recur cloud-prefix files))
+      (list-gcs-folder cloud-prefix))))

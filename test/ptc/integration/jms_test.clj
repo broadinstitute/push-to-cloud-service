@@ -1,15 +1,14 @@
 (ns ptc.integration.jms-test
-  (:require [clojure.data      :as data]
-            [clojure.data.json :as json]
+  (:require [clojure.data :as data]
             [clojure.edn       :as edn]
             [clojure.java.io   :as io]
             [clojure.set       :as set]
-            [clojure.string    :as str]
             [clojure.test      :refer [deftest is testing]]
             [ptc.start         :as start]
             [ptc.tools.gcs      :as gcs]
+            [ptc.tools.utils :as utils]
             [ptc.util.jms      :as jms]
-            [ptc.util.misc     :as misc])
+            [ptc.util.misc      :as misc])
   (:import [java.util UUID]
            [org.apache.activemq ActiveMQSslConnectionFactory]))
 
@@ -44,21 +43,11 @@
 (defn with-test-jms-connection
   "CALL with a local JMS connection for testing."
   [call]
-  (let [url     "vm://localhost?broker.persistent=false"
+  (let [url "vm://localhost?broker.persistent=false"
         factory (new ActiveMQSslConnectionFactory url)
-        queue   "test.queue"]
+        queue "test.queue"]
     (with-open [connection (.createQueueConnection factory)]
       (call connection queue))))
-
-(defn list-gcs-folder
-  "Nil or URLs for the GCS objects of folder."
-  [folder]
-  (-> folder
-      (vector "**")
-      (->> (str/join "/")
-           (misc/shell! "gsutil" "ls"))
-      (str/split #"\n")
-      misc/do-or-nil))
 
 (defn fix-paths
   "Fix the local file paths of the JMS message in FILE."
@@ -66,37 +55,22 @@
   (letfn [(canonicalize [file] (-> file io/file .getCanonicalPath io/file))]
     (let [{:keys [::jms/chip ::jms/push]} jms/notification-keys->jms-keys
           push-keys (vals (merge chip push))
-          infile    (canonicalize file)
-          dir       (io/file (.getParent infile))
-          content   (edn/read-string (slurp infile))]
+          infile (canonicalize file)
+          dir (io/file (.getParent infile))
+          content (edn/read-string (slurp infile))]
       (letfn [(one [leaf] (.getCanonicalPath (io/file dir leaf)))
               (all [workflow]
                 (let [old (select-keys workflow push-keys)]
                   (merge workflow (zipmap (keys old) (map one (vals old))))))]
         (update-in content [::jms/Properties :payload :workflow] all)))))
 
-(defn gcs-cat
-  "Return the content of the GCS object at URL."
-  [url]
-  (misc/shell! "gsutil" "cat" url))
-
-(defn gcs-edn
-  "Return the JSON in GCS URL as EDN."
-  [url]
-  (-> url gcs-cat (json/read-str :key-fn keyword)))
-
 (deftest push-notification-for-jms
-  (let [path     [::jms/Properties :payload :workflow]
-        push     (-> jms/notification-keys->jms-keys
-                     ((juxt ::jms/chip ::jms/push))
-                     (->> (apply merge))
-                     keys
-                     (->> (apply juxt)))
-        bad      (fix-paths "./test/data/bad-jms.edn")
-        good     (fix-paths "./test/data/good-jms.edn")
-        missing  (-> good (data/diff bad) first (get-in path) keys first
-                     (->> (str jms/missing-keys-message ".*"))
-                     re-pattern)
+  (let [path [::jms/Properties :payload :workflow]
+        bad (fix-paths "./test/data/bad-jms.edn")
+        good (fix-paths "./test/data/good-jms.edn")
+        missing (-> good (data/diff bad) first (get-in path) keys first
+                    (->> (str jms/missing-keys-message ".*"))
+                    re-pattern)
         workflow (get-in good path)]
     (with-temporary-gcs-folder folder
       (with-test-jms-connection
@@ -115,34 +89,31 @@
                            "GOOD" (::jms/Properties (jms/encode good)))
             (let [msg (start/consume connection queue)
                   [params ptc] (jms/handle-message folder (jms/ednify msg))
-                  {:keys [notifications] :as request} (gcs-edn ptc)
-                  pushed (push (first notifications))
-                  gcs (list-gcs-folder folder)
-                  union (set/union      (set gcs) (set pushed))
-                  diff  (set/difference (set gcs) (set pushed))]
-              (is (==   (count pushed)  (count (set pushed))))
-              (is (==   (count gcs)     (count (set gcs))))
-              (is (==   (count union)   (count (set gcs))))
-              (is (== 2 (count diff)))
-              (is (=    diff            (set [params ptc])))
-              (is (=    (jms/jms->params workflow) (gcs-cat params))))))))))
+                  {:keys [notifications] :as request} (gcs/gcs-edn ptc)
+                  pushed (utils/pushed-files (first notifications) params)
+                  gcs (gcs/list-gcs-folder folder)
+                  diff (set/difference (set gcs) (set pushed))]
+              (is (= diff (set [ptc])))
+              (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))))))
 
 (defn queue-messages
   "Queue N messages to the 'dev' queue."
-  [n]
-  (let [where   [::jms/Properties :payload :workflow :analysisCloudVersion]
-        blame   (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")
-        message (fix-paths "./test/data/good-jms.edn")]
+  [n env message]
+  (let [blame (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")]
     (letfn [(make [n] (-> message
-                          (assoc-in where n)
                           jms/encode
                           ::jms/Properties))]
-      (start/with-push-to-cloud-jms-connection "dev"
+      (start/with-push-to-cloud-jms-connection env
         (fn [connection queue]
           (run! (partial start/produce connection queue blame)
                 (map make (range 1 (inc n)))))))))
 
 (defn -main
   [& args]
-  (let [n (edn/read-string (first args))]
-    (queue-messages n)))
+  (let [n (edn/read-string (first args))
+        env (edn/read-string (second args))
+        analysis-version (rand-int Integer/MAX_VALUE)
+        where [::jms/Properties :payload :workflow :analysisCloudVersion]
+        jms-message (fix-paths "./test/data/good-jms.edn")
+        message (assoc-in where analysis-version jms-message)]
+    (queue-messages n env message)))

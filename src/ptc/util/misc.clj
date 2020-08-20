@@ -9,7 +9,8 @@
             [ptc.ptc               :as ptc]
             [vault.client.http]         ; vault.core needs this
             [vault.core            :as vault])
-  (:import [java.util UUID]
+  (:import [java.util.concurrent TimeUnit]
+           [java.util UUID]
            [org.apache.commons.mail SimpleEmail]))
 
 (defmacro do-or-nil
