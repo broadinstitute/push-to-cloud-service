@@ -2,29 +2,28 @@
   (:require [clojure.edn :as edn]
             [clojure.set :as set]
             [clojure.test :refer [deftest is testing]]
-            [ptc.integration.jms-test :as jms-test]
             [ptc.tools.cromwell :as cromwell]
             [ptc.tools.gcs :as gcs]
             [ptc.tools.wfl :as wfl]
             [ptc.tools.utils :as utils]
-            [ptc.util.jms :as jms])
+            [ptc.util.jms :as jms]
+            [ptc.tools.jms :as jms-tools])
   (:import [java.lang Integer]
-           [java.util UUID]
-           [java.util.concurrent TimeUnit]))
+           [java.util UUID]))
 
 (def environment
-  (or (System/getenv "ENVIRONMENT") "dev"))
+  (keyword (or (System/getenv "ENVIRONMENT") "dev")))
 
 (def bucket
   (or (System/getenv "PTC_BUCKET_NAME") "gs://dev-aou-arrays-input"))
 
 (def cromwell-url
-  (if (= environment "prod")
+  (if (= environment :prod)
     "https://cromwell-aou.gotc-prod.broadinstitute.org"
     "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org"))
 
 (def wfl-url
-  (if (= environment "prod")
+  (if (= environment :prod)
     "https://aou-wfl.gotc-prod.broadinstitute.org"
     "https://dev-wfl.gotc-dev.broadinstitute.org"))
 
@@ -34,7 +33,7 @@
 (defn timeout
   "Timeout FUNCTION after MILLISECONDS."
   [milliseconds function]
-  (let [f (future (function))
+  (let [f      (future (function))
         return (deref f milliseconds ::timed-out)]
     (when (= return ::timed-out)
       (future-cancel f))
@@ -42,21 +41,21 @@
 
 (deftest test-end-to-end
   (let [analysis-version (rand-int Integer/MAX_VALUE)
-        message (assoc-in jms-message
-                          [::jms/Properties :payload :workflow :analysisCloudVersion] analysis-version)
+        message          (assoc-in jms-message
+                                   [::jms/Properties :payload :workflow :analysisCloudVersion] analysis-version)
         chipwell-barcode (get-in message [::jms/Properties :payload :workflow :chipWellBarcode])
-        workflow (get-in message [::jms/Properties :payload :workflow])
-        cloud-prefix (jms/cloud-prefix bucket workflow)]
-    (jms-test/queue-messages 1 environment message)
+        workflow         (get-in message [::jms/Properties :payload :workflow])
+        cloud-prefix     (jms/cloud-prefix bucket workflow)]
+    (jms-tools/queue-messages 1 environment message)
     (testing "Files are uploaded to the input bucket"
       (let [params (str cloud-prefix "/params.txt")
-            ptc (str cloud-prefix "/ptc.json")
-            wait (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix [ptc]))
+            ptc    (str cloud-prefix "/ptc.json")
+            _      (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix [ptc]))
             ; Dodge rarely observed race condition where `cat` errors even though `ls` shows the file
-            wait-after-upload (.sleep TimeUnit/SECONDS 1)
-            {:keys [notifications] :as request} (gcs/gcs-edn ptc)
+            _      (.sleep TimeUnit/SECONDS 1)
+            {:keys [notifications]} (gcs/gcs-edn ptc)
             pushed (utils/pushed-files (first notifications) params)
-            gcs (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
+            gcs    (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
         (is (not= gcs ::timed-out) "Timeout waiting for files to upload")
         (let [diff (set/difference (set gcs) (set pushed))]
           (is (= diff (set [ptc])) "Files in bucket do not match expected files")
@@ -67,5 +66,5 @@
         (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
           (let [workflow-timeout 1800000
-                result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
+                result           (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
             (is (= result "Succeeded") "Cromwell workflow failed")))))))

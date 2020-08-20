@@ -2,8 +2,8 @@
   (:require [clojure.test :refer [deftest is testing]]
             [ptc.start :as start]
             [ptc.tools.gcs :as gcs]
-            [ptc.util.jms :as jms]
-            [ptc.tools.jms :refer [with-test-queue-connection message]])
+            [ptc.tools.jms :as jms-tools]
+            [ptc.util.jms :as jms])
   (:import (java.util UUID)))
 
 (def bucket
@@ -12,7 +12,7 @@
 
 (deftest integration
   (let [prefix     (str "test/" (UUID/randomUUID))
-        properties (::jms/Properties (jms/encode @message))]
+        properties (::jms/Properties (jms/encode @jms-tools/message))]
     (letfn [(task [_]
               (try
                 (testing "end-to-end: "
@@ -27,14 +27,14 @@
               (start/produce connection queue "text" properties)
               (start/listen-and-consume-from-queue task connection queue))]
       (testing "Message is not nil and can be properly read"
-        (if-let [msg (with-test-queue-connection flow)]
-          (is (= @message (select-keys msg [::jms/Properties])))
+        (if-let [msg (jms-tools/with-test-queue-connection flow)]
+          (is (= @jms-tools/message (select-keys msg [::jms/Properties])))
           (is false))))))
 
 (deftest peeking
-  (let [properties (::jms/Properties (jms/encode @message))]
+  (let [properties (::jms/Properties (jms/encode @jms-tools/message))]
     (letfn [(task [message] (is message) false)]
-      (with-test-queue-connection
+      (jms-tools/with-test-queue-connection
         (fn [connection queue]
           (testing "Message given to task isn't nil"
             (start/produce connection queue "text" properties)
@@ -42,4 +42,4 @@
           (testing "The message was only peeked and can still be consumed"
             (let [msg (jms/ednify (start/consume connection queue))]
               (testing "Message is not nil and can be properly read"
-                (is (= @message (select-keys msg [::jms/Properties])))))))))))
+                (is (= @jms-tools/message (select-keys msg [::jms/Properties])))))))))))

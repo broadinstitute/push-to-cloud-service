@@ -28,5 +28,5 @@
            :format {:extra-deps  {cljfmt {:mvn/version "0.6.8"}}
                     :main-opts   ["-m" "cljfmt.main" "fix"]}
            :queue  {:extra-paths ["test"]
-                    :main-opts   ["-m" "ptc.integration.jms-test"]}}
+                    :main-opts   ["-m" "ptc.tools.jms"]}}
  }
