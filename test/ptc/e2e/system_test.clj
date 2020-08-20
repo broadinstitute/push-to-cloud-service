@@ -52,7 +52,8 @@
       (let [params (str cloud-prefix "/params.txt")
             ptc (str cloud-prefix "/ptc.json")
             wait (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix [ptc]))
-            wait-after-upload (.sleep TimeUnit/SECONDS 3)
+            ; Dodge rarely observed race condition where `cat` errors even though `ls` shows the file
+            wait-after-upload (.sleep TimeUnit/SECONDS 1)
             {:keys [notifications] :as request} (gcs/gcs-edn ptc)
             pushed (utils/pushed-files (first notifications) params)
             gcs (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
