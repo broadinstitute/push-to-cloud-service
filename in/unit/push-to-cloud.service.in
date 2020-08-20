@@ -2,7 +2,7 @@
 Description=All-of-Us Arrays Push-to-Cloud Daemon
 After=network.target
 StartLimitIntervalSec=300
-StartLimitBust=3
+StartLimitBurst=3
 
 [Service]
 EnvironmentFile=-/etc/sysconfig/push-to-cloud
