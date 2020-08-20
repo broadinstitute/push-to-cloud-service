@@ -31,7 +31,7 @@
       (with-open [connection (start/create-queue-connection url username password)]
         (closure connection queue)))))
 
-(def message
+(def good-jms-message
   "Example JMS message for testing."
   (delay (edn/read-string (slurp "test/data/good-jms.edn"))))
 
