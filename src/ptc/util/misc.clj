@@ -40,10 +40,11 @@
 (defn vault-secrets
   "Return the vault-secrets at PATH."
   [path]
-  (let [token-path (str (System/getProperty "user.home") "/.vault-token")]
+  (let [env-token  (System/getenv "VAULT_TOKEN")
+        token-path (str (System/getProperty "user.home") "/.vault-token")]
     (try (vault/read-secret
           (doto (vault/new-client "https://clotho.broadinstitute.org:8200/")
-            (vault/authenticate! :token (slurp token-path)))
+            (vault/authenticate! :token (or env-token (slurp token-path))))
           path)
          (catch Throwable e
            (log/warn e "Issue with Vault")
