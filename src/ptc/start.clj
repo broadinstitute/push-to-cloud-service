@@ -102,7 +102,7 @@
   "Loop and consume messages using the Zamboni ActiveMQ server."
   []
   (let [queue          (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-        url            (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_URL")
+        url            (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
         vault-path     (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
         bucket-url     (misc/getenv-or-throw "PTC_BUCKET_URL")
         upload-sample! (partial jms/handle-message bucket-url)
