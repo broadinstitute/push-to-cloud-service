@@ -19,7 +19,7 @@
   "CALL with the ENV JMS connection for testing."
   [env closure]
   (let [config {:prod {:url        "failover:ssl://vpicard-jms.broadinstitute.org:61616"
-                       :queue      "wfl.broad.pushtocloud.enqueue.prod"
+                       :queue      "wfl.broad.pushtocloud.enqueue.prod-test"
                        :vault-path "secret/dsde/gotc/prod/activemq/logins/zamboni"}
                 :dev  {:url        "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616"
                        :queue      "wfl.broad.pushtocloud.enqueue.dev"
