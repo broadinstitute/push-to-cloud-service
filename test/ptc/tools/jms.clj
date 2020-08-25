@@ -66,7 +66,7 @@
         env              (edn/read-string (second args))
         analysis-version (rand-int Integer/MAX_VALUE)
         where            [::jms/Properties :payload :workflow :analysisCloudVersion]
-        jms-message      (fix-paths "./test/data/good-jms.edn")
+        jms-message      (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn"))
         message          (assoc-in jms-message where analysis-version)]
     (when-not (pos-int? n)
       (throw (IllegalArgumentException. "Must specify a positive integer")))
