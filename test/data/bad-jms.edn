@@ -13,7 +13,6 @@
     :chipName "HumanExome-12v1-1_A"
     :chipWellBarcode "7991775143_R01C01"
     :clusterFilePath "bogus-cluster.egt"
-    :collaboratorParticipantId "NA12878"
     :cromwellWorkflowWdlFile "bogus-workflow-wdl.wdl"
     :gender "F"
     :genderClusterFilePath "bogus-gender-cluster.egt"
