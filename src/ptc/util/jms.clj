@@ -47,10 +47,10 @@
   "Map params.txt keys to their associated keys in a JMS message."
   (letfn [(ignore-required-column-for-now [row] (replace (vec row) [1 2]))]
     (->> params-keys->jms-keys-table
-      (partition-all 3)
-      rest
-      (map ignore-required-column-for-now)
-      (into {}))))
+         (partition-all 3)
+         rest
+         (map ignore-required-column-for-now)
+         (into {}))))
 
 (def notification-keys->jms-keys-table
   "How to satisfy notification keys in WFL request."
@@ -98,11 +98,11 @@
   "Map action to map of WFL request notification keys to JMS keys."
   (letfn [(ignore-required-column-for-now [row] (replace (vec row) [0 2 3]))]
     (->> notification-keys->jms-keys-table
-      (partition-all 4) rest
-      (map ignore-required-column-for-now)
-      (group-by first)
-      (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
-      (into {}))))
+         (partition-all 4) rest
+         (map ignore-required-column-for-now)
+         (group-by first)
+         (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
+         (into {}))))
 
 (defn cloud-prefix
   "Return the cloud GCS URL with PREFIX for WORKFLOW."
@@ -116,9 +116,9 @@
   (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))
           (rekey [m [k v]] (assoc m k (v workflow)))]
     (->> params-keys->jms-keys
-      (reduce rekey {})
-      (map stringify)
-      (str/join \newline))))
+         (reduce rekey {})
+         (map stringify)
+         (str/join \newline))))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
@@ -140,8 +140,8 @@
     (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
             (cloudify [m [k v]]
               (assoc m k
-                (str/join "/"
-                  [cloud (last (str/split (v workflow) #"/"))])))
+                     (str/join "/"
+                               [cloud (last (str/split (v workflow) #"/"))])))
             (nilval [k m] (when (nil? (k m)) k))]
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
@@ -151,7 +151,7 @@
   [prefix workflow params]
   (let [result (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])
         request (update append-to-aou-request
-                  :notifications conj (jms->notification prefix workflow))
+                        :notifications conj (jms->notification prefix workflow))
         contents (assoc-in request [:notifications 0 :params_file] params)]
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str contents))
     result))
@@ -161,13 +161,13 @@
   (letfn [(required-for-request? [[_ required? _ k]] (when required? k))
           (required-for-params?  [[required? _ k]]   (when required? k))]
     (let [request (->> notification-keys->jms-keys-table
-                    (partition-all 4)
-                    rest
-                    (keep required-for-request?))
+                       (partition-all 4)
+                       rest
+                       (keep required-for-request?))
           params  (->> params-keys->jms-keys-table
-                    (partition-all 3)
-                    rest
-                    (keep required-for-params?))]
+                       (partition-all 3)
+                       rest
+                       (keep required-for-params?))]
       (sort (set (concat request params))))))
 
 (defn ednify
@@ -200,6 +200,6 @@
         missing (keep missing? required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
-               (str/join \space [missing-keys-message (vec missing)]))))
+              (str/join \space [missing-keys-message (vec missing)]))))
     (let [params (push-params prefix workflow)]
       [params (push-append-to-aou-request prefix workflow params)])))
