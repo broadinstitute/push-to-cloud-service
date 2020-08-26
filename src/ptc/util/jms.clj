@@ -24,23 +24,33 @@
    :uuid (str uuid)
    :notifications []})
 
+(def params-keys->jms-keys-table
+  "How to map params.txt keys to their associated JMS message keys."
+  ["req'd" "params.txt"            "JMS message"
+   true    :CHIP_TYPE_NAME         :chipName
+   true    :CHIP_WELL_BARCODE      :chipWellBarcode
+   true    :INDIVIDUAL_ALIAS       :collaboratorParticipantId
+   true    :LAB_BATCH              :labBatch
+   true    :PARTICIPANT_ID         :participantId
+   true    :PRODUCT_FAMILY         :productFamily
+   true    :PRODUCT_NAME           :productName
+   true    :PRODUCT_ORDER_ID       :productOrderId
+   true    :PRODUCT_PART_NUMBER    :productPartNumber
+   true    :REGULATORY_DESIGNATION :regulatoryDesignation
+   true    :RESEARCH_PROJECT_ID    :researchProjectId
+   false   :SAMPLE_ALIAS           :collaboratorSampleId
+   true    :SAMPLE_GENDER          :gender
+   true    :SAMPLE_ID              :sampleId
+   true    :SAMPLE_LSID            :sampleLsid])
+
 (def params-keys->jms-keys
   "Map params.txt keys to their associated keys in a JMS message."
-  {:CHIP_TYPE_NAME         :chipName
-   :CHIP_WELL_BARCODE      :chipWellBarcode
-   :INDIVIDUAL_ALIAS       :collaboratorParticipantId
-   :LAB_BATCH              :labBatch
-   :PARTICIPANT_ID         :participantId
-   :PRODUCT_FAMILY         :productFamily
-   :PRODUCT_NAME           :productName
-   :PRODUCT_ORDER_ID       :productOrderId
-   :PRODUCT_PART_NUMBER    :productPartNumber
-   :REGULATORY_DESIGNATION :regulatoryDesignation
-   :RESEARCH_PROJECT_ID    :researchProjectId
-   :SAMPLE_ALIAS           :collaboratorSampleId
-   :SAMPLE_GENDER          :gender
-   :SAMPLE_ID              :sampleId
-   :SAMPLE_LSID            :sampleLsid})
+  (letfn [(ignore-required-column-for-now [row] (replace (vec row) [1 2]))]
+    (->> params-keys->jms-keys-table
+      (partition-all 3)
+      rest
+      (map ignore-required-column-for-now)
+      (into {}))))
 
 (def notification-keys->jms-keys-table
   "How to satisfy notification keys in WFL request."
@@ -86,10 +96,10 @@
 
 (def notification-keys->jms-keys
   "Map action to map of WFL request notification keys to JMS keys."
-  (letfn [(ignore-required-for-now [row] (replace (vec row) [0 2 3]))]
+  (letfn [(ignore-required-column-for-now [row] (replace (vec row) [0 2 3]))]
     (->> notification-keys->jms-keys-table
       (partition-all 4) rest
-      (map ignore-required-for-now)
+      (map ignore-required-column-for-now)
       (group-by first)
       (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
       (into {}))))
@@ -106,9 +116,9 @@
   (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))
           (rekey [m [k v]] (assoc m k (v workflow)))]
     (->> params-keys->jms-keys
-         (reduce rekey {})
-         (map stringify)
-         (str/join \newline))))
+      (reduce rekey {})
+      (map stringify)
+      (str/join \newline))))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
@@ -130,8 +140,8 @@
     (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
             (cloudify [m [k v]]
               (assoc m k
-                     (str/join "/"
-                               [cloud (last (str/split (v workflow) #"/"))])))
+                (str/join "/"
+                  [cloud (last (str/split (v workflow) #"/"))])))
             (nilval [k m] (when (nil? (k m)) k))]
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
@@ -141,20 +151,24 @@
   [prefix workflow params]
   (let [result (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])
         request (update append-to-aou-request
-                        :notifications conj (jms->notification prefix workflow))
+                  :notifications conj (jms->notification prefix workflow))
         contents (assoc-in request [:notifications 0 :params_file] params)]
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str contents))
     result))
 
 (def required-jms-keys
   "Sort all the keys required to handle a JMS message."
-  (letfn [(required? [[_ reqd? _ k]] (when reqd? k))]
-    (sort (into (->> notification-keys->jms-keys-table
-                  (partition-all 4)
-                  rest
-                  (keep required?)
-                  set)
-            (vals params-keys->jms-keys)))))
+  (letfn [(required-for-request? [[_ required? _ k]] (when required? k))
+          (required-for-params?  [[required? _ k]]   (when required? k))]
+    (let [request (->> notification-keys->jms-keys-table
+                    (partition-all 4)
+                    rest
+                    (keep required-for-request?))
+          params  (->> params-keys->jms-keys-table
+                    (partition-all 3)
+                    rest
+                    (keep required-for-params?))]
+      (sort (set (concat request params))))))
 
 (defn ednify
   "Return a EDN representation of the JMS MESSAGE with keyword keys."
@@ -186,6 +200,6 @@
         missing (keep missing? required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
-              (str/join \space [missing-keys-message (vec missing)]))))
+               (str/join \space [missing-keys-message (vec missing)]))))
     (let [params (push-params prefix workflow)]
       [params (push-append-to-aou-request prefix workflow params)])))
