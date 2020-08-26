@@ -44,20 +44,20 @@
 
 (def notification-keys->jms-keys-table
   "How to satisfy notification keys in WFL request."
-  ["action" "request notification key"   "JMS key"
-   ::copy   :analysis_version_number     :analysisCloudVersion
-   ::copy   :chip_well_barcode           :chipWellBarcode
-   ::copy   :reported_gender             :gender
-   ::copy   :sample_alias                :sampleAlias
-   ::copy   :sample_lsid                 :sampleLsid
-   ::copy   :call_rate_threshold         :callRateThreshold
-   ::chip   :bead_pool_manifest_file     :beadPoolManifestPath
-   ::chip   :cluster_file                :clusterFilePath
-   ::chip   :extended_chip_manifest_file :chipManifestPath
-   ::chip   :gender_cluster_file         :genderClusterFilePath
-   ::chip   :zcall_thresholds_file       :zCallThresholdsPath
-   ::push   :green_idat_cloud_path       :greenIDatPath
-   ::push   :red_idat_cloud_path         :redIDatPath])
+  ["action" "req'd?" "request notification key"   "JMS key"
+   ::copy   true     :analysis_version_number     :analysisCloudVersion
+   ::copy   true     :chip_well_barcode           :chipWellBarcode
+   ::copy   true     :reported_gender             :gender
+   ::copy   true     :sample_alias                :sampleAlias
+   ::copy   true     :sample_lsid                 :sampleLsid
+   ::copy   true     :call_rate_threshold         :callRateThreshold
+   ::chip   true     :bead_pool_manifest_file     :beadPoolManifestPath
+   ::chip   true     :cluster_file                :clusterFilePath
+   ::chip   true     :extended_chip_manifest_file :chipManifestPath
+   ::chip   false    :gender_cluster_file         :genderClusterFilePath
+   ::chip   false    :zcall_thresholds_file       :zCallThresholdsPath
+   ::push   true     :green_idat_cloud_path       :greenIDatPath
+   ::push   true     :red_idat_cloud_path         :redIDatPath])
 
 ;; There are others, but these are not null in the sample messages.
 ;;
@@ -86,10 +86,13 @@
 
 (def notification-keys->jms-keys
   "Map action to map of WFL request notification keys to JMS keys."
-  (->> notification-keys->jms-keys-table
-       (partition-all 3) rest (group-by first)
-       (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
-       (into {})))
+  (letfn [(ignore-required-for-now [row] (replace (vec row) [0 2 3]))]
+    (->> notification-keys->jms-keys-table
+      (partition-all 4) rest
+      (map ignore-required-for-now)
+      (group-by first)
+      (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
+      (into {}))))
 
 (defn cloud-prefix
   "Return the cloud GCS URL with PREFIX for WORKFLOW."
@@ -145,12 +148,13 @@
 
 (def required-jms-keys
   "Sort all the keys required to handle a JMS message."
-  (sort (into (->> notification-keys->jms-keys-table
-                   (partition-all 3)
-                   rest
-                   (map (fn [[_ _ key]] key))
-                   set)
-              (vals params-keys->jms-keys))))
+  (letfn [(required? [[_ reqd? _ k]] (when reqd? k))]
+    (sort (into (->> notification-keys->jms-keys-table
+                  (partition-all 4)
+                  rest
+                  (keep required?)
+                  set)
+            (vals params-keys->jms-keys)))))
 
 (defn ednify
   "Return a EDN representation of the JMS MESSAGE with keyword keys."
