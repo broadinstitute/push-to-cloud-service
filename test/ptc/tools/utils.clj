@@ -5,7 +5,7 @@
 (defn pushed-files
   "Get files pushed by PTC."
   [notification params]
-  (let [push (-> jms/notification-keys->jms-keys
+  (let [push (-> jms/wfl-keys->jms-keys
                  ((juxt ::jms/chip ::jms/push))
                  (->> (apply merge)
                       keys

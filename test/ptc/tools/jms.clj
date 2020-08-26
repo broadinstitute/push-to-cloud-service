@@ -39,7 +39,7 @@
   "Fix the local file paths of the JMS message in FILE."
   [file]
   (letfn [(canonicalize [file] (-> file io/file .getCanonicalPath io/file))]
-    (let [{:keys [::jms/chip ::jms/push]} jms/notification-keys->jms-keys
+    (let [{:keys [::jms/chip ::jms/push]} jms/wfl-keys->jms-keys
           push-keys (vals (merge chip push))
           infile    (canonicalize file)
           dir       (io/file (.getParent infile))

@@ -14,7 +14,7 @@
   "aou-dev")
 
 (def uuid
-  "Pass this to WFL for some reason.  WFL should generate this UUID."
+  "Pass this to WFL for some reason. WFL should generate the UUID."
   misc/uuid-nil)
 
 (def append-to-aou-request
@@ -24,35 +24,7 @@
    :uuid (str uuid)
    :notifications []})
 
-(def params-keys->jms-keys-table
-  "How to map params.txt keys to their associated JMS message keys."
-  ["req'd" "params.txt"            "JMS message"
-   true    :CHIP_TYPE_NAME         :chipName
-   true    :CHIP_WELL_BARCODE      :chipWellBarcode
-   true    :INDIVIDUAL_ALIAS       :collaboratorParticipantId
-   true    :LAB_BATCH              :labBatch
-   true    :PARTICIPANT_ID         :participantId
-   true    :PRODUCT_FAMILY         :productFamily
-   true    :PRODUCT_NAME           :productName
-   true    :PRODUCT_ORDER_ID       :productOrderId
-   true    :PRODUCT_PART_NUMBER    :productPartNumber
-   true    :REGULATORY_DESIGNATION :regulatoryDesignation
-   true    :RESEARCH_PROJECT_ID    :researchProjectId
-   false   :SAMPLE_ALIAS           :collaboratorSampleId
-   true    :SAMPLE_GENDER          :gender
-   true    :SAMPLE_ID              :sampleId
-   true    :SAMPLE_LSID            :sampleLsid])
-
-(def params-keys->jms-keys
-  "Map params.txt keys to their associated keys in a JMS message."
-  (letfn [(ignore-required-column-for-now [row] (replace (vec row) [1 2]))]
-    (->> params-keys->jms-keys-table
-         (partition-all 3)
-         rest
-         (map ignore-required-column-for-now)
-         (into {}))))
-
-(def notification-keys->jms-keys-table
+(def wfl-keys->jms-keys-table
   "How to satisfy notification keys in WFL request."
   ["action" "req'd?" "request notification key"   "JMS key"
    ::copy   true     :analysis_version_number     :analysisCloudVersion
@@ -67,7 +39,50 @@
    ::chip   false    :gender_cluster_file         :genderClusterFilePath
    ::chip   false    :zcall_thresholds_file       :zCallThresholdsPath
    ::push   true     :green_idat_cloud_path       :greenIDatPath
-   ::push   true     :red_idat_cloud_path         :redIDatPath])
+   ::push   true     :red_idat_cloud_path         :redIDatPath
+   ::param  true     :CHIP_TYPE_NAME              :chipName
+   ::param  true     :CHIP_WELL_BARCODE           :chipWellBarcode
+   ::param  true     :INDIVIDUAL_ALIAS            :collaboratorParticipantId
+   ::param  true     :LAB_BATCH                   :labBatch
+   ::param  true     :PARTICIPANT_ID              :participantId
+   ::param  true     :PRODUCT_FAMILY              :productFamily
+   ::param  true     :PRODUCT_NAME                :productName
+   ::param  true     :PRODUCT_ORDER_ID            :productOrderId
+   ::param  true     :PRODUCT_PART_NUMBER         :productPartNumber
+   ::param  true     :REGULATORY_DESIGNATION      :regulatoryDesignation
+   ::param  true     :RESEARCH_PROJECT_ID         :researchProjectId
+   ::param  false    :SAMPLE_ALIAS                :collaboratorSampleId
+   ::param  true     :SAMPLE_GENDER               :gender
+   ::param  true     :SAMPLE_ID                   :sampleId
+   ::param  true     :SAMPLE_LSID                 :sampleLsid])
+
+(def required-jms-keys
+  "Sort all the keys required to handle a JMS message."
+  (letfn [(required? [[_ reqd? _ jms]] (when reqd? jms))]
+    (->> wfl-keys->jms-keys-table
+         (partition-all 4) rest
+         (keep required?) set sort)))
+
+(def wfl-keys->jms-keys
+  "Map action to map of WFL request notification keys to JMS keys."
+  (letfn [(ignore-required-column-for-now [row] (replace (vec row) [0 2 3]))
+          (key->key [[k v]] [k (into {} (map (comp vec rest) v))])]
+    (->> wfl-keys->jms-keys-table
+         (partition-all 4) rest
+         (map ignore-required-column-for-now)
+         (group-by first)
+         (map key->key)
+         (into {}))))
+
+(defn jms->params
+  "Replace JMS keys in WORKFLOW with their params.txt names."
+  [workflow]
+  (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))
+          (rekey [m [k v]] (assoc m k (v workflow)))]
+    (->> wfl-keys->jms-keys ::param
+         (reduce rekey {})
+         (map stringify)
+         (str/join \newline))))
 
 ;; There are others, but these are not null in the sample messages.
 ;;
@@ -94,31 +109,11 @@
    :size                 #(.getSize                 %)
    :timestamp            #(.getTimestamp            %)})
 
-(def notification-keys->jms-keys
-  "Map action to map of WFL request notification keys to JMS keys."
-  (letfn [(ignore-required-column-for-now [row] (replace (vec row) [0 2 3]))]
-    (->> notification-keys->jms-keys-table
-         (partition-all 4) rest
-         (map ignore-required-column-for-now)
-         (group-by first)
-         (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
-         (into {}))))
-
 (defn cloud-prefix
   "Return the cloud GCS URL with PREFIX for WORKFLOW."
   [prefix workflow]
   (let [{:keys [analysisCloudVersion chipName chipWellBarcode]} workflow]
     (str/join "/" [prefix chipName chipWellBarcode analysisCloudVersion])))
-
-(defn jms->params
-  "Replace JMS keys in WORKFLOW with their params.txt names."
-  [workflow]
-  (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))
-          (rekey [m [k v]] (assoc m k (v workflow)))]
-    (->> params-keys->jms-keys
-         (reduce rekey {})
-         (map stringify)
-         (str/join \newline))))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
@@ -134,7 +129,7 @@
   "Push files to PREFIX and return notification for WORKFLOW."
   [prefix workflow]
   (let [cloud (cloud-prefix prefix workflow)
-        {:keys [::chip ::copy ::push]} notification-keys->jms-keys
+        {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
         chip-and-push (merge chip push)
         sources (map workflow (vals chip-and-push))]
     (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
@@ -155,20 +150,6 @@
         contents (assoc-in request [:notifications 0 :params_file] params)]
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str contents))
     result))
-
-(def required-jms-keys
-  "Sort all the keys required to handle a JMS message."
-  (letfn [(required-for-request? [[_ required? _ k]] (when required? k))
-          (required-for-params?  [[required? _ k]]   (when required? k))]
-    (let [request (->> notification-keys->jms-keys-table
-                       (partition-all 4)
-                       rest
-                       (keep required-for-request?))
-          params  (->> params-keys->jms-keys-table
-                       (partition-all 3)
-                       rest
-                       (keep required-for-params?))]
-      (sort (set (concat request params))))))
 
 (defn ednify
   "Return a EDN representation of the JMS MESSAGE with keyword keys."
