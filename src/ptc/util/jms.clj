@@ -131,13 +131,12 @@
   (let [cloud (cloud-prefix prefix workflow)
         {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
         chip-and-push (merge chip push)
-        sources (map workflow (vals chip-and-push))]
+        sources (keep workflow (vals chip-and-push))]
     (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
             (cloudify [m [k v]]
-              (assoc m k
-                     (str/join "/"
-                               [cloud (last (str/split (v workflow) #"/"))])))
-            (nilval [k m] (when (nil? (k m)) k))]
+              (if-let [path (v workflow)]
+                (assoc m k (str/join "/" [cloud (last (str/split path #"/"))]))
+                m))]
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
