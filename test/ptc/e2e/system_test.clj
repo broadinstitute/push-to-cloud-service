@@ -51,7 +51,7 @@
     (testing "Files are uploaded to the input bucket"
       (let [params (str cloud-prefix "/params.txt")
             ptc    (str cloud-prefix "/ptc.json")
-            _      (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix [ptc]))
+            _      (timeout 360000 #(gcs/wait-for-files-in-bucket cloud-prefix [ptc]))
             ; Dodge rarely observed race condition where `cat` errors even though `ls` shows the file
             _      (.sleep TimeUnit/SECONDS 1)
             {:keys [notifications]} (gcs/gcs-edn ptc)
