@@ -51,12 +51,10 @@
     (testing "Files are uploaded to the input bucket"
       (let [params (str cloud-prefix "/params.txt")
             ptc    (str cloud-prefix "/ptc.json")
-            _      (timeout 360000 #(gcs/wait-for-files-in-bucket cloud-prefix [ptc]))
-            ; Dodge rarely observed race condition where `cat` errors even though `ls` shows the file
-            _      (.sleep TimeUnit/SECONDS 1)
+            _      (timeout 360000 #(gcs/wait-for-files-in-bucket [ptc]))
             {:keys [notifications]} (gcs/gcs-edn ptc)
             pushed (utils/pushed-files (first notifications) params)
-            gcs    (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
+            gcs    (timeout 180000 #(gcs/wait-for-files-in-bucket pushed))]
         (is (not= gcs ::timed-out) "Timeout waiting for files to upload")
         (let [diff (set/difference (set gcs) (set pushed))]
           (is (= diff (set [ptc])) "Files in bucket do not match expected files")
