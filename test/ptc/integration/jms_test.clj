@@ -1,6 +1,5 @@
 (ns ptc.integration.jms-test
   (:require [clojure.data :as data]
-            [clojure.set :as set]
             [clojure.test :refer [deftest is testing]]
             [ptc.start :as start]
             [ptc.tools.gcs :as gcs]
@@ -61,8 +60,13 @@
             (let [msg    (start/consume connection queue)
                   [params ptc] (jms/handle-message folder (jms/ednify msg))
                   {:keys [notifications]} (gcs/gcs-edn ptc)
-                  pushed (utils/pushed-files (first notifications) params)
-                  gcs    (gcs/list-gcs-folder folder)
-                  diff   (set/difference (set gcs) (set pushed))]
-              (is (= diff (set [ptc])))
+                  push   (-> jms/wfl-keys->jms-keys
+                             ((juxt ::jms/chip ::jms/push))
+                             (->> (apply merge))
+                             keys
+                             (->> (apply juxt)))
+                  inputs (remove nil? (push (first notifications)))
+                  pushed (into [params ptc] inputs)
+                  gcs    (gcs/list-gcs-folder folder)]
+              (is (= (set pushed) (set gcs)))
               (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))))))

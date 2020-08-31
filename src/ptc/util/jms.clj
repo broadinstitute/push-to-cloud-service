@@ -14,7 +14,7 @@
   "aou-dev")
 
 (def uuid
-  "Pass this to WFL for some reason.  WFL should generate this UUID."
+  "Pass this to WFL for some reason. WFL should generate the UUID."
   misc/uuid-nil)
 
 (def append-to-aou-request
@@ -24,40 +24,65 @@
    :uuid (str uuid)
    :notifications []})
 
-(def params-keys->jms-keys
-  "Map params.txt keys to their associated keys in a JMS message."
-  {:CHIP_TYPE_NAME         :chipName
-   :CHIP_WELL_BARCODE      :chipWellBarcode
-   :INDIVIDUAL_ALIAS       :collaboratorParticipantId
-   :LAB_BATCH              :labBatch
-   :PARTICIPANT_ID         :participantId
-   :PRODUCT_FAMILY         :productFamily
-   :PRODUCT_NAME           :productName
-   :PRODUCT_ORDER_ID       :productOrderId
-   :PRODUCT_PART_NUMBER    :productPartNumber
-   :REGULATORY_DESIGNATION :regulatoryDesignation
-   :RESEARCH_PROJECT_ID    :researchProjectId
-   :SAMPLE_ALIAS           :collaboratorSampleId
-   :SAMPLE_GENDER          :gender
-   :SAMPLE_ID              :sampleId
-   :SAMPLE_LSID            :sampleLsid})
-
-(def notification-keys->jms-keys-table
+(def wfl-keys->jms-keys-table
   "How to satisfy notification keys in WFL request."
-  ["action" "request notification key"   "JMS key"
-   ::copy   :analysis_version_number     :analysisCloudVersion
-   ::copy   :chip_well_barcode           :chipWellBarcode
-   ::copy   :reported_gender             :gender
-   ::copy   :sample_alias                :sampleAlias
-   ::copy   :sample_lsid                 :sampleLsid
-   ::copy   :call_rate_threshold         :callRateThreshold
-   ::chip   :bead_pool_manifest_file     :beadPoolManifestPath
-   ::chip   :cluster_file                :clusterFilePath
-   ::chip   :extended_chip_manifest_file :chipManifestPath
-   ::chip   :gender_cluster_file         :genderClusterFilePath
-   ::chip   :zcall_thresholds_file       :zCallThresholdsPath
-   ::push   :green_idat_cloud_path       :greenIDatPath
-   ::push   :red_idat_cloud_path         :redIDatPath])
+  ["action" "req'd?" "request notification key"   "JMS key"
+   ::copy   true     :analysis_version_number     :analysisCloudVersion
+   ::copy   true     :chip_well_barcode           :chipWellBarcode
+   ::copy   true     :reported_gender             :gender
+   ::copy   true     :sample_alias                :sampleAlias
+   ::copy   true     :sample_lsid                 :sampleLsid
+   ::copy   true     :call_rate_threshold         :callRateThreshold
+   ::chip   true     :bead_pool_manifest_file     :beadPoolManifestPath
+   ::chip   true     :cluster_file                :clusterFilePath
+   ::chip   true     :extended_chip_manifest_file :chipManifestPath
+   ::chip   false    :gender_cluster_file         :genderClusterFilePath
+   ::chip   false    :zcall_thresholds_file       :zCallThresholdsPath
+   ::push   true     :green_idat_cloud_path       :greenIDatPath
+   ::push   true     :red_idat_cloud_path         :redIDatPath
+   ::param  true     :CHIP_TYPE_NAME              :chipName
+   ::param  true     :CHIP_WELL_BARCODE           :chipWellBarcode
+   ::param  true     :INDIVIDUAL_ALIAS            :collaboratorParticipantId
+   ::param  true     :LAB_BATCH                   :labBatch
+   ::param  true     :PARTICIPANT_ID              :participantId
+   ::param  true     :PRODUCT_FAMILY              :productFamily
+   ::param  true     :PRODUCT_NAME                :productName
+   ::param  true     :PRODUCT_ORDER_ID            :productOrderId
+   ::param  true     :PRODUCT_PART_NUMBER         :productPartNumber
+   ::param  true     :REGULATORY_DESIGNATION      :regulatoryDesignation
+   ::param  true     :RESEARCH_PROJECT_ID         :researchProjectId
+   ::param  false    :SAMPLE_ALIAS                :collaboratorSampleId
+   ::param  true     :SAMPLE_GENDER               :gender
+   ::param  true     :SAMPLE_ID                   :sampleId
+   ::param  true     :SAMPLE_LSID                 :sampleLsid])
+
+(def required-jms-keys
+  "Sort all the keys required to handle a JMS message."
+  (letfn [(required? [[_ reqd? _ jms]] (when reqd? jms))]
+    (->> wfl-keys->jms-keys-table
+         (partition-all 4) rest
+         (keep required?) set sort)))
+
+(def wfl-keys->jms-keys
+  "Map action to map of WFL request notification keys to JMS keys."
+  (letfn [(ignore-required-column-for-now [row] (replace (vec row) [0 2 3]))
+          (key->key [[k v]] [k (into {} (map (comp vec rest) v))])]
+    (->> wfl-keys->jms-keys-table
+         (partition-all 4) rest
+         (map ignore-required-column-for-now)
+         (group-by first)
+         (map key->key)
+         (into {}))))
+
+(defn jms->params
+  "Replace JMS keys in WORKFLOW with their params.txt names."
+  [workflow]
+  (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))
+          (rekey [m [k v]] (assoc m k (v workflow)))]
+    (->> wfl-keys->jms-keys ::param
+         (reduce rekey {})
+         (map stringify)
+         (str/join \newline))))
 
 ;; There are others, but these are not null in the sample messages.
 ;;
@@ -84,28 +109,11 @@
    :size                 #(.getSize                 %)
    :timestamp            #(.getTimestamp            %)})
 
-(def notification-keys->jms-keys
-  "Map action to map of WFL request notification keys to JMS keys."
-  (->> notification-keys->jms-keys-table
-       (partition-all 3) rest (group-by first)
-       (map (fn [[k v]] [k (into {} (map (comp vec rest) v))]))
-       (into {})))
-
 (defn cloud-prefix
   "Return the cloud GCS URL with PREFIX for WORKFLOW."
   [prefix workflow]
   (let [{:keys [analysisCloudVersion chipName chipWellBarcode]} workflow]
     (str/join "/" [prefix chipName chipWellBarcode analysisCloudVersion])))
-
-(defn jms->params
-  "Replace JMS keys in WORKFLOW with their params.txt names."
-  [workflow]
-  (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))
-          (rekey [m [k v]] (assoc m k (v workflow)))]
-    (->> params-keys->jms-keys
-         (reduce rekey {})
-         (map stringify)
-         (str/join \newline))))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
@@ -121,15 +129,14 @@
   "Push files to PREFIX and return notification for WORKFLOW."
   [prefix workflow]
   (let [cloud (cloud-prefix prefix workflow)
-        {:keys [::chip ::copy ::push]} notification-keys->jms-keys
+        {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
         chip-and-push (merge chip push)
-        sources (map workflow (vals chip-and-push))]
+        sources (keep workflow (vals chip-and-push))]
     (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
             (cloudify [m [k v]]
-              (assoc m k
-                     (str/join "/"
-                               [cloud (last (str/split (v workflow) #"/"))])))
-            (nilval [k m] (when (nil? (k m)) k))]
+              (if-let [path (v workflow)]
+                (assoc m k (str/join "/" [cloud (last (str/split path #"/"))]))
+                m))]
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
@@ -142,15 +149,6 @@
         contents (assoc-in request [:notifications 0 :params_file] params)]
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str contents))
     result))
-
-(def required-jms-keys
-  "Sort all the keys required to handle a JMS message."
-  (sort (into (->> notification-keys->jms-keys-table
-                   (partition-all 3)
-                   rest
-                   (map (fn [[_ _ key]] key))
-                   set)
-              (vals params-keys->jms-keys))))
 
 (defn ednify
   "Return a EDN representation of the JMS MESSAGE with keyword keys."
