@@ -30,6 +30,7 @@
    ::copy   true     :analysis_version_number     :analysisCloudVersion
    ::copy   true     :chip_well_barcode           :chipWellBarcode
    ::copy   true     :reported_gender             :gender
+   ::copy   true     :sample_alias                :sampleAlias
    ::copy   true     :sample_lsid                 :sampleLsid
    ::copy   true     :call_rate_threshold         :callRateThreshold
    ::chip   true     :bead_pool_manifest_file     :beadPoolManifestPath
