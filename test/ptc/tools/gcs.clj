@@ -136,8 +136,8 @@
               (do
                 (log/infof "Couldn't find %s, sleeping %s seconds" file seconds)
                 (.sleep TimeUnit/SECONDS seconds)
-                (recur)))
-            (log/infof "Found %s in bucket" file))
+                (recur))
+              (log/infof "Found %s in bucket" file)))
           (wait-for-files-in-bucket (rest files)))
       true)))
 
