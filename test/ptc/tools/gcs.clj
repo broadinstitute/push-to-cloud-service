@@ -123,7 +123,8 @@
 (defn wait-for-files-in-bucket
   "Wait for gsutil to successfully `stat` each given `gs://` file path.
 
-  If it returns, it will always return true."
+  Exists to block and will always return true when it returns. May block
+  forever."
   [files]
   (let [seconds 15
         file (first files)]
