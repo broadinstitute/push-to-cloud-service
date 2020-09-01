@@ -30,7 +30,6 @@
    ::copy   true     :analysis_version_number     :analysisCloudVersion
    ::copy   true     :chip_well_barcode           :chipWellBarcode
    ::copy   true     :reported_gender             :gender
-   ::copy   true     :sample_alias                :sampleAlias
    ::copy   true     :sample_lsid                 :sampleLsid
    ::copy   true     :call_rate_threshold         :callRateThreshold
    ::chip   true     :bead_pool_manifest_file     :beadPoolManifestPath
@@ -51,7 +50,7 @@
    ::param  true     :PRODUCT_PART_NUMBER         :productPartNumber
    ::param  true     :REGULATORY_DESIGNATION      :regulatoryDesignation
    ::param  true     :RESEARCH_PROJECT_ID         :researchProjectId
-   ::param  false    :SAMPLE_ALIAS                :collaboratorSampleId
+   ::param  true     :SAMPLE_ALIAS                :sampleAlias
    ::param  true     :SAMPLE_GENDER               :gender
    ::param  true     :SAMPLE_ID                   :sampleId
    ::param  true     :SAMPLE_LSID                 :sampleLsid])
