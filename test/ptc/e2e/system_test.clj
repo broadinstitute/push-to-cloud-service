@@ -49,21 +49,20 @@
         cloud-prefix     (jms/cloud-prefix bucket workflow)]
     (jms-tools/queue-messages 1 environment message)
     (testing "Files are uploaded to the input bucket"
-      (let [params (str cloud-prefix "/params.txt")
-            ptc    (str cloud-prefix "/ptc.json")
-            _      (timeout 360000 #(gcs/wait-for-files-in-bucket [ptc]))
-            {:keys [notifications]} (gcs/gcs-edn ptc)
-            pushed (utils/pushed-files (first notifications) params)
-            gcs    (timeout 180000 #(gcs/wait-for-files-in-bucket pushed))]
-        (is (not= gcs ::timed-out) "Timeout waiting for files to upload")
-        (let [diff (set/difference (set gcs) (set pushed))]
-          (is (= diff (set [ptc])) "Files in bucket do not match expected files")
+      (let [params   (str cloud-prefix "/params.txt")
+            ptc      (str cloud-prefix "/ptc.json")
+            ptc-json (timeout 360000 #(gcs/wait-for-files-in-bucket [ptc]))]
+        (is (not= ptc-json ::timed-out) "Timed out waiting for ptc.json to upload")
+        (let [{:keys [notifications]} (gcs/gcs-edn ptc)
+              pushed                  (utils/pushed-files (first notifications) params)
+              pushes-files            (timeout 180000 #(gcs/wait-for-files-in-bucket pushed))]
+          (is (not= pushes-files ::timed-out) "Timed out waiting for expected files to upload")
           (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))
-    (testing "Cromwell workflow is started by WFL"
-      (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
-        (is (not= workflow-id ::timed-out) "Timeout waiting for workflow creation")
-        (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
-        (testing "Cromwell workflow succeeds"
-          (let [workflow-timeout 1800000
-                result           (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
-            (is (= result "Succeeded") "Cromwell workflow failed")))))))
+      (testing "Cromwell workflow is started by WFL"
+        (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
+          (is (not= workflow-id ::timed-out) "Timeout waiting for workflow creation")
+          (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
+          (testing "Cromwell workflow succeeds"
+            (let [workflow-timeout 1800000
+                  result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
+              (is (= result "Succeeded") "Cromwell workflow failed")))))))
