@@ -121,19 +121,23 @@
   (-> url gcs-cat misc/parse-json-string))
 
 (defn wait-for-files-in-bucket
-  "Wait for gsutil to successfully `stat` each given `gs://` file path."
+  "Wait for gsutil to successfully `stat` each given `gs://` file path.
+
+  If it returns, it will always return true."
   [files]
   (let [seconds 15
         file (first files)]
-    (when file
-      (loop []
-        (if (not (try
-                   (misc/shell! "gsutil" "stat" file)
-                   (catch Exception _
-                     nil)))
-          (do
-            (log/infof "Sleeping %s seconds" seconds)
-            (.sleep TimeUnit/SECONDS seconds)
-            (recur))))
-      (wait-for-files-in-bucket (rest files)))))
+    (if file
+      (do (loop []
+            (if (not (try
+                       (misc/shell! "gsutil" "stat" file)
+                       (catch Exception _
+                         nil)))
+              (do
+                (log/infof "Couldn't find %s, sleeping %s seconds" file seconds)
+                (.sleep TimeUnit/SECONDS seconds)
+                (recur)))
+            (log/infof "Found %s in bucket" file))
+          (wait-for-files-in-bucket (rest files)))
+      true)))
 
