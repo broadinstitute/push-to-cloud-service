@@ -1,5 +1,6 @@
 {:ptc.util.jms/Properties
  {:action "start"
+  :sender "sender"
   :payload
           {:Zamboni
            {:workflow "IlluminaArraysWorkflow"
@@ -14,7 +15,6 @@
             :chipWellBarcode "7991775143_R01C01"
             :clusterFilePath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_CEPH_A.egt"
             :collaboratorParticipantId "NA12878"
-            :collaboratorSampleId "SM-3S2IV"
             :gender "Female"
             :genderClusterFilePath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_gender.egt"
             :greenIDatPath "/home/unix/ptc/data/arrays/HumanExome-12v1-1_A/idats/7991775143_R01C01/7991775143_R01C01_Grn.idat"
@@ -32,4 +32,4 @@
             :sampleId "SM-3S2IV"
             :sampleLsid "broadinstitute.org:bsp.dev.sample:NOTREAL.NA12878"
             :zCallThresholdsPath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/IBDPRISM_EX.egt.thresholds.txt"}}
-  :sender "picard-dev"}}
+}}

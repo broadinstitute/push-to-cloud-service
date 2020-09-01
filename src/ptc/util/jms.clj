@@ -51,7 +51,7 @@
    ::param  true     :PRODUCT_PART_NUMBER         :productPartNumber
    ::param  true     :REGULATORY_DESIGNATION      :regulatoryDesignation
    ::param  true     :RESEARCH_PROJECT_ID         :researchProjectId
-   ::param  false    :SAMPLE_ALIAS                :collaboratorSampleId
+   ::param  true     :SAMPLE_ALIAS                :sampleAlias
    ::param  true     :SAMPLE_GENDER               :gender
    ::param  true     :SAMPLE_ID                   :sampleId
    ::param  true     :SAMPLE_LSID                 :sampleLsid])
