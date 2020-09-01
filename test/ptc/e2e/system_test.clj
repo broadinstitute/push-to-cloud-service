@@ -49,14 +49,14 @@
         cloud-prefix     (jms/cloud-prefix bucket workflow)]
     (jms-tools/queue-messages 1 environment message)
     (testing "Files are uploaded to the input bucket"
-      (let [params   (str cloud-prefix "/params.txt")
-            ptc      (str cloud-prefix "/ptc.json")
-            ptc-json (timeout 360000 #(gcs/wait-for-files-in-bucket [ptc]))]
-        (is (not= ptc-json ::timed-out) "Timed out waiting for ptc.json to upload")
-        (let [{:keys [notifications]} (gcs/gcs-edn ptc)
-              pushed                  (utils/pushed-files (first notifications) params)
-              pushes-files            (timeout 180000 #(gcs/wait-for-files-in-bucket pushed))]
-          (is (not= pushes-files ::timed-out) "Timed out waiting for expected files to upload")
+      (let [params      (str cloud-prefix "/params.txt")
+            ptc-file    (str cloud-prefix "/ptc.json")
+            ptc-present (timeout 360000 #(gcs/wait-for-files-in-bucket [ptc-file]))]
+        (is (not= ptc-present ::timed-out) "Timed out waiting for ptc.json to upload")
+        (let [{:keys [notifications]} (gcs/gcs-edn ptc-file)
+              expected-files          (utils/pushed-files (first notifications) params)
+              expected-present        (timeout 180000 #(gcs/wait-for-files-in-bucket expected-files))]
+          (is (not= expected-present ::timed-out) "Timed out waiting for expected files to upload")
           (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))
     (testing "Cromwell workflow is started by WFL"
       (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
