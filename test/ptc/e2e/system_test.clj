@@ -49,17 +49,14 @@
         cloud-prefix     (jms/cloud-prefix bucket workflow)]
     (jms-tools/queue-messages 1 environment message)
     (testing "Files are uploaded to the input bucket"
-      (let [params (str cloud-prefix "/params.txt")
-            ptc    (str cloud-prefix "/ptc.json")
-            _      (timeout 360000 #(gcs/wait-for-files-in-bucket cloud-prefix [ptc]))
-            ; Dodge rarely observed race condition where `cat` errors even though `ls` shows the file
-            _      (.sleep TimeUnit/SECONDS 1)
-            {:keys [notifications]} (gcs/gcs-edn ptc)
-            pushed (utils/pushed-files (first notifications) params)
-            gcs    (timeout 180000 #(gcs/wait-for-files-in-bucket cloud-prefix pushed))]
-        (is (not= gcs ::timed-out) "Timeout waiting for files to upload")
-        (let [diff (set/difference (set gcs) (set pushed))]
-          (is (= diff (set [ptc])) "Files in bucket do not match expected files")
+      (let [params      (str cloud-prefix "/params.txt")
+            ptc-file    (str cloud-prefix "/ptc.json")
+            ptc-present (timeout 360000 #(gcs/wait-for-files-in-bucket [ptc-file]))]
+        (is (not= ptc-present ::timed-out) "Timed out waiting for ptc.json to upload")
+        (let [{:keys [notifications]} (gcs/gcs-edn ptc-file)
+              expected-files          (utils/pushed-files (first notifications) params)
+              expected-present        (timeout 180000 #(gcs/wait-for-files-in-bucket expected-files))]
+          (is (not= expected-present ::timed-out) "Timed out waiting for expected files to upload")
           (is (= (jms/jms->params workflow) (gcs/gcs-cat params))))))
     (testing "Cromwell workflow is started by WFL"
       (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
@@ -67,5 +64,5 @@
         (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
           (let [workflow-timeout 1800000
-                result           (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
+                result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
             (is (= result "Succeeded") "Cromwell workflow failed")))))))

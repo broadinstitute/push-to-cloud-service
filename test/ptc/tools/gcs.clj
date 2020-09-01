@@ -121,12 +121,24 @@
   (-> url gcs-cat misc/parse-json-string))
 
 (defn wait-for-files-in-bucket
-  "Wait for files at CLOUD-PREFIX URL to match expected FILES."
-  [cloud-prefix files]
+  "Wait for gsutil to successfully `stat` each given `gs://` file path.
+
+  Exists to block and will always return true when it returns. May block
+  forever."
+  [files]
   (let [seconds 15
-        gcs (list-gcs-folder cloud-prefix)]
-    (if (set/subset? (set gcs) (set files))
-      (do (log/infof "Sleeping %s seconds" seconds)
-          (.sleep TimeUnit/SECONDS seconds)
-          (recur cloud-prefix files))
-      (list-gcs-folder cloud-prefix))))
+        file (first files)]
+    (if file
+      (do (loop []
+            (if (not (try
+                       (misc/shell! "gsutil" "stat" file)
+                       (catch Exception _
+                         nil)))
+              (do
+                (log/infof "Couldn't find %s, sleeping %s seconds" file seconds)
+                (.sleep TimeUnit/SECONDS seconds)
+                (recur))
+              (log/infof "Found %s in bucket" file)))
+          (wait-for-files-in-bucket (rest files)))
+      true)))
+
