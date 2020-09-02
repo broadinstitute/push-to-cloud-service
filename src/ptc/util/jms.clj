@@ -147,7 +147,7 @@
   (let [aou-reference-bucket (or (System/getenv "AOU_REFERENCE_BUCKET") "broad-arrays-dev-storage")
         cloud-chip-metadata-dir (get workflow :cloudChipMetaDataDirectory)
         bucket (first (misc/parse-gs-url cloud-chip-metadata-dir))
-        aou-chip-metadata-dir (str/replace cloud-chip-metadata-dir bucket aou-reference-bucket)
+        aou-chip-metadata-dir (str/replace-first cloud-chip-metadata-dir bucket aou-reference-bucket)
         extended-chip-manifest-file-name (get workflow :extendedIlluminaManifestFileName)]
     (str aou-chip-metadata-dir extended-chip-manifest-file-name)))
 
