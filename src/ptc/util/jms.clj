@@ -142,7 +142,7 @@
 (defn get-extended-chip-manifest
   "Get the extended_chip_manifest_file from the JMS message"
   [workflow]
-  (let [aou-reference-bucket (misc/getenv-or-throw "AOU_REFERENCE_BUCKET")
+  (let [aou-reference-bucket (or (misc/getenv-or-throw "AOU_REFERENCE_BUCKET") "broad-arrays-dev-storage")
         cloud-chip-metadata-dir (get workflow :cloudChipMetaDataDirectory)
         bucket (first (misc/parse-gs-url cloud-chip-metadata-dir))
         aou-chip-metadata-dir (str/replace cloud-chip-metadata-dir bucket aou-reference-bucket)
