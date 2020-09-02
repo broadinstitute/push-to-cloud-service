@@ -26,35 +26,36 @@
 
 (def wfl-keys->jms-keys-table
   "How to satisfy notification keys in WFL request."
-  ["action" "req'd?" "request notification key"   "JMS key"
-   ::copy   true     :analysis_version_number     :analysisCloudVersion
-   ::copy   true     :chip_well_barcode           :chipWellBarcode
-   ::copy   true     :reported_gender             :gender
-   ::copy   true     :sample_alias                :sampleAlias
-   ::copy   true     :sample_lsid                 :sampleLsid
-   ::copy   true     :call_rate_threshold         :callRateThreshold
-   ::chip   true     :bead_pool_manifest_file     :beadPoolManifestPath
-   ::chip   true     :cluster_file                :clusterFilePath
-   ::chip   true     :extended_chip_manifest_file :chipManifestPath
-   ::chip   false    :gender_cluster_file         :genderClusterFilePath
-   ::chip   false    :zcall_thresholds_file       :zCallThresholdsPath
-   ::push   true     :green_idat_cloud_path       :greenIDatPath
-   ::push   true     :red_idat_cloud_path         :redIDatPath
-   ::param  true     :CHIP_TYPE_NAME              :chipName
-   ::param  true     :CHIP_WELL_BARCODE           :chipWellBarcode
-   ::param  true     :INDIVIDUAL_ALIAS            :collaboratorParticipantId
-   ::param  true     :LAB_BATCH                   :labBatch
-   ::param  true     :PARTICIPANT_ID              :participantId
-   ::param  true     :PRODUCT_FAMILY              :productFamily
-   ::param  true     :PRODUCT_NAME                :productName
-   ::param  true     :PRODUCT_ORDER_ID            :productOrderId
-   ::param  true     :PRODUCT_PART_NUMBER         :productPartNumber
-   ::param  true     :REGULATORY_DESIGNATION      :regulatoryDesignation
-   ::param  true     :RESEARCH_PROJECT_ID         :researchProjectId
-   ::param  true     :SAMPLE_ALIAS                :sampleAlias
-   ::param  true     :SAMPLE_GENDER               :gender
-   ::param  true     :SAMPLE_ID                   :sampleId
-   ::param  true     :SAMPLE_LSID                 :sampleLsid])
+  ["action" "req'd?" "request notification key"           "JMS key"
+   ::copy   true     :analysis_version_number             :analysisCloudVersion
+   ::copy   true     :chip_well_barcode                   :chipWellBarcode
+   ::copy   true     :cloud_chip_metadata_directory       :cloudChipMetaDataDirectory
+   ::copy   true     :extended_illumina_manifest_filename :extendedIlluminaManifestFileName
+   ::copy   true     :reported_gender                     :gender
+   ::copy   true     :sample_alias                        :sampleAlias
+   ::copy   true     :sample_lsid                         :sampleLsid
+   ::copy   true     :call_rate_threshold                 :callRateThreshold
+   ::chip   true     :bead_pool_manifest_file             :beadPoolManifestPath
+   ::chip   true     :cluster_file                        :clusterFilePath
+   ::chip   false    :gender_cluster_file                 :genderClusterFilePath
+   ::chip   false    :zcall_thresholds_file               :zCallThresholdsPath
+   ::push   true     :green_idat_cloud_path               :greenIDatPath
+   ::push   true     :red_idat_cloud_path                 :redIDatPath
+   ::param  true     :CHIP_TYPE_NAME                      :chipName
+   ::param  true     :CHIP_WELL_BARCODE                   :chipWellBarcode
+   ::param  true     :INDIVIDUAL_ALIAS                    :collaboratorParticipantId
+   ::param  true     :LAB_BATCH                           :labBatch
+   ::param  true     :PARTICIPANT_ID                      :participantId
+   ::param  true     :PRODUCT_FAMILY                      :productFamily
+   ::param  true     :PRODUCT_NAME                        :productName
+   ::param  true     :PRODUCT_ORDER_ID                    :productOrderId
+   ::param  true     :PRODUCT_PART_NUMBER                 :productPartNumber
+   ::param  true     :REGULATORY_DESIGNATION              :regulatoryDesignation
+   ::param  true     :RESEARCH_PROJECT_ID                 :researchProjectId
+   ::param  true     :SAMPLE_ALIAS                        :sampleAlias
+   ::param  true     :SAMPLE_GENDER                       :gender
+   ::param  true     :SAMPLE_ID                           :sampleId
+   ::param  true     :SAMPLE_LSID                         :sampleLsid])
 
 (def required-jms-keys
   "Sort all the keys required to handle a JMS message."
@@ -140,13 +141,26 @@
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
+(defn get-extended-chip-manifest
+  "Get the extended_chip_manifest_file from the JMS message"
+  [workflow]
+  (let [aou-reference-bucket (or (System/getenv "AOU_REFERENCE_BUCKET") "broad-arrays-dev-storage")
+        cloud-chip-metadata-dir (get workflow :cloudChipMetaDataDirectory)
+        bucket (first (misc/parse-gs-url cloud-chip-metadata-dir))
+        aou-chip-metadata-dir (str/replace-first cloud-chip-metadata-dir bucket aou-reference-bucket)
+        extended-chip-manifest-file-name (get workflow :extendedIlluminaManifestFileName)]
+    (str aou-chip-metadata-dir extended-chip-manifest-file-name)))
+
 (defn push-append-to-aou-request
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX."
   [prefix workflow params]
   (let [result (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])
         request (update append-to-aou-request
                         :notifications conj (jms->notification prefix workflow))
-        contents (assoc-in request [:notifications 0 :params_file] params)]
+        extended-chip-manifest (get-extended-chip-manifest workflow)
+        contents (-> request
+                     (assoc-in [:notifications 0 :params_file] params)
+                     (assoc-in [:notifications 0 :extended_chip_manifest_file] extended-chip-manifest))]
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str contents))
     result))
 
