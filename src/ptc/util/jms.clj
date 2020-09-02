@@ -35,7 +35,6 @@
    ::copy   true     :call_rate_threshold         :callRateThreshold
    ::chip   true     :bead_pool_manifest_file     :beadPoolManifestPath
    ::chip   true     :cluster_file                :clusterFilePath
-   ::chip   true     :extended_chip_manifest_file :chipManifestPath
    ::chip   false    :gender_cluster_file         :genderClusterFilePath
    ::chip   false    :zcall_thresholds_file       :zCallThresholdsPath
    ::push   true     :green_idat_cloud_path       :greenIDatPath
@@ -140,13 +139,26 @@
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
+(defn get-extended-chip-manifest
+  "Get the extended_chip_manifest_file from the JMS message"
+  [workflow]
+  (let [aou-reference-bucket (misc/getenv-or-throw "AOU_REFERENCE_BUCKET")
+        cloud-chip-metadata-dir (get workflow :cloudChipMetaDataDirectory)
+        bucket (first (misc/parse-gs-url cloud-chip-metadata-dir))
+        aou-chip-metadata-dir (str/replace cloud-chip-metadata-dir bucket aou-reference-bucket)
+        extended-chip-manifest-file-name (get workflow :extendedIlluminaManifestFileName)]
+    (str aou-chip-metadata-dir extended-chip-manifest-file-name)))
+
 (defn push-append-to-aou-request
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX."
   [prefix workflow params]
   (let [result (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])
         request (update append-to-aou-request
                         :notifications conj (jms->notification prefix workflow))
-        contents (assoc-in request [:notifications 0 :params_file] params)]
+        extended-chip-manifest (get-extended-chip-manifest workflow)
+        contents (-> request
+              (assoc-in [:notifications 0 :params_file] params)
+              (assoc-in [:notifications 0 :extended_chip_manifest_file] extended-chip-manifest))]
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str contents))
     result))
 
