@@ -157,8 +157,8 @@
                         :notifications conj (jms->notification prefix workflow))
         extended-chip-manifest (get-extended-chip-manifest workflow)
         contents (-> request
-              (assoc-in [:notifications 0 :params_file] params)
-              (assoc-in [:notifications 0 :extended_chip_manifest_file] extended-chip-manifest))]
+                     (assoc-in [:notifications 0 :params_file] params)
+                     (assoc-in [:notifications 0 :extended_chip_manifest_file] extended-chip-manifest))]
     (misc/shell! "gsutil" "cp" "-" result :in (json/write-str contents))
     result))
 
