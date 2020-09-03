@@ -9,24 +9,19 @@
             [ptc.util.jms :as jms]
             [ptc.tools.jms :as jms-tools])
   (:import [java.lang Integer]
-           [java.util UUID]
-           [java.util.concurrent TimeUnit]))
+           [java.util UUID]))
 
-(def environment
-  (keyword (or (System/getenv "ENVIRONMENT") "dev")))
+(def queue-environment
+  (keyword (or (System/getenv "QUEUE_ENVIRONMENT") "dev")))
 
 (def bucket
-  (or (System/getenv "PTC_BUCKET_NAME") "gs://dev-aou-arrays-input"))
+  (or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input"))
 
 (def cromwell-url
-  (if (= environment :prod)
-    "https://cromwell-aou.gotc-prod.broadinstitute.org"
-    "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org"))
+  (or (System/getenv "CROMWELL_URL") "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org"))
 
 (def wfl-url
-  (if (= environment :prod)
-    "https://aou-wfl.gotc-prod.broadinstitute.org"
-    "https://dev-wfl.gotc-dev.broadinstitute.org"))
+  (or (System/getenv "WFL_URL") "https://dev-wfl.gotc-dev.broadinstitute.org"))
 
 (def jms-message
   (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn")))
@@ -47,7 +42,7 @@
         chipwell-barcode (get-in message [::jms/Properties :payload :workflow :chipWellBarcode])
         workflow         (get-in message [::jms/Properties :payload :workflow])
         cloud-prefix     (jms/cloud-prefix bucket workflow)]
-    (jms-tools/queue-messages 1 environment message)
+    (jms-tools/queue-messages 1 queue-environment message)
     (testing "Files are uploaded to the input bucket"
       (let [params      (str cloud-prefix "/params.txt")
             ptc-file    (str cloud-prefix "/ptc.json")
