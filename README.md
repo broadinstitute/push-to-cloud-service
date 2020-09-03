@@ -63,13 +63,16 @@ network and run:
 
 The e2e test runs in the dev environment by default. To run in production:
 ```bash
-QUEUE_ENVIRONMENT="prod"
+JMS_URL="failover:ssl://vpicard-jms.broadinstitute.org:61616"
+QUEUE="wfl.broad.pushtocloud.enqueue.prod-test"
+VAULT_PATH="secret/dsde/gotc/prod/activemq/logins/zamboni"
 PTC_BUCKET_URL="gs://broad-aou-arrays-input"
 CROMWELL_URL="https://cromwell-aou.gotc-prod.broadinstitute.org"
 WFL_URL="https://aou-wfl.gotc-prod.broadinstitute.org"
 
-QUEUE_ENVIRONMENT=${QUEUE_ENVIRONMENT} PTC_BUCKET_URL=${PTC_BUCKET_URL} \
-CROMWELL_URL=${CROMWELL_URL} WFL_URL=${WFL_URL} clojure -A:test integration
+JMS_URL=${JMS_URL} QUEUE=${QUEUE} VAULT_PATH=${VAULT_PATH} \
+PTC_BUCKET_URL=${PTC_BUCKET_URL} CROMWELL_URL=${CROMWELL_URL} WFL_URL=${WFL_URL} \
+clojure -A:test integration
 ```
 
 There's also an `ACL` testing to check if the permissions of (AoU) Bucket and Cromwell are in general set properly. You could invoke it with:

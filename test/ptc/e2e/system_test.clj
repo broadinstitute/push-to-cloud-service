@@ -11,8 +11,14 @@
   (:import [java.lang Integer]
            [java.util UUID]))
 
-(def queue-environment
-  (keyword (or (System/getenv "QUEUE_ENVIRONMENT") "dev")))
+(def jms-url
+  (keyword (or (System/getenv "JMS_URL") "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616")))
+
+(def queue
+  (keyword (or (System/getenv "QUEUE") "wfl.broad.pushtocloud.enqueue.dev")))
+
+(def vault-path
+  (keyword (or (System/getenv "VAULT_PATH") "secret/dsde/gotc/dev/activemq/logins/zamboni")))
 
 (def bucket
   (or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input"))
@@ -42,7 +48,7 @@
         chipwell-barcode (get-in message [::jms/Properties :payload :workflow :chipWellBarcode])
         workflow         (get-in message [::jms/Properties :payload :workflow])
         cloud-prefix     (jms/cloud-prefix bucket workflow)]
-    (jms-tools/queue-messages 1 queue-environment message)
+    (jms-tools/queue-messages 1 jms-url queue vault-path message)
     (testing "Files are uploaded to the input bucket"
       (let [params      (str cloud-prefix "/params.txt")
             ptc-file    (str cloud-prefix "/ptc.json")
