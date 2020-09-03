@@ -54,7 +54,7 @@
 (defn -main
   [& args]
   (let [[n url queue vault-path] args
-        n (edn/read-string n)
+        n                (edn/read-string n)
         analysis-version (rand-int Integer/MAX_VALUE)
         where            [::jms/Properties :payload :workflow :analysisCloudVersion]
         jms-message      (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn"))
