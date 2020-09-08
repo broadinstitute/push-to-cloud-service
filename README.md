@@ -21,30 +21,6 @@ You could then run `clj -m $namespace` to run a module with given namespace. e.g
 clojure -m ptc.start
 ```
 
-The tests are managed by `clj` as well and will be executed by
- [`kaocha`](https://github.com/lambdaisland/kaocha) test runner. You could
- run the following code to see an example:
-
- ```bash
- clojure -A:test unit
- ```
-
-For integration testing, you need to connect to the VPN or be in the Broad
-network and run:
-
-```bash
- clojure -A:test integration
-```
-
-There's also an `ACL` testing to check if the permissions of (AoU) Bucket and Cromwell are in general set properly. You could invoke it with:
-
-```bash
- clojure -A:test acl
- ```
-
-which will run the end to end test including uploading some files to the
-testing Google Cloud Storage Bucket.
-
 ## Development
 
 ```bash
@@ -61,6 +37,50 @@ $ tree .
 The project structure is shown as above, you add new entries to `deps.edn`
 to introduce a new dependency, add new modules to `src/` and implement new
 test cases to `test/`.
+
+## Testing
+
+The tests are managed by `clj` and will be executed by
+ [`kaocha`](https://github.com/lambdaisland/kaocha) test runner. You could
+ run the following code to see an example:
+
+ ```bash
+ clojure -A:test unit
+ ```
+
+For integration testing, you need to connect to the VPN or be in the Broad
+network and run:
+
+```bash
+ clojure -A:test integration
+```
+
+For end-to-end testing, you need to connect to the VPN or be in the Broad
+network and run:
+```bash
+ clojure -A:test e2e
+```
+
+The e2e test runs in the dev environment by default. To run in production:
+```bash
+export ZAMBONI_ACTIVEMQ_SERVER_URL="failover:ssl://vpicard-jms.broadinstitute.org:61616"
+export ZAMBONI_ACTIVEMQ_QUEUE_NAME="wfl.broad.pushtocloud.enqueue.prod-test"
+export ZAMBONI_ACTIVEMQ_SECRET_PATH="secret/dsde/gotc/prod/activemq/logins/zamboni"
+export PTC_BUCKET_URL="gs://broad-aou-arrays-input"
+export CROMWELL_URL="https://cromwell-aou.gotc-prod.broadinstitute.org"
+export WFL_URL="https://aou-wfl.gotc-prod.broadinstitute.org"
+
+clojure -A:test integration
+```
+
+There's also an `ACL` testing to check if the permissions of (AoU) Bucket and Cromwell are in general set properly. You could invoke it with:
+
+```bash
+ clojure -A:test acl
+ ```
+
+which will run the end to end test including uploading some files to the
+testing Google Cloud Storage Bucket.
 
 ## Build
 

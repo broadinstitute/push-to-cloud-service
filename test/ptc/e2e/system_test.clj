@@ -9,24 +9,25 @@
             [ptc.util.jms :as jms]
             [ptc.tools.jms :as jms-tools])
   (:import [java.lang Integer]
-           [java.util UUID]
-           [java.util.concurrent TimeUnit]))
+           [java.util UUID]))
 
-(def environment
-  (keyword (or (System/getenv "ENVIRONMENT") "dev")))
+(def zamboni-activemq-server-url
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL") "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616"))
 
-(def bucket
-  (or (System/getenv "PTC_BUCKET_NAME") "gs://dev-aou-arrays-input"))
+(def zamboni-activemq-queue-name
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME") "wfl.broad.pushtocloud.enqueue.dev"))
+
+(def zamboni-activemq-secret-path
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH") "secret/dsde/gotc/dev/activemq/logins/zamboni"))
+
+(def ptc-bucket-url
+  (or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input"))
 
 (def cromwell-url
-  (if (= environment :prod)
-    "https://cromwell-aou.gotc-prod.broadinstitute.org"
-    "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org"))
+  (or (System/getenv "CROMWELL_URL") "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org"))
 
 (def wfl-url
-  (if (= environment :prod)
-    "https://aou-wfl.gotc-prod.broadinstitute.org"
-    "https://dev-wfl.gotc-dev.broadinstitute.org"))
+  (or (System/getenv "WFL_URL") "https://dev-wfl.gotc-dev.broadinstitute.org"))
 
 (def jms-message
   (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn")))
@@ -46,8 +47,8 @@
                                    [::jms/Properties :payload :workflow :analysisCloudVersion] analysis-version)
         chipwell-barcode (get-in message [::jms/Properties :payload :workflow :chipWellBarcode])
         workflow         (get-in message [::jms/Properties :payload :workflow])
-        cloud-prefix     (jms/cloud-prefix bucket workflow)]
-    (jms-tools/queue-messages 1 environment message)
+        cloud-prefix     (jms/cloud-prefix ptc-bucket-url workflow)]
+    (jms-tools/queue-messages 1 zamboni-activemq-server-url zamboni-activemq-queue-name zamboni-activemq-secret-path message)
     (testing "Files are uploaded to the input bucket"
       (let [params      (str cloud-prefix "/params.txt")
             ptc-file    (str cloud-prefix "/ptc.json")
