@@ -63,14 +63,16 @@ network and run:
 
 The e2e test runs in the dev environment by default. To run in production:
 ```bash
-JMS_URL="failover:ssl://vpicard-jms.broadinstitute.org:61616"
-QUEUE="wfl.broad.pushtocloud.enqueue.prod-test"
-VAULT_PATH="secret/dsde/gotc/prod/activemq/logins/zamboni"
+ZAMBONI_ACTIVEMQ_SERVER_URL="failover:ssl://vpicard-jms.broadinstitute.org:61616"
+ZAMBONI_ACTIVEMQ_QUEUE_NAME="wfl.broad.pushtocloud.enqueue.prod-test"
+ZAMBONI_ACTIVEMQ_SECRET_PATH="secret/dsde/gotc/prod/activemq/logins/zamboni"
 PTC_BUCKET_URL="gs://broad-aou-arrays-input"
 CROMWELL_URL="https://cromwell-aou.gotc-prod.broadinstitute.org"
 WFL_URL="https://aou-wfl.gotc-prod.broadinstitute.org"
 
-JMS_URL=${JMS_URL} QUEUE=${QUEUE} VAULT_PATH=${VAULT_PATH} \
+ZAMBONI_ACTIVEMQ_SERVER_URL=${ZAMBONI_ACTIVEMQ_SERVER_URL} \
+ZAMBONI_ACTIVEMQ_QUEUE_NAME=${ZAMBONI_ACTIVEMQ_QUEUE_NAME} \
+ZAMBONI_ACTIVEMQ_SECRET_PATH=${ZAMBONI_ACTIVEMQ_SECRET_PATH} \
 PTC_BUCKET_URL=${PTC_BUCKET_URL} CROMWELL_URL=${CROMWELL_URL} WFL_URL=${WFL_URL} \
 clojure -A:test integration
 ```

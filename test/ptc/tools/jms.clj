@@ -53,7 +53,7 @@
 
 (defn -main
   [& args]
-  (let [[n url queue vault-path] args
+  (let [[n zamboni-activemq-server-url zamboni-activemq-queue-name zamboni-activemq-secret-path] args
         n                (edn/read-string n)
         analysis-version (rand-int Integer/MAX_VALUE)
         where            [::jms/Properties :payload :workflow :analysisCloudVersion]
@@ -61,4 +61,4 @@
         message          (assoc-in jms-message where analysis-version)]
     (when-not (pos-int? n)
       (throw (IllegalArgumentException. "Must specify a positive integer")))
-    (queue-messages n url queue vault-path message)))
+    (queue-messages n zamboni-activemq-server-url zamboni-activemq-queue-name zamboni-activemq-secret-path message)))

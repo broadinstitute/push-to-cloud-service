@@ -11,16 +11,16 @@
   (:import [java.lang Integer]
            [java.util UUID]))
 
-(def jms-url
-  (keyword (or (System/getenv "JMS_URL") "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616")))
+(def zamboni-activemq-server-url
+  (keyword (or (System/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL") "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616")))
 
-(def queue
-  (keyword (or (System/getenv "QUEUE") "wfl.broad.pushtocloud.enqueue.dev")))
+(def zamboni-activemq-queue-name
+  (keyword (or (System/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME") "wfl.broad.pushtocloud.enqueue.dev")))
 
-(def vault-path
-  (keyword (or (System/getenv "VAULT_PATH") "secret/dsde/gotc/dev/activemq/logins/zamboni")))
+(def zamboni-activemq-secret-path
+  (keyword (or (System/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH") "secret/dsde/gotc/dev/activemq/logins/zamboni")))
 
-(def bucket
+(def ptc-bucket-url
   (or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input"))
 
 (def cromwell-url
@@ -47,8 +47,8 @@
                                    [::jms/Properties :payload :workflow :analysisCloudVersion] analysis-version)
         chipwell-barcode (get-in message [::jms/Properties :payload :workflow :chipWellBarcode])
         workflow         (get-in message [::jms/Properties :payload :workflow])
-        cloud-prefix     (jms/cloud-prefix bucket workflow)]
-    (jms-tools/queue-messages 1 jms-url queue vault-path message)
+        cloud-prefix     (jms/cloud-prefix ptc-bucket-url workflow)]
+    (jms-tools/queue-messages 1 zamboni-activemq-server-url zamboni-activemq-queue-name zamboni-activemq-secret-path message)
     (testing "Files are uploaded to the input bucket"
       (let [params      (str cloud-prefix "/params.txt")
             ptc-file    (str cloud-prefix "/ptc.json")
