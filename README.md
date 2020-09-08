@@ -63,17 +63,13 @@ network and run:
 
 The e2e test runs in the dev environment by default. To run in production:
 ```bash
-ZAMBONI_ACTIVEMQ_SERVER_URL="failover:ssl://vpicard-jms.broadinstitute.org:61616"
-ZAMBONI_ACTIVEMQ_QUEUE_NAME="wfl.broad.pushtocloud.enqueue.prod-test"
-ZAMBONI_ACTIVEMQ_SECRET_PATH="secret/dsde/gotc/prod/activemq/logins/zamboni"
-PTC_BUCKET_URL="gs://broad-aou-arrays-input"
-CROMWELL_URL="https://cromwell-aou.gotc-prod.broadinstitute.org"
-WFL_URL="https://aou-wfl.gotc-prod.broadinstitute.org"
+export ZAMBONI_ACTIVEMQ_SERVER_URL="failover:ssl://vpicard-jms.broadinstitute.org:61616"
+export ZAMBONI_ACTIVEMQ_QUEUE_NAME="wfl.broad.pushtocloud.enqueue.prod-test"
+export ZAMBONI_ACTIVEMQ_SECRET_PATH="secret/dsde/gotc/prod/activemq/logins/zamboni"
+export PTC_BUCKET_URL="gs://broad-aou-arrays-input"
+export CROMWELL_URL="https://cromwell-aou.gotc-prod.broadinstitute.org"
+export WFL_URL="https://aou-wfl.gotc-prod.broadinstitute.org"
 
-ZAMBONI_ACTIVEMQ_SERVER_URL=${ZAMBONI_ACTIVEMQ_SERVER_URL} \
-ZAMBONI_ACTIVEMQ_QUEUE_NAME=${ZAMBONI_ACTIVEMQ_QUEUE_NAME} \
-ZAMBONI_ACTIVEMQ_SECRET_PATH=${ZAMBONI_ACTIVEMQ_SECRET_PATH} \
-PTC_BUCKET_URL=${PTC_BUCKET_URL} CROMWELL_URL=${CROMWELL_URL} WFL_URL=${WFL_URL} \
 clojure -A:test integration
 ```
 
