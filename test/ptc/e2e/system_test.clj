@@ -12,13 +12,13 @@
            [java.util UUID]))
 
 (def zamboni-activemq-server-url
-  (keyword (or (System/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL") "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616")))
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL") "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616"))
 
 (def zamboni-activemq-queue-name
-  (keyword (or (System/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME") "wfl.broad.pushtocloud.enqueue.dev")))
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME") "wfl.broad.pushtocloud.enqueue.dev"))
 
 (def zamboni-activemq-secret-path
-  (keyword (or (System/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH") "secret/dsde/gotc/dev/activemq/logins/zamboni")))
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH") "secret/dsde/gotc/dev/activemq/logins/zamboni"))
 
 (def ptc-bucket-url
   (or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input"))
