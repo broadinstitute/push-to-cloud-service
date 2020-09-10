@@ -80,15 +80,19 @@
          (into {}))))
 
 (defn update-cloud-path-keys
-  "If a cloud path exists in the JMS message, add the key to 'copy' otherwise
+  "If a file exists at the JMS cloud path, add the key to 'copy' otherwise
   add the JMS key for the on-prem path to 'push'"
   [wfl-key key-map workflow]
-  (let [[jms-cloud-path jms-on-prem-path] (get-in key-map [::push wfl-key])]
-    (if (get workflow jms-cloud-path)
-      (do
-        (->> (assoc-in key-map [::copy wfl-key] jms-cloud-path)
-             (remove [:push])))
-      (assoc-in key-map [::push wfl-key] jms-on-prem-path))))
+  (let [[jms-cloud-key jms-on-prem-key] (get-in key-map [::push wfl-key])
+        cloud-path (get workflow jms-cloud-key)
+        uploaded? (try
+                 (misc/shell! "gsutil" "stat" cloud-path)
+                 (catch Exception _
+                   nil))]
+    (if uploaded?
+      (->> (assoc-in key-map [::copy wfl-key] jms-cloud-key)
+           (remove [:push]))
+      (assoc-in key-map [::push wfl-key] jms-on-prem-key))))
 
 (defn handle-existing-cloud-paths
   [keys key-map workflow]
@@ -221,7 +225,7 @@
         missing (keep check-missing required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
-              (str/join \space [missing-keys-message (sort (vec missing))]))))
+               (str/join \space [missing-keys-message (sort (vec missing))]))))
     (let [params (push-params prefix workflow)]
       [params (push-append-to-aou-request prefix workflow params)])))
 
