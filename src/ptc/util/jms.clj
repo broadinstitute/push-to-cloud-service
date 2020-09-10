@@ -39,8 +39,8 @@
    ::chip   true     :cluster_file                        :clusterFilePath
    ::chip   false    :gender_cluster_file                 :genderClusterFilePath
    ::chip   false    :zcall_thresholds_file               :zCallThresholdsPath
-   ::push   true     :green_idat_cloud_path               :greenIDatPath
-   ::push   true     :red_idat_cloud_path                 :redIDatPath
+   ::push   true     :green_idat_cloud_path               [:cloudGreenIdatPath :greenIDatPath]
+   ::push   true     :red_idat_cloud_path                 [:cloudRedIdatPath :redIDatPath]
    ::param  true     :CHIP_TYPE_NAME                      :chipName
    ::param  true     :CHIP_WELL_BARCODE                   :chipWellBarcode
    ::param  true     :INDIVIDUAL_ALIAS                    :collaboratorParticipantId
@@ -62,7 +62,7 @@
   (letfn [(required? [[_ reqd? _ jms]] (when reqd? jms))]
     (->> wfl-keys->jms-keys-table
          (partition-all 4) rest
-         (keep required?) set sort)))
+         (keep required?) set)))
 
 (def wfl-keys->jms-keys
   "Map action to map of WFL request notification keys to JMS keys."
@@ -74,6 +74,25 @@
          (group-by first)
          (map key->key)
          (into {}))))
+
+(defn update-cloud-path-keys
+  "If a cloud path exists in the JMS message, add the key to 'copy' otherwise
+  add the JMS key for the on-prem path to 'push'"
+  [wfl-key key-map workflow]
+  (let [[jms-cloud-path jms-on-prem-path] (get-in key-map [::push wfl-key])]
+    (if (get workflow jms-cloud-path)
+      (do
+        (->> (assoc-in key-map [::copy wfl-key] jms-cloud-path)
+             (remove [:push])))
+      (assoc-in key-map [::push wfl-key] jms-on-prem-path))))
+
+(defn handle-existing-cloud-paths
+  [keys key-map workflow]
+  (let [[key & rest] keys]
+    (if key
+      (do (let [updated-keys (update-cloud-path-keys key key-map workflow)]
+            (handle-existing-cloud-paths rest updated-keys workflow)))
+      key-map)))
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
@@ -130,7 +149,9 @@
   "Push files to PREFIX and return notification for WORKFLOW."
   [prefix workflow]
   (let [cloud (cloud-prefix prefix workflow)
-        {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
+        push-or-copy [:green_idat_cloud_path :red_idat_cloud_path]
+        key-map (handle-existing-cloud-paths push-or-copy wfl-keys->jms-keys workflow)
+        {:keys [::chip ::copy ::push]} key-map
         chip-and-push (merge chip push)
         sources (keep workflow (vals chip-and-push))]
     (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
@@ -191,9 +212,21 @@
   [prefix jms]
   (let [workflow (get-in jms [::Properties :payload :workflow])
         missing? (fn [k] (when (nil? (k workflow)) k))
-        missing (keep missing? required-jms-keys)]
+        check-missing (fn [k] (if (vector? k)
+                                (if (= (count (keep missing? k)) (count k)) (first k))
+                                (missing? k)))
+        missing (keep check-missing required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
               (str/join \space [missing-keys-message (vec missing)]))))
     (let [params (push-params prefix workflow)]
       [params (push-append-to-aou-request prefix workflow params)])))
+
+(comment
+  (let [jms (clojure.edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn"))
+        workflow (get-in jms [::Properties :payload :workflow])
+        updated-keys (handle-existing-cloud-paths [:green_idat_cloud_path :red_idat_cloud_path] wfl-keys->jms-keys workflow)
+        {:keys [::chip ::copy ::push]} updated-keys
+        chip-and-push (merge chip push)
+        sources (keep workflow (vals chip-and-push))]
+    (print sources)))
