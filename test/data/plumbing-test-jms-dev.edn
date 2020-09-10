@@ -14,6 +14,8 @@
             :chipName "HumanExome-12v1-1_A"
             :chipWellBarcode "7991775143_R01C01"
             :cloudChipMetaDataDirectory "gs://storage/pipeline/arrays_metadata/HumanExome-12v1-1_A/"
+            :cloudGreenIdatPath "gs://storage/pipeline/RP-1044/NA12878/3999595072_R06C01/idats/3999595072_R06C01_Grn.idat"
+            :cloudRedIdatPath "gs://storage/pipeline/RP-1044/NA12878/3999595072_R06C01/idats/3999595072_R06C01_Red.idat"
             :clusterFilePath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_CEPH_A.egt"
             :collaboratorParticipantId "NA12878"
             :extendedIlluminaManifestFileName "HumanExome-12v1-1_A.1.3.extended.csv"
