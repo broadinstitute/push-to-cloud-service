@@ -80,12 +80,8 @@
   add the JMS key for the on-prem path to 'push'"
   [wfl-key push-key copy-key key-map workflow]
   (let [[jms-cloud-key jms-on-prem-key] (get-in key-map (vector push-key wfl-key))
-        cloud-path (get workflow jms-cloud-key)
-        uploaded? (try
-                    (misc/shell! "gsutil" "stat" cloud-path)
-                    (catch Exception _
-                      nil))]
-    (if uploaded?
+        cloud-path (get workflow jms-cloud-key)]
+    (if (misc/file-exists-or-nil cloud-path)
       (-> (assoc-in key-map (vector copy-key wfl-key) jms-cloud-key)
           (update-in (vector push-key) dissoc wfl-key))
       (assoc-in key-map (vector push-key wfl-key) jms-on-prem-key))))

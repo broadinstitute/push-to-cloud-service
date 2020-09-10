@@ -136,3 +136,10 @@
           (= "" nada))
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
+
+(defn file-exists-or-nil
+  [file]
+  (try
+    (misc/shell! "gsutil" "stat" file)
+    (catch Exception _
+      nil)))
