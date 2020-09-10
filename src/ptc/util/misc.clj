@@ -140,6 +140,6 @@
 (defn file-exists-or-nil
   [file]
   (try
-    (misc/shell! "gsutil" "stat" file)
+    (shell! "gsutil" "stat" file)
     (catch Exception _
       nil)))
