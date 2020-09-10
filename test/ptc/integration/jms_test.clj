@@ -60,10 +60,9 @@
             (let [msg    (start/consume connection queue)
                   [params ptc] (jms/handle-message folder (jms/ednify msg))
                   {:keys [notifications]} (gcs/gcs-edn ptc)
-                  key-map (jms/handle-existing-cloud-paths jms/push-or-copy-keys ::jms/push jms/wfl-keys->jms-keys workflow)
-                  push   (-> key-map
-                             ((juxt ::jms/chip ::jms/push))
-                             (->> (apply merge))
+                  {:keys [::jms/chip ::jms/push]} jms/wfl-keys->jms-keys
+                  push   (-> (jms/handle-existing-cloud-paths jms/push-or-copy-keys push workflow)
+                             (->> (merge chip))
                              keys
                              (->> (apply juxt)))
                   inputs (remove nil? (push (first notifications)))

@@ -80,22 +80,22 @@
          (into {}))))
 
 (defn update-cloud-path-keys
-  "If a file exists at the JMS cloud path, add the key to 'copy' otherwise
-  add the JMS key for the on-prem path to 'push'"
-  [wfl-key push-key key-map workflow]
-  (let [[jms-cloud-key jms-on-prem-key] (get-in key-map (vector push-key wfl-key))
+  "Update the WFL-KEY with the JMS cloud path key if the file exists, otherwise
+  use the JMS key for the on-prem path"
+  [wfl-key push workflow]
+  (let [[jms-cloud-key jms-on-prem-key] (get push wfl-key)
         cloud-path (get workflow jms-cloud-key)]
     (if (misc/file-exists-or-nil cloud-path)
-      (assoc-in key-map (vector push-key wfl-key) jms-cloud-key)
-      (assoc-in key-map (vector push-key wfl-key) jms-on-prem-key))))
+      (assoc push wfl-key jms-cloud-key)
+      (assoc push wfl-key jms-on-prem-key))))
 
 (defn handle-existing-cloud-paths
-  [keys push-key key-map workflow]
+  [keys push workflow]
   (let [[key & rest] keys]
     (if key
-      (do (let [updated-keys (update-cloud-path-keys key push-key key-map workflow)]
-            (handle-existing-cloud-paths rest push-key updated-keys workflow)))
-      key-map)))
+      (do (let [updated-keys (update-cloud-path-keys key push workflow)]
+            (handle-existing-cloud-paths rest updated-keys workflow)))
+      push)))
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
@@ -152,8 +152,9 @@
   "Push files to PREFIX and return notification for WORKFLOW."
   [prefix workflow]
   (let [cloud (cloud-prefix prefix workflow)
-        key-map (handle-existing-cloud-paths push-or-copy-keys ::push wfl-keys->jms-keys workflow)
-        {:keys [::chip ::copy ::push]} key-map
+        ;key-map (handle-existing-cloud-paths push-or-copy-keys ::push wfl-keys->jms-keys workflow)
+        {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
+        push (handle-existing-cloud-paths push-or-copy-keys push workflow)
         chip-and-push (merge chip push)
         sources (keep workflow (vals chip-and-push))]
     (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
