@@ -80,22 +80,23 @@
          (into {}))))
 
 (defn update-cloud-path-keys
-  "Update the WFL-KEY with the JMS cloud path key if the file exists, otherwise
-  use the JMS key for the on-prem path"
-  [wfl-key push workflow]
-  (let [[jms-cloud-key jms-on-prem-key] (get push wfl-key)
-        cloud-path (get workflow jms-cloud-key)]
-    (if (misc/gcs-object-exists? cloud-path)
-      (assoc push wfl-key jms-cloud-key)
-      (assoc push wfl-key jms-on-prem-key))))
+  "If a cloud path exists in the JMS message, add the key to 'copy' otherwise
+  add the JMS key for the on-prem path to 'push'"
+  [wfl-key key-map workflow]
+  (let [[jms-cloud-path jms-on-prem-path] (get-in key-map [::push wfl-key])]
+    (if (get workflow jms-cloud-path)
+      (do
+        (->> (assoc-in key-map [::copy wfl-key] jms-cloud-path)
+             (remove [:push])))
+      (assoc-in key-map [::push wfl-key] jms-on-prem-path))))
 
 (defn handle-existing-cloud-paths
-  [keys push workflow]
+  [keys key-map workflow]
   (let [[key & rest] keys]
     (if key
-      (do (let [updated-keys (update-cloud-path-keys key push workflow)]
+      (do (let [updated-keys (update-cloud-path-keys key key-map workflow)]
             (handle-existing-cloud-paths rest updated-keys workflow)))
-      push)))
+      key-map)))
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
@@ -223,3 +224,12 @@
               (str/join \space [missing-keys-message (sort (vec missing))]))))
     (let [params (push-params prefix workflow)]
       [params (push-append-to-aou-request prefix workflow params)])))
+
+(comment
+  (let [jms (clojure.edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn"))
+        workflow (get-in jms [::Properties :payload :workflow])
+        updated-keys (handle-existing-cloud-paths [:green_idat_cloud_path :red_idat_cloud_path] wfl-keys->jms-keys workflow)
+        {:keys [::chip ::copy ::push]} updated-keys
+        chip-and-push (merge chip push)
+        sources (keep workflow (vals chip-and-push))]
+    (print sources)))
