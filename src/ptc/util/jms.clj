@@ -82,9 +82,9 @@
   (let [[jms-cloud-key jms-on-prem-key] (get-in key-map (vector push-key wfl-key))
         cloud-path (get workflow jms-cloud-key)
         uploaded? (try
-                 (misc/shell! "gsutil" "stat" cloud-path)
-                 (catch Exception _
-                   nil))]
+                    (misc/shell! "gsutil" "stat" cloud-path)
+                    (catch Exception _
+                      nil))]
     (if uploaded?
       (-> (assoc-in key-map (vector copy-key wfl-key) jms-cloud-key)
           (update-in (vector push-key) dissoc wfl-key))
@@ -222,6 +222,6 @@
         missing (keep check-missing required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
-               (str/join \space [missing-keys-message (vec missing)]))))
+              (str/join \space [missing-keys-message (vec missing)]))))
     (let [params (push-params prefix workflow)]
-    [params (push-append-to-aou-request prefix workflow params)])))
+      [params (push-append-to-aou-request prefix workflow params)])))
