@@ -78,20 +78,19 @@
 (defn update-cloud-path-keys
   "If a file exists at the JMS cloud path, add the key to 'copy' otherwise
   add the JMS key for the on-prem path to 'push'"
-  [wfl-key push-key copy-key key-map workflow]
+  [wfl-key push-key key-map workflow]
   (let [[jms-cloud-key jms-on-prem-key] (get-in key-map (vector push-key wfl-key))
         cloud-path (get workflow jms-cloud-key)]
     (if (misc/file-exists-or-nil cloud-path)
-      (-> (assoc-in key-map (vector copy-key wfl-key) jms-cloud-key)
-          (update-in (vector push-key) dissoc wfl-key))
+      (assoc-in key-map (vector push-key wfl-key) jms-cloud-key)
       (assoc-in key-map (vector push-key wfl-key) jms-on-prem-key))))
 
 (defn handle-existing-cloud-paths
-  [keys push-key copy-key key-map workflow]
+  [keys push-key key-map workflow]
   (let [[key & rest] keys]
     (if key
-      (do (let [updated-keys (update-cloud-path-keys key push-key copy-key key-map workflow)]
-            (handle-existing-cloud-paths rest push-key copy-key updated-keys workflow)))
+      (do (let [updated-keys (update-cloud-path-keys key push-key key-map workflow)]
+            (handle-existing-cloud-paths rest push-key updated-keys workflow)))
       key-map)))
 
 (defn jms->params
@@ -150,7 +149,7 @@
   [prefix workflow]
   (let [cloud (cloud-prefix prefix workflow)
         push-or-copy [:green_idat_cloud_path :red_idat_cloud_path]
-        key-map (handle-existing-cloud-paths push-or-copy ::push ::copy wfl-keys->jms-keys workflow)
+        key-map (handle-existing-cloud-paths push-or-copy ::push wfl-keys->jms-keys workflow)
         {:keys [::chip ::copy ::push]} key-map
         chip-and-push (merge chip push)
         sources (keep workflow (vals chip-and-push))]
