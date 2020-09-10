@@ -84,15 +84,16 @@
   add the JMS key for the on-prem path to 'push'"
   [wfl-key key-map workflow]
   (let [[jms-cloud-key jms-on-prem-key] (get-in key-map [::push wfl-key])
+        on-prem-path (get workflow jms-on-prem-key)
         cloud-path (get workflow jms-cloud-key)
         uploaded? (try
                  (misc/shell! "gsutil" "stat" cloud-path)
                  (catch Exception _
                    nil))]
-    (if uploaded?
-      (->> (assoc-in key-map [::copy wfl-key] jms-cloud-key)
-           (remove [:push]))
-      (assoc-in key-map [::push wfl-key] jms-on-prem-key))))
+    (if (not uploaded?)
+      (misc/shell! "gsutil" "cp" on-prem-path cloud-path))
+    (->> (assoc-in key-map [::copy wfl-key] jms-cloud-key)
+         (remove [:push]))))
 
 (defn handle-existing-cloud-paths
   [keys key-map workflow]
