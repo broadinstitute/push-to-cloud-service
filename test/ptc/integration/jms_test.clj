@@ -60,8 +60,7 @@
             (let [msg    (start/consume connection queue)
                   [params ptc] (jms/handle-message folder (jms/ednify msg))
                   {:keys [notifications]} (gcs/gcs-edn ptc)
-                  push-or-copy [:green_idat_cloud_path :red_idat_cloud_path]
-                  key-map (jms/handle-existing-cloud-paths push-or-copy ::jms/push jms/wfl-keys->jms-keys workflow)
+                  key-map (jms/handle-existing-cloud-paths jms/push-or-copy-keys ::jms/push jms/wfl-keys->jms-keys workflow)
                   push   (-> key-map
                              ((juxt ::jms/chip ::jms/push))
                              (->> (apply merge))

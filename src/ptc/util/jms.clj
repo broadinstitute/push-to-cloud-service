@@ -57,6 +57,10 @@
    ::param  true     :SAMPLE_ID                           :sampleId
    ::param  true     :SAMPLE_LSID                         :sampleLsid])
 
+(def push-or-copy-keys
+  "WFL request notification keys for files that may already exist in the cloud."
+  [:green_idat_cloud_path :red_idat_cloud_path])
+
 (def required-jms-keys
   "Sort all the keys required to handle a JMS message."
   (letfn [(required? [[_ reqd? _ jms]] (when reqd? jms))]
@@ -148,8 +152,7 @@
   "Push files to PREFIX and return notification for WORKFLOW."
   [prefix workflow]
   (let [cloud (cloud-prefix prefix workflow)
-        push-or-copy [:green_idat_cloud_path :red_idat_cloud_path]
-        key-map (handle-existing-cloud-paths push-or-copy ::push wfl-keys->jms-keys workflow)
+        key-map (handle-existing-cloud-paths push-or-copy-keys ::push wfl-keys->jms-keys workflow)
         {:keys [::chip ::copy ::push]} key-map
         chip-and-push (merge chip push)
         sources (keep workflow (vals chip-and-push))]
