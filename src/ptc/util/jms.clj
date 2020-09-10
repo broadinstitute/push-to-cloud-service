@@ -82,25 +82,24 @@
 (defn update-cloud-path-keys
   "If a file exists at the JMS cloud path, add the key to 'copy' otherwise
   add the JMS key for the on-prem path to 'push'"
-  [wfl-key key-map workflow]
-  (let [[jms-cloud-key jms-on-prem-key] (get-in key-map [::push wfl-key])
-        on-prem-path (get workflow jms-on-prem-key)
+  [wfl-key push-key copy-key key-map workflow]
+  (let [[jms-cloud-key jms-on-prem-key] (get-in key-map (vector push-key wfl-key))
         cloud-path (get workflow jms-cloud-key)
         uploaded? (try
-                 (misc/shell! "gsutil" "stat" cloud-path)
-                 (catch Exception _
-                   nil))]
-    (if (not uploaded?)
-      (misc/shell! "gsutil" "cp" on-prem-path cloud-path))
-    (->> (assoc-in key-map [::copy wfl-key] jms-cloud-key)
-         (remove [:push]))))
+                    (misc/shell! "gsutil" "stat" cloud-path)
+                    (catch Exception _
+                      nil))]
+    (if uploaded?
+      (-> (assoc-in key-map (vector copy-key wfl-key) jms-cloud-key)
+        (update-in (vector push-key) dissoc wfl-key))
+      (assoc-in key-map (vector push-key wfl-key) jms-on-prem-key))))
 
 (defn handle-existing-cloud-paths
-  [keys key-map workflow]
+  [keys push-key copy-key key-map workflow]
   (let [[key & rest] keys]
     (if key
-      (do (let [updated-keys (update-cloud-path-keys key key-map workflow)]
-            (handle-existing-cloud-paths rest updated-keys workflow)))
+      (do (let [updated-keys (update-cloud-path-keys key push-key copy-key key-map workflow)]
+            (handle-existing-cloud-paths rest push-key copy-key updated-keys workflow)))
       key-map)))
 
 (defn jms->params
@@ -109,9 +108,9 @@
   (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))
           (rekey [m [k v]] (assoc m k (v workflow)))]
     (->> wfl-keys->jms-keys ::param
-         (reduce rekey {})
-         (map stringify)
-         (str/join \newline))))
+      (reduce rekey {})
+      (map stringify)
+      (str/join \newline))))
 
 ;; There are others, but these are not null in the sample messages.
 ;;
