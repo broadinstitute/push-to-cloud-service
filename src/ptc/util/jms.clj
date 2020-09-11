@@ -174,8 +174,8 @@
       (jms->notification workflow)
       (assoc :params_file params)
       (assoc :extended_chip_manifest_file (get-extended-chip-manifest workflow))
-      vec
-      (->> assoc append-to-aou-request :notifications)
+      vector
+      (->> (assoc append-to-aou-request :notifications))
       json/write-str
       (->> (misc/shell! "gsutil" "cp" "-" ptc :in)))
     [params ptc]))
