@@ -152,7 +152,6 @@
   "Push files to PREFIX and return notification for WORKFLOW."
   [prefix workflow]
   (let [cloud (cloud-prefix prefix workflow)
-        ;key-map (handle-existing-cloud-paths push-or-copy-keys ::push wfl-keys->jms-keys workflow)
         {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
         push (handle-existing-cloud-paths push-or-copy-keys push workflow)
         chip-and-push (merge chip push)
