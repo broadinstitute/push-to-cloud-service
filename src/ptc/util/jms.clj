@@ -85,7 +85,7 @@
   [wfl-key push workflow]
   (let [[jms-cloud-key jms-on-prem-key] (get push wfl-key)
         cloud-path (get workflow jms-cloud-key)]
-    (if (misc/file-exists-or-nil cloud-path)
+    (if (misc/gcs-object-exists? cloud-path)
       (assoc push wfl-key jms-cloud-key)
       (assoc push wfl-key jms-on-prem-key))))
 

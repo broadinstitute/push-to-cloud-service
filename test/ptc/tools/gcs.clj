@@ -130,7 +130,7 @@
         file (first files)]
     (if file
       (do (loop []
-            (if (not (misc/file-exists-or-nil file))
+            (if (not (misc/gcs-object-exists? file))
               (do
                 (log/infof "Couldn't find %s, sleeping %s seconds" file seconds)
                 (.sleep TimeUnit/SECONDS seconds)

@@ -137,9 +137,8 @@
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
 
-(defn file-exists-or-nil
+(defn gcs-object-exists?
+  "Return FILE stat if the gcs object exists."
   [file]
-  (try
-    (shell! "gsutil" "stat" file)
-    (catch Exception _
-      nil)))
+  (do-or-nil
+   (shell! "gsutil" "stat" file)))
