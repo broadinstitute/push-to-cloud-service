@@ -131,7 +131,7 @@
   [url]
   (let [[gs-colon nada bucket object] (str/split url #"/" 4)]
     (when-not
-        (and (every? seq [gs-colon bucket])
+     (and (every? seq [gs-colon bucket])
           (= "gs:" gs-colon)
           (= "" nada))
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
@@ -142,4 +142,4 @@
   [path]
   (when (string? path)
     (do-or-nil
-      (shell! "gsutil" "stat" path))))
+     (shell! "gsutil" "stat" path))))

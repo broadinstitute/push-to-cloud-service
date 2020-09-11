@@ -63,29 +63,29 @@
   "All the keys required to handle a JMS message."
   (letfn [(required? [[_ reqd? _ jms]] (when reqd? jms))]
     (->> wfl-keys->jms-keys-table
-      (partition-all 4) rest
-      (keep required?) set)))
+         (partition-all 4) rest
+         (keep required?) set)))
 
 (def wfl-keys->jms-keys
   "Map action to map of WFL request notification keys to JMS keys."
   (letfn [(ignore-required-column-for-now [row] (replace (vec row) [0 2 3]))
           (key->key [[k v]] [k (into {} (map (comp vec rest) v))])]
     (->> wfl-keys->jms-keys-table
-      (partition-all 4) rest
-      (map ignore-required-column-for-now)
-      (group-by first)
-      (map key->key)
-      (into {}))))
+         (partition-all 4) rest
+         (map ignore-required-column-for-now)
+         (group-by first)
+         (map key->key)
+         (into {}))))
 
 (defn wfl-keys->jms-keys-for
   "Return wfl-keys->jms-keys modified for WORKFLOW."
   [workflow]
   (letfn [(frob [keymap [k v]] (assoc-in keymap [::push k] v))]
     (reduce frob (dissoc wfl-keys->jms-keys ::push)
-      (for [[k [cloud local]] (::push wfl-keys->jms-keys)]
-        (if (misc/gcs-object-exists? (cloud workflow))
-          [k cloud]
-          [k local])))))
+            (for [[k [cloud local]] (::push wfl-keys->jms-keys)]
+              (if (misc/gcs-object-exists? (cloud workflow))
+                [k cloud]
+                [k local])))))
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
@@ -93,9 +93,9 @@
   (letfn [(stringify [[k v]] (str/join "=" [(name k) v]))
           (rekey [m [k v]] (assoc m k (v workflow)))]
     (->> wfl-keys->jms-keys ::param
-      (reduce rekey {})
-      (map stringify)
-      (str/join \newline))))
+         (reduce rekey {})
+         (map stringify)
+         (str/join \newline))))
 
 ;; There are others, but these are not null in the sample messages.
 ;;
@@ -154,7 +154,7 @@
 (def aou-reference-bucket
   "The AllOfUs reference bucket or broad-arrays-dev-storage."
   (or (System/getenv "AOU_REFERENCE_BUCKET")
-    "broad-arrays-dev-storage"))
+      "broad-arrays-dev-storage"))
 
 (defn get-extended-chip-manifest
   "Get the extended_chip_manifest_file from WORKFLOW."
@@ -162,8 +162,8 @@
     :as workflow}]
   (let [[bucket _] (misc/parse-gs-url cloudChipMetaDataDirectory)]
     (str (str/replace-first cloudChipMetaDataDirectory
-           bucket aou-reference-bucket)
-      extendedIlluminaManifestFileName)))
+                            bucket aou-reference-bucket)
+         extendedIlluminaManifestFileName)))
 
 (defn push-append-to-aou-request
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX
@@ -171,13 +171,13 @@
   [prefix workflow params]
   (let [ptc (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])]
     (-> prefix
-      (jms->notification workflow)
-      (assoc :params_file params)
-      (assoc :extended_chip_manifest_file (get-extended-chip-manifest workflow))
-      vector
-      (->> (assoc append-to-aou-request :notifications))
-      json/write-str
-      (->> (misc/shell! "gsutil" "cp" "-" ptc :in)))
+        (jms->notification workflow)
+        (assoc :params_file params)
+        (assoc :extended_chip_manifest_file (get-extended-chip-manifest workflow))
+        vector
+        (->> (assoc append-to-aou-request :notifications))
+        json/write-str
+        (->> (misc/shell! "gsutil" "cp" "-" ptc :in)))
     [params ptc]))
 
 (defn ednify
@@ -196,8 +196,8 @@
   "Encode EDN MESSAGE ::Properties :payload for a PTC JMS message."
   [{:keys [::Properties] :as message}]
   (letfn [(jsonify [payload] (json/write-str payload
-                               :escape-js-separators false
-                               :escape-slash false))]
+                                             :escape-js-separators false
+                                             :escape-slash false))]
     (assoc message ::Properties (update Properties :payload jsonify))))
 
 (def missing-keys-message "Missing JMS keys:") ; for tests
@@ -216,6 +216,6 @@
       (let [missing (concat (keep missing? required) (keep none? one-ofs))]
         (when (seq missing)
           (throw (IllegalArgumentException.
-                   (str/join \space [missing-keys-message (vec missing)])))))
+                  (str/join \space [missing-keys-message (vec missing)])))))
       (let [params (push-params prefix workflow)]
         (push-append-to-aou-request prefix workflow params)))))
