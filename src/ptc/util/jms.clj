@@ -77,8 +77,8 @@
       (map key->key)
       (into {}))))
 
-(defn frob-wfl-keys->jms-keys
-  "Return wfl-keys->jms-keys modified according to WORKFLOW."
+(defn wfl-keys->jms-keys-for
+  "Return wfl-keys->jms-keys modified for WORKFLOW."
   [workflow]
   (letfn [(frob [keymap [where k v]] (assoc-in keymap [where k] v))]
     (reduce frob (dissoc wfl-keys->jms-keys ::push)
@@ -140,7 +140,7 @@
   "Push files to PREFIX and return notification for WORKFLOW."
   [prefix workflow]
   (let [cloud (cloud-prefix prefix workflow)
-        {:keys [::chip ::copy ::push]} (frob-wfl-keys->jms-keys workflow)
+        {:keys [::chip ::copy ::push]} (wfl-keys->jms-keys-for workflow)
         chip-and-push (merge chip push)
         sources (keep workflow (vals chip-and-push))]
     (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
