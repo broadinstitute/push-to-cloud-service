@@ -80,12 +80,12 @@
 (defn wfl-keys->jms-keys-for
   "Return wfl-keys->jms-keys modified for WORKFLOW."
   [workflow]
-  (letfn [(frob [keymap [where k v]] (assoc-in keymap [where k] v))]
+  (letfn [(frob [keymap [k v]] (assoc-in keymap [::push k] v))]
     (reduce frob (dissoc wfl-keys->jms-keys ::push)
       (for [[k [cloud local]] (::push wfl-keys->jms-keys)]
         (if (misc/gcs-object-exists? (cloud workflow))
-          [::copy k cloud] 
-          [::push k local])))))
+          [k cloud]
+          [k local])))))
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
