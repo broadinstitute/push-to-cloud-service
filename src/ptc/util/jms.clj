@@ -42,7 +42,7 @@
    ::chip   false    :gender_cluster_file                 :genderClusterFilePath
    ::chip   false    :zcall_thresholds_file               :zCallThresholdsPath
    ::push   true     :green_idat_cloud_path               [:cloudGreenIdatPath :greenIDatPath]
-   ::push   true     :red_idat_cloud_path                 [:cloudRedIdatPath :redIDatPath]
+   ::push   true     :red_idat_cloud_path                 [:cloudRedIdatPath   :redIDatPath]
    ::param  true     :CHIP_TYPE_NAME                      :chipName
    ::param  true     :CHIP_WELL_BARCODE                   :chipWellBarcode
    ::param  true     :INDIVIDUAL_ALIAS                    :collaboratorParticipantId
@@ -58,10 +58,6 @@
    ::param  true     :SAMPLE_GENDER                       :gender
    ::param  true     :SAMPLE_ID                           :sampleId
    ::param  true     :SAMPLE_LSID                         :sampleLsid])
-
-(def push-or-copy-keys
-  "WFL request notification keys for files that may already exist in the cloud."
-  [:green_idat_cloud_path :red_idat_cloud_path])
 
 (def required-jms-keys
   "All the keys required to handle a JMS message."
@@ -173,7 +169,7 @@
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX
   with PARAMS."
   [prefix workflow params]
-  (let [result (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])]
+  (let [ptc (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])]
     (-> prefix
       (jms->notification workflow)
       (assoc :params_file params)
@@ -181,8 +177,8 @@
       vec
       (->> assoc append-to-aou-request :notifications)
       json/write-str
-      (->> (misc/shell! "gsutil" "cp" "-" result :in)))
-    result))
+      (->> (misc/shell! "gsutil" "cp" "-" ptc :in)))
+    [params ptc]))
 
 (defn ednify
   "Return an EDN representation of the JMS MESSAGE with keyword keys."
@@ -210,37 +206,16 @@
   "Throw or push to cloud at PREFIX all the files for ednified JMS message."
   [prefix jms]
   (let [workflow (get-in jms [::Properties :payload :workflow])
-        missing? (fn [k] (when (nil? (k workflow)) k))
-        check-missing (fn [k] (if (vector? k)
-                                (if (= (count (keep missing? k)) (count k)) (first k))
-                                (missing? k)))
-        missing (keep check-missing required-jms-keys)]
-    (when (seq missing)
-      (throw (IllegalArgumentException.
-               (str/join \space [missing-keys-message (vec missing)]))))
-    (let [params (push-params prefix workflow)]
-      [params (push-append-to-aou-request prefix workflow params)])))
-
-(defn handle-message
-  "Throw or push to cloud at PREFIX all the files for ednified JMS message."
-  [prefix jms]
-  (let [workflow (get-in jms [::Properties :payload :workflow])
         optional (group-by vector? required-jms-keys)
         required (sort (optional false))
-        one-ofs  (apply juxt (map set (optional true)))
-        missing? (fn [k] (when (nil? (k workflow)) k))
-        missing  (keep missing? required)]
-    (when (seq missing)
-      (throw (IllegalArgumentException.
-               (str/join \space [missing-keys-message (vec missing)]))))
-    (let [params (push-params prefix workflow)]
-      [params (push-append-to-aou-request prefix workflow params)])))
-
-(comment
-  (let [jms (clojure.edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn"))
-        workflow (get-in jms [::Properties :payload :workflow])
-        updated-keys (handle-existing-cloud-paths [:green_idat_cloud_path :red_idat_cloud_path] wfl-keys->jms-keys workflow)
-        {:keys [::chip ::copy ::push]} updated-keys
-        chip-and-push (merge chip push)
-        sources (keep workflow (vals chip-and-push))]
-    (print sources)))
+        one-ofs  (map set (optional true))]
+    (letfn [(missing? [k] (when (nil? (k workflow)) k))
+            (none? [one-of]
+              (when (not-any? one-of (keys workflow))
+                one-of))]
+      (let [missing (concat (keep missing? required) (keep none? one-ofs))]
+        (when (seq missing)
+          (throw (IllegalArgumentException.
+                   (str/join \space [missing-keys-message (vec missing)])))))
+      (let [params (push-params prefix workflow)]
+        (push-append-to-aou-request prefix workflow params)))))
