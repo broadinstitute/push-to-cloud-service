@@ -62,7 +62,7 @@
   [:green_idat_cloud_path :red_idat_cloud_path])
 
 (def required-jms-keys
-  "Sort all the keys required to handle a JMS message."
+  "All the keys required to handle a JMS message."
   (letfn [(required? [[_ reqd? _ jms]] (when reqd? jms))]
     (->> wfl-keys->jms-keys-table
          (partition-all 4) rest
@@ -220,6 +220,6 @@
         missing (keep check-missing required-jms-keys)]
     (when (seq missing)
       (throw (IllegalArgumentException.
-              (str/join \space [missing-keys-message (vec missing)]))))
+              (str/join \space [missing-keys-message (sort (vec missing))]))))
     (let [params (push-params prefix workflow)]
       [params (push-append-to-aou-request prefix workflow params)])))
