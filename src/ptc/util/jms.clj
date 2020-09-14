@@ -1,5 +1,5 @@
 (ns ptc.util.jms
-  "Frob JMS messages into upload actions and workflow parameters."
+  "Adapt JMS messages into upload actions and workflow parameters."
   (:require [clojure.data.json :as json]
             [clojure.string    :as str]
             [ptc.util.misc     :as misc]))
@@ -80,8 +80,8 @@
 (defn wfl-keys->jms-keys-for
   "Return wfl-keys->jms-keys modified for WORKFLOW."
   [workflow]
-  (letfn [(frob [keymap [k v]] (assoc-in keymap [::push k] v))]
-    (reduce frob (dissoc wfl-keys->jms-keys ::push)
+  (letfn [(adapt [keymap [k v]] (assoc-in keymap [::push k] v))]
+    (reduce adapt (dissoc wfl-keys->jms-keys ::push)
             (for [[k [cloud local]] (::push wfl-keys->jms-keys)]
               (if (misc/gcs-object-exists? (cloud workflow))
                 [k cloud]
@@ -157,9 +157,9 @@
       "broad-arrays-dev-storage"))
 
 (defn get-extended-chip-manifest
-  "Get the extended_chip_manifest_file from WORKFLOW."
+  "Get the extended_chip_manifest_file from _WORKFLOW."
   [{:keys [cloudChipMetaDataDirectory extendedIlluminaManifestFileName]
-    :as workflow}]
+    :as _workflow}]
   (let [[bucket _] (misc/parse-gs-url cloudChipMetaDataDirectory)]
     (str (str/replace-first cloudChipMetaDataDirectory
                             bucket aou-reference-bucket)
