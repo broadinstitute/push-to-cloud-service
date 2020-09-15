@@ -1,5 +1,5 @@
 (ns ptc.util.jms
-  "Frob JMS messages into upload actions and workflow parameters."
+  "Adapt JMS messages into upload actions and workflow parameters."
   (:require [clojure.data.json :as json]
             [clojure.string    :as str]
             [ptc.util.misc     :as misc]))
@@ -18,11 +18,13 @@
   misc/uuid-nil)
 
 (def append-to-aou-request
-  "An empty append_to_aou request without notifications."
+  "An empty append_to_aou request with placeholder symbols."
   {:cromwell cromwell
    :environment environment
-   :uuid (str uuid)
-   :notifications []})
+   :extended_chip_manifest_file 'extended_chip_manifest_file
+   :notifications 'notifications
+   :params_file 'params_file
+   :uuid (str uuid)})
 
 (def wfl-keys->jms-keys-table
   "How to satisfy notification keys in WFL request."
@@ -40,7 +42,7 @@
    ::chip   false    :gender_cluster_file                 :genderClusterFilePath
    ::chip   false    :zcall_thresholds_file               :zCallThresholdsPath
    ::push   true     :green_idat_cloud_path               [:cloudGreenIdatPath :greenIDatPath]
-   ::push   true     :red_idat_cloud_path                 [:cloudRedIdatPath :redIDatPath]
+   ::push   true     :red_idat_cloud_path                 [:cloudRedIdatPath   :redIDatPath]
    ::param  true     :CHIP_TYPE_NAME                      :chipName
    ::param  true     :CHIP_WELL_BARCODE                   :chipWellBarcode
    ::param  true     :INDIVIDUAL_ALIAS                    :collaboratorParticipantId
@@ -56,10 +58,6 @@
    ::param  true     :SAMPLE_GENDER                       :gender
    ::param  true     :SAMPLE_ID                           :sampleId
    ::param  true     :SAMPLE_LSID                         :sampleLsid])
-
-(def push-or-copy-keys
-  "WFL request notification keys for files that may already exist in the cloud."
-  [:green_idat_cloud_path :red_idat_cloud_path])
 
 (def required-jms-keys
   "All the keys required to handle a JMS message."
@@ -79,23 +77,15 @@
          (map key->key)
          (into {}))))
 
-(defn update-cloud-path-keys
-  "Update the WFL-KEY with the JMS cloud path key if the file exists, otherwise
-  use the JMS key for the on-prem path"
-  [wfl-key push workflow]
-  (let [[jms-cloud-key jms-on-prem-key] (get push wfl-key)
-        cloud-path (get workflow jms-cloud-key)]
-    (if (misc/gcs-object-exists? cloud-path)
-      (assoc push wfl-key jms-cloud-key)
-      (assoc push wfl-key jms-on-prem-key))))
-
-(defn handle-existing-cloud-paths
-  [keys push workflow]
-  (let [[key & rest] keys]
-    (if key
-      (do (let [updated-keys (update-cloud-path-keys key push workflow)]
-            (handle-existing-cloud-paths rest updated-keys workflow)))
-      push)))
+(defn wfl-keys->jms-keys-for
+  "Return wfl-keys->jms-keys modified for WORKFLOW."
+  [workflow]
+  (letfn [(adapt [keymap [k v]] (assoc-in keymap [::push k] v))]
+    (reduce adapt (dissoc wfl-keys->jms-keys ::push)
+            (for [[k [cloud local]] (::push wfl-keys->jms-keys)]
+              (if (misc/gcs-object-exists? (cloud workflow))
+                [k cloud]
+                [k local])))))
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
@@ -146,14 +136,11 @@
     (misc/shell! "gsutil" "cp" "-" result :in (jms->params workflow))
     result))
 
-;; Push the chip files too until we figure something else out.
-;;
 (defn jms->notification
   "Push files to PREFIX and return notification for WORKFLOW."
   [prefix workflow]
   (let [cloud (cloud-prefix prefix workflow)
-        {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
-        push (handle-existing-cloud-paths push-or-copy-keys push workflow)
+        {:keys [::chip ::copy ::push]} (wfl-keys->jms-keys-for workflow)
         chip-and-push (merge chip push)
         sources (keep workflow (vals chip-and-push))]
     (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
@@ -164,31 +151,37 @@
       (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
+(def aou-reference-bucket
+  "The AllOfUs reference bucket or broad-arrays-dev-storage."
+  (or (System/getenv "AOU_REFERENCE_BUCKET")
+      "broad-arrays-dev-storage"))
+
 (defn get-extended-chip-manifest
-  "Get the extended_chip_manifest_file from the JMS message"
-  [workflow]
-  (let [aou-reference-bucket (or (System/getenv "AOU_REFERENCE_BUCKET") "broad-arrays-dev-storage")
-        cloud-chip-metadata-dir (get workflow :cloudChipMetaDataDirectory)
-        bucket (first (misc/parse-gs-url cloud-chip-metadata-dir))
-        aou-chip-metadata-dir (str/replace-first cloud-chip-metadata-dir bucket aou-reference-bucket)
-        extended-chip-manifest-file-name (get workflow :extendedIlluminaManifestFileName)]
-    (str aou-chip-metadata-dir extended-chip-manifest-file-name)))
+  "Get the extended_chip_manifest_file from _WORKFLOW."
+  [{:keys [cloudChipMetaDataDirectory extendedIlluminaManifestFileName]
+    :as _workflow}]
+  (let [[bucket _] (misc/parse-gs-url cloudChipMetaDataDirectory)]
+    (str (str/replace-first cloudChipMetaDataDirectory
+                            bucket aou-reference-bucket)
+         extendedIlluminaManifestFileName)))
 
 (defn push-append-to-aou-request
-  "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX."
+  "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX
+  with PARAMS."
   [prefix workflow params]
-  (let [result (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])
-        request (update append-to-aou-request
-                        :notifications conj (jms->notification prefix workflow))
-        extended-chip-manifest (get-extended-chip-manifest workflow)
-        contents (-> request
-                     (assoc-in [:notifications 0 :params_file] params)
-                     (assoc-in [:notifications 0 :extended_chip_manifest_file] extended-chip-manifest))]
-    (misc/shell! "gsutil" "cp" "-" result :in (json/write-str contents))
-    result))
+  (let [ptc (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])]
+    (-> prefix
+        (jms->notification workflow)
+        (assoc :params_file params)
+        (assoc :extended_chip_manifest_file (get-extended-chip-manifest workflow))
+        vector
+        (->> (assoc append-to-aou-request :notifications))
+        json/write-str
+        (->> (misc/shell! "gsutil" "cp" "-" ptc :in)))
+    [params ptc]))
 
 (defn ednify
-  "Return a EDN representation of the JMS MESSAGE with keyword keys."
+  "Return an EDN representation of the JMS MESSAGE with keyword keys."
   [message]
   (letfn [(headerify [m [k v]] (assoc m k (v message)))
           (unjsonify [s] (json/read-str s :key-fn keyword))]
@@ -213,13 +206,16 @@
   "Throw or push to cloud at PREFIX all the files for ednified JMS message."
   [prefix jms]
   (let [workflow (get-in jms [::Properties :payload :workflow])
-        missing? (fn [k] (when (nil? (k workflow)) k))
-        check-missing (fn [k] (if (vector? k)
-                                (if (= (count (keep missing? k)) (count k)) (first k))
-                                (missing? k)))
-        missing (keep check-missing required-jms-keys)]
-    (when (seq missing)
-      (throw (IllegalArgumentException.
-              (str/join \space [missing-keys-message (sort (vec missing))]))))
-    (let [params (push-params prefix workflow)]
-      [params (push-append-to-aou-request prefix workflow params)])))
+        optional (group-by vector? required-jms-keys)
+        required (sort (optional false))
+        one-ofs  (map set (optional true))]
+    (letfn [(missing? [k] (when (nil? (k workflow)) k))
+            (none? [one-of]
+              (when (not-any? one-of (keys workflow))
+                one-of))]
+      (let [missing (concat (keep missing? required) (keep none? one-ofs))]
+        (when (seq missing)
+          (throw (IllegalArgumentException.
+                  (str/join \space [missing-keys-message (vec missing)])))))
+      (let [params (push-params prefix workflow)]
+        (push-append-to-aou-request prefix workflow params)))))

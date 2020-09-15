@@ -1,30 +1,29 @@
 (ns ptc.unit.jms-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.edn :as edn]
+            [clojure.test :refer [deftest is testing]]
             [ptc.util.jms :as jms]
             [ptc.util.misc :as misc]))
 
+(def read-jms-message (comp edn/read-string slurp))
+
 (deftest use-on-prem-idat-paths
   (testing "WFL uses the on-prem idat files if they do not exist in the cloud."
-    (let [jms (clojure.edn/read-string (slurp "./test/data/good-jms.edn"))
+    (let [jms (read-jms-message "./test/data/good-jms.edn")
           workflow (get-in jms [::jms/Properties :payload :workflow])
-          cloud-green-idat (get workflow :cloudGreenIdatPath)
-          cloud-red-idat (get workflow :cloudRedIdatPath)
-          push (get jms/wfl-keys->jms-keys ::jms/push)
-          updated-keys (jms/handle-existing-cloud-paths jms/push-or-copy-keys push workflow)]
-      (is (= (misc/gcs-object-exists? cloud-green-idat) nil))
-      (is (= (misc/gcs-object-exists? cloud-red-idat) nil))
-      (is (= (get updated-keys :green_idat_cloud_path) :greenIDatPath))
-      (is (= (get updated-keys :red_idat_cloud_path) :redIDatPath)))))
+          {:keys [cloudGreenIdatPath cloudRedIdatPath]} workflow
+          push (::jms/push (jms/wfl-keys->jms-keys-for workflow))]
+      (is (not (misc/gcs-object-exists? cloudGreenIdatPath)))
+      (is (not (misc/gcs-object-exists? cloudRedIdatPath)))
+      (is (= (:green_idat_cloud_path push) :greenIDatPath))
+      (is (= (:red_idat_cloud_path   push) :redIDatPath)))))
 
 (deftest use-cloud-idat-paths
   (testing "WFL uses the cloud idat paths if they exist."
-    (let [jms (clojure.edn/read-string (slurp "./test/data/reprocessing-jms.edn"))
+    (let [jms (read-jms-message "./test/data/reprocessing-jms.edn")
           workflow (get-in jms [::jms/Properties :payload :workflow])
-          cloud-green-idat (get workflow :cloudGreenIdatPath)
-          cloud-red-idat (get workflow :cloudRedIdatPath)
-          push (get jms/wfl-keys->jms-keys ::jms/push)
-          updated-keys (jms/handle-existing-cloud-paths jms/push-or-copy-keys push workflow)]
-      (is (not= (misc/gcs-object-exists? cloud-green-idat) nil))
-      (is (not= (misc/gcs-object-exists? cloud-red-idat) nil))
-      (is (= (get updated-keys :green_idat_cloud_path) :cloudGreenIdatPath))
-      (is (= (get updated-keys :red_idat_cloud_path) :cloudRedIdatPath)))))
+          {:keys [cloudGreenIdatPath cloudRedIdatPath]} workflow
+          push (::jms/push (jms/wfl-keys->jms-keys-for workflow))]
+      (is (misc/gcs-object-exists? cloudGreenIdatPath))
+      (is (misc/gcs-object-exists? cloudRedIdatPath))
+      (is (= (:green_idat_cloud_path push) :cloudGreenIdatPath))
+      (is (= (:red_idat_cloud_path   push) :cloudRedIdatPath)))))

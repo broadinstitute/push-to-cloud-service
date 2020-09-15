@@ -61,7 +61,7 @@
                   [params ptc] (jms/handle-message folder (jms/ednify msg))
                   {:keys [notifications]} (gcs/gcs-edn ptc)
                   {:keys [::jms/chip ::jms/push]} jms/wfl-keys->jms-keys
-                  push   (-> (jms/handle-existing-cloud-paths jms/push-or-copy-keys push workflow)
+                  push   (-> workflow jms/wfl-keys->jms-keys-for ::jms/push
                              (->> (merge chip))
                              keys
                              (->> (apply juxt)))

@@ -138,7 +138,8 @@
     [bucket (or object "")]))
 
 (defn gcs-object-exists?
-  "Return FILE stat if the gcs object exists."
-  [file]
-  (do-or-nil
-   (shell! "gsutil" "stat" file)))
+  "Return PATH when there is a GCS object at PATH.  Otherwise nil."
+  [path]
+  (when (string? path)
+    (do-or-nil
+     (shell! "gsutil" "stat" path))))
