@@ -8,7 +8,7 @@
 
 (def bucket
   "Storage bucket for running ptc.integration test with."
-  "broad-gotc-dev-zero-test")
+  "broad-gotc-dev-wfl-ptc-test-outputs")
 
 (deftest integration
   (let [prefix     (str "test/" (UUID/randomUUID))
