@@ -27,8 +27,8 @@
     :clioServer                                  "clioServer"
     :clioUseHttps                                true
     :cloudChipMetaDataDirectory                  "gs://storage/pipeline/arrays_metadata/PsychChip_v1-1_15073391_A1/"
-    :cloudGreenIdatPath                          "gs://broad-gotc-dev-zero-test/idats/bogus-green.idat"
-    :cloudRedIdatPath                            "gs://broad-gotc-dev-zero-test/idats/bogus-red.idat"
+    :cloudGreenIdatPath                          "gs://broad-gotc-dev-wfl-ptc-test-inputs/idats/bogus-green.idat"
+    :cloudRedIdatPath                            "gs://broad-gotc-dev-wfl-ptc-test-inputs/idats/bogus-red.idat"
     :cloudSoftwarePath                           "/seq/cloud/prod/software"
     :clusterFilePath                             "bogus-cluster.egt"
     :collaboratorParticipantId                   "3999595072"

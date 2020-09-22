@@ -11,7 +11,7 @@
 
 (def gcs-test-bucket
   "Throw test files in this bucket."
-  "broad-gotc-dev-zero-test")
+  "broad-gotc-dev-wfl-ptc-test-outputs")
 
 (defmacro with-temporary-gcs-folder
   "
