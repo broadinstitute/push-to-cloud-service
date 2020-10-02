@@ -143,3 +143,11 @@
   (when (string? path)
     (do-or-nil
      (shell! "gsutil" "stat" path))))
+
+(defn get-md5-hash
+  "Return the md5 hash of a file."
+  [path]
+  (-> (shell! "gsutil" "hash" "-m" path)
+      (str/split #":")
+      (last)
+      (str/trim)))
