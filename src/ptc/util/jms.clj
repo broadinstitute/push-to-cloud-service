@@ -148,7 +148,9 @@
               (if-let [path (v workflow)]
                 (assoc m k (str/join "/" [cloud (last (str/split path #"/"))]))
                 m))]
-      (apply misc/shell! "gsutil" "cp" (concat sources [cloud]))
+      (doseq [f sources]
+        (let [hash (misc/get-md5-hash f)]
+          (misc/shell! "gsutil" "-h" (str "Content-MD5:" hash) "cp" f cloud)))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
 (def aou-reference-bucket
