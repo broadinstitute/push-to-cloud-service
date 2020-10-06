@@ -60,7 +60,7 @@ jobs:
              exit 1
           fi
           echo ::add-mask::${VAULT_TOKEN}
-          echo ::set-env name=VAULT_TOKEN::${VAULT_TOKEN}
+          echo "VAULT_TOKEN=${VAULT_TOKEN}" >> $GITHUB_ENV
           # use vault token to read secret - service account json
           curl --silent -H "X-Vault-Token: ${VAULT_TOKEN}" -X GET \
                ${VAULT_ADDR}/v1/secret/dsde/gotc/dev/service-accounts/push-to-cloud-non-prod-service-account.json \
