@@ -24,6 +24,7 @@
             :genderClusterFilePath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_gender.egt"
             :greenIDatPath "/home/unix/ptc/data/arrays/HumanExome-12v1-1_A/idats/7991775143_R01C01/7991775143_R01C01_Grn.idat"
             :labBatch "ARRAY-CO-5799466"
+            :minorAlleleFrequencyFileCloudPath "gs://storage/minor_allele_frequency.MAF.txt"
             :participantId "PT-97GM"
             :productFamily "Whole Genome Genotyping"
             :productName "Infinium Exome V1_A"
