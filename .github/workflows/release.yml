@@ -11,7 +11,7 @@ on:
         description: semantic version to release.
         required: true
       release_note:
-        description: release note file.
+        description: release note file path.
         required: false
         default: ''
       draft:
