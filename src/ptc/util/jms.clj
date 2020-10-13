@@ -33,6 +33,7 @@
    ::copy   true     :chip_well_barcode                   :chipWellBarcode
    ::copy   true     :cloud_chip_metadata_directory       :cloudChipMetaDataDirectory
    ::copy   true     :extended_illumina_manifest_filename :extendedIlluminaManifestFileName
+   ::copy   false    :minor_allele_frequency_file         :minorAlleleFrequencyFileCloudPath
    ::copy   true     :reported_gender                     :gender
    ::copy   true     :sample_alias                        :sampleAlias
    ::copy   true     :sample_lsid                         :sampleLsid
