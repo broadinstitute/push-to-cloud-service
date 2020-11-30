@@ -1,6 +1,6 @@
 (ns ptc.unit.util-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [clojure.edn :as edn]
+  (:require [clojure.test  :refer [deftest is testing]]
+            [clojure.edn   :as edn]
             [ptc.util.misc :as misc]
             [ptc.tools.gcs :as gcs])
   (:import (java.io StringWriter)))
