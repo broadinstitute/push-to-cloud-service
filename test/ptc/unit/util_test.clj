@@ -1,8 +1,9 @@
 (ns ptc.unit.util-test
-  (:require [clojure.test  :refer [deftest is testing]]
-            [clojure.edn   :as edn]
+  (:require [clojure.test :refer [deftest is testing]]
+            [clojure.edn :as edn]
             [ptc.util.misc :as misc]
-            [ptc.tools.gcs  :as gcs]))
+            [ptc.tools.gcs :as gcs])
+  (:import (java.io StringWriter)))
 
 (deftest test-notify-everyone-on-the-list-with-message
   (letfn [(notify [msg to-list]
@@ -48,3 +49,21 @@
         (is (not (misc/message-ids-equal? test-msg test-msg-different))))
       (testing "not equal even if only one argument isn't"
         (is (not (misc/message-ids-equal? test-msg test-msg test-msg-different)))))))
+
+(deftest test-silent-stat
+  (testing "success case"
+    (let [output (StringWriter.)]
+      (testing "returns text"
+        (binding [*out* output
+                  *err* output]
+          (is (not (empty? (misc/gcs-object-exists? "--help"))))))
+      (testing "prints nothing"
+        (is (empty? (str output))))))
+  (testing "error case"
+    (let [output (StringWriter.)]
+      (testing "returns nothing"
+        (binding [*out* output
+                  *err* output]
+          (is (nil? (misc/gcs-object-exists? "non/gcs/path")))))
+      (testing "prints nothing"
+        (is (empty? (str output)))))))
