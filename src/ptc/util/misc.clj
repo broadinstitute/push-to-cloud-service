@@ -148,7 +148,7 @@
   "Return PATH when there is a GCS object at PATH.  Otherwise nil."
   [path]
   (when (string? path)
-    (do-or-nil
+    (do-or-nil-silently
      (shell! "gsutil" "stat" path))))
 
 (defn get-md5-hash
