@@ -19,6 +19,13 @@
         (catch Exception x#
           (println x#))))
 
+(defmacro do-or-nil-silently
+  "Value of BODY or nil if it throws, without printing any exceptions.
+  See also [[do-or-nil]]."
+  [& body]
+  `(try (do ~@body)
+        (catch Exception x#)))
+
 (defmacro dump
   "Dump [EXPRESSION VALUE] where VALUE is EXPRESSION's value."
   [expression]
