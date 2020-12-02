@@ -76,39 +76,23 @@
   (-> folder
       (vector "**")
       (->> (str/join "/")
-           (misc/shell! "gsutil" "ls"))
+           (misc/gsutil "ls"))
       (str/split #"\n")
       misc/do-or-nil))
 
 (defn delete-object
   "Delete URL or OBJECT from BUCKET"
-  ([bucket object headers]
-   (http/request {:method  :delete ;; :debug true :debug-body true
-                  :url     (bucket-object-url bucket object)
-                  :headers headers}))
-  ([bucket object]
-   (delete-object bucket object (get-auth-header!)))
   ([url]
-   (apply delete-object (parse-gs-url url))))
+   (misc/gsutil "rm" url))
+  ([bucket object]
+   (delete-object (str "gs://" bucket "/" object))))
 
 (defn upload-file
   "Upload FILE to BUCKET with name OBJECT."
-  ([file bucket object headers]
-   (let [body (io/file file)]
-     (-> {:method       :post  ;; :debug true :debug-body true
-          :url          (str upload-url bucket "/o")
-          :query-params {:uploadType "media"
-                         :name       object}
-          :content-type (.detect (new Tika) body)
-          :headers      headers
-          :body         body}
-         http/request
-         :body
-         (json/read-str :key-fn keyword))))
-  ([file bucket object]
-   (upload-file file bucket object (get-auth-header!)))
   ([file url]
-   (apply upload-file file (parse-gs-url url))))
+   (misc/gsutil "cp" file url))
+  ([file bucket object]
+   (upload-file file (str "gs://" bucket "/" object))))
 
 (defn gcs-cat
   "Return the content of the GCS object at URL."

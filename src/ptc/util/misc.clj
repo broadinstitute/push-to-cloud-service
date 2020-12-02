@@ -10,7 +10,10 @@
             [vault.client.http]         ; vault.core needs this
             [vault.core            :as vault])
   (:import [java.util UUID]
-           [org.apache.commons.mail SimpleEmail]))
+           [java.util.concurrent TimeUnit]
+           [org.apache.commons.mail SimpleEmail]
+           (clojure.lang ExceptionInfo)
+           (java.io IOException)))
 
 (defmacro do-or-nil
   "Value of BODY or nil if it throws."
@@ -76,9 +79,7 @@
   "Run ARGS in a shell and return stdout or throw."
   [& args]
   (let [{:keys [exit err out]} (apply shell/sh args)]
-    (when-not (zero? exit)
-      (throw (Exception. (format "%s: %s exit status from: %s : %s"
-                                 ptc/the-name exit args err))))
+    (when-not (zero? exit) (throw (IOException. err)))
     (str/trim out)))
 
 (defn slurp-json
@@ -137,17 +138,32 @@
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
 
+(defn gsutil [& args]
+  "Shell out to gsutil with ARGS. Retry when gsutil responds with 503."
+  (let [max 3]
+    (loop [attempt 1]
+      (or (try
+            (apply shell! "gsutil" args)
+            (catch ExceptionInfo ex
+              (when-not (and (str/includes? (.getMessage ex) "503 Server Error")
+                          (< attempt max))
+                (throw ex))
+              (log/warnf "received 503 (attempt % of %s)" attempt max)
+              (log/info "sleeping before another attempt")
+              (.sleep TimeUnit/SECONDS 30)))
+        (recur (inc attempt))))))
+
 (defn gcs-object-exists?
   "Return PATH when there is a GCS object at PATH.  Otherwise nil."
   [path]
   (when (string? path)
     (do-or-nil
-     (shell! "gsutil" "stat" path))))
+     (gsutil "stat" path))))
 
 (defn get-md5-hash
   "Return the md5 hash of a file."
   [path]
-  (-> (shell! "gsutil" "hash" "-m" path)
+  (-> (gsutil "hash" "-m" path)
       (str/split #":")
       (last)
       (str/trim)))
