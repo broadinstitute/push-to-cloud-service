@@ -12,7 +12,6 @@
   (:import [java.util UUID]
            [java.util.concurrent TimeUnit]
            [org.apache.commons.mail SimpleEmail]
-           (clojure.lang ExceptionInfo)
            (java.io IOException)))
 
 (defmacro do-or-nil
@@ -151,7 +150,7 @@
     (loop [attempt 1]
       (or (try
             (apply shell! "gsutil" args)
-            (catch ExceptionInfo ex
+            (catch IOException ex
               (when-not (and (str/includes? (.getMessage ex) "503 Server Error")
                           (< attempt max))
                 (throw ex))
