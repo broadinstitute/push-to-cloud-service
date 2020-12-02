@@ -22,6 +22,9 @@ main() {
         in/unit/push-to-cloud.service.in > ${UNIT_DIR}/push-to-cloud.service \
         && sed -i '/User=ptc/d' ${UNIT_DIR}/push-to-cloud.service \
         && systemctl --user daemon-reload
+    
+    cp in/unit/vault.service ${UNIT_DIR}/vault.service \
+        && systemctl --user daemon-reload
 }
 
 main "$@"
