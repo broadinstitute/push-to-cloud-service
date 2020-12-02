@@ -1,6 +1,6 @@
 [Unit]
 Description=All-of-Us Arrays Push-to-Cloud Daemon
-After=network.target
+After=network.target ptc-vault.service
 StartLimitIntervalSec=300
 StartLimitBurst=3
 

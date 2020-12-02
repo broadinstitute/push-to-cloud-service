@@ -1,5 +1,6 @@
 [Unit]
 Description=start vault
+After=network.target 
 
 [Service]
 ExecStart=/home/unix/ptc/bin/vault agent -config=/home/unix/ptc/vault-agent/vault-agent.hcl
