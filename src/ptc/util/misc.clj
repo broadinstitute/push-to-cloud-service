@@ -152,12 +152,12 @@
             (apply shell! "gsutil" args)
             (catch IOException ex
               (when-not (and (str/includes? (.getMessage ex) "503 Server Error")
-                          (< attempt max))
+                             (< attempt max))
                 (throw ex))
               (log/warnf "received 503 (attempt % of %s)" attempt max)
               (log/info "sleeping before another attempt")
               (.sleep TimeUnit/SECONDS 30)))
-        (recur (inc attempt))))))
+          (recur (inc attempt))))))
 
 (defn gcs-object-exists?
   "Return PATH when there is a GCS object at PATH.  Otherwise nil."
