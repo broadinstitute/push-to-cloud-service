@@ -74,7 +74,7 @@
               #(let [x (swap! counter dec)]
                  (or (> 1 x) (throw (IOException. "503 Server Error"))))))]
     (testing "handles at most 3 retries"
-      (is (misc/retry-on-server-error (throw-n-times 3) 1))
-      (testing "Gives up after third"
-        (is (thrown? Exception (misc/retry-on-server-error (throw-n-times 4) 1)))))))
+      (is (misc/retry-on-server-error 1 (throw-n-times 3))))
+    (testing "Gives up after third"
+      (is (thrown? Exception (misc/retry-on-server-error 1 (throw-n-times 4)))))))
 

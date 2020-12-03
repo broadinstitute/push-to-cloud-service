@@ -145,7 +145,7 @@
     [bucket (or object "")]))
 
 ;; visible-for-testing
-(defn retry-on-server-error [thunk seconds]
+(defn retry-on-server-error [seconds thunk]
   (let [max 3]
     (loop [attempt 1]
       (or (try
@@ -162,7 +162,7 @@
 
 (defn gsutil [& args]
   "Shell out to gsutil with ARGS. Retry when gsutil responds with 503."
-  (retry-on-server-error (fn [] (apply shell! "gsutil" args)) 30))
+  (retry-on-server-error 30 #(apply shell! "gsutil" args)))
 
 (defn gcs-object-exists?
   "Return PATH when there is a GCS object at PATH.  Otherwise nil."
