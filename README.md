@@ -122,7 +122,7 @@ push-to-cloud-service is designed to be a [systemd user unit](https://wiki.archl
 Once installed via the bundled install script, you can enable push-to-cloud via:
 ```bash
 systemctl --user enable --now push-to-cloud.service
-systemctl --user enable --now ptc-vault.service
+systemctl enable ptc-vault.service
 ```
 
 More information on systemd usage can be found [here](https://wiki.archlinux.org/index.php/Systemd).
