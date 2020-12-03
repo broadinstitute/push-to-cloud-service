@@ -144,20 +144,25 @@
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
 
-(defn gsutil [& args]
-  "Shell out to gsutil with ARGS. Retry when gsutil responds with 503."
+;; visible-for-testing
+(defn retry-on-server-error [thunk seconds]
   (let [max 3]
     (loop [attempt 1]
       (or (try
-            (apply shell! "gsutil" args)
+            (thunk)
             (catch IOException ex
-              (when-not (and (str/includes? (.getMessage ex) "503 Server Error")
-                             (< attempt max))
+              (when-not (and
+                         (str/includes? (.getMessage ex) "503 Server Error")
+                         (< attempt max))
                 (throw ex))
-              (log/warnf "received 503 (attempt % of %s)" attempt max)
+              (log/warnf "received 503 (attempt %s of %s)" attempt max)
               (log/info "sleeping before another attempt")
-              (.sleep TimeUnit/SECONDS 30)))
+              (.sleep TimeUnit/SECONDS seconds)))
           (recur (inc attempt))))))
+
+(defn gsutil [& args]
+  "Shell out to gsutil with ARGS. Retry when gsutil responds with 503."
+  (retry-on-server-error (fn [] (apply shell! "gsutil" args)) 30))
 
 (defn gcs-object-exists?
   "Return PATH when there is a GCS object at PATH.  Otherwise nil."

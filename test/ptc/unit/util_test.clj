@@ -1,9 +1,9 @@
 (ns ptc.unit.util-test
-  (:require [clojure.test  :refer [deftest is testing]]
-            [clojure.edn   :as edn]
+  (:require [clojure.test :refer [deftest is testing]]
+            [clojure.edn :as edn]
             [ptc.util.misc :as misc]
             [ptc.tools.gcs :as gcs])
-  (:import (java.io StringWriter)))
+  (:import (java.io StringWriter IOException)))
 
 (deftest test-notify-everyone-on-the-list-with-message
   (letfn [(notify [msg to-list]
@@ -18,10 +18,10 @@
 (deftest gs-url-test
   (testing "URL utilities"
     (testing "parse-gs-url ok"
-      (is (= ["b" "obj/ect"]  (gcs/parse-gs-url "gs://b/obj/ect")))
+      (is (= ["b" "obj/ect"] (gcs/parse-gs-url "gs://b/obj/ect")))
       (is (= ["b" "obj/ect/"] (gcs/parse-gs-url "gs://b/obj/ect/")))
-      (is (= ["b" ""]         (gcs/parse-gs-url "gs://b/")))
-      (is (= ["b" ""]         (gcs/parse-gs-url "gs://b"))))
+      (is (= ["b" ""] (gcs/parse-gs-url "gs://b/")))
+      (is (= ["b" ""] (gcs/parse-gs-url "gs://b"))))
     (testing "parse-gs-url bad"
       (is (thrown? IllegalArgumentException (gcs/parse-gs-url "")))
       (is (thrown? IllegalArgumentException (gcs/parse-gs-url "x")))
@@ -33,9 +33,9 @@
       (is (thrown? IllegalArgumentException (gcs/parse-gs-url "gs:///o/"))))))
 
 (deftest test-message-id-equality
-  (let [test-msg (edn/read-string (slurp "test/data/test_msg.edn"))
+  (let [test-msg           (edn/read-string (slurp "test/data/test_msg.edn"))
         test-msg-different (edn/read-string (slurp "test/data/test_msg_diff.edn"))
-        test-msg-same (edn/read-string (slurp "test/data/test_msg_same.edn"))]
+        test-msg-same      (edn/read-string (slurp "test/data/test_msg_same.edn"))]
     (testing "message ID equality"
       (testing "true with no arguments"
         (is (misc/message-ids-equal?)))
@@ -67,3 +67,15 @@
           (is (nil? (misc/gcs-object-exists? "non/gcs/path")))))
       (testing "prints nothing"
         (is (empty? (str output)))))))
+
+(deftest test-retry-on-server-error
+  (letfn [(throw-n-times [n]
+            (let [counter (atom n)]
+              #(do
+                 (let [x (swap! counter dec)]
+                   (or (zero? x) (throw (IOException. "503 Server Error")))))))]
+    (testing "handles two reties"
+      (is (misc/retry-on-server-error (throw-n-times 2) 1)))
+    (testing "Fails on third"
+      (is (thrown? Exception (misc/retry-on-server-error (throw-n-times 4) 1))))))
+
