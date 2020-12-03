@@ -14,14 +14,12 @@
   (let [prefix     (str "test/" (UUID/randomUUID))
         properties (::jms/Properties (jms/encode @jms-tools/good-jms-message))]
     (letfn [(task [_]
-              (try
-                (testing "end-to-end: "
-                  (testing "upload a file to the bucket"
-                    (let [upload (gcs/upload-file "deps.edn" bucket prefix)]
-                      (is (= prefix (:name upload)))
-                      (is (= bucket (:bucket upload)))
-                      (is (= [upload] (gcs/list-objects bucket prefix))))))
-                (finally (gcs/delete-object bucket prefix)))
+              (testing "upload a file to the bucket"
+                (let [object (str prefix "/deps.edn")]
+                  (try
+                    (gcs/upload-file "deps.edn" bucket object)
+                    (gcs/list-objects bucket object)
+                    (finally (gcs/delete-object bucket object)))))
               false)
             (flow [connection queue]
               (start/produce connection queue "text" properties)

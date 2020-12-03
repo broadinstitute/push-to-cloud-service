@@ -10,7 +10,9 @@
             [vault.client.http]         ; vault.core needs this
             [vault.core            :as vault])
   (:import [java.util UUID]
-           [org.apache.commons.mail SimpleEmail]))
+           [java.util.concurrent TimeUnit]
+           [org.apache.commons.mail SimpleEmail]
+           (java.io IOException)))
 
 (defmacro do-or-nil
   "Value of BODY or nil if it throws."
@@ -83,9 +85,7 @@
   "Run ARGS in a shell and return stdout or throw."
   [& args]
   (let [{:keys [exit err out]} (apply shell/sh args)]
-    (when-not (zero? exit)
-      (throw (Exception. (format "%s: %s exit status from: %s : %s"
-                                 ptc/the-name exit args err))))
+    (when-not (zero? exit) (throw (IOException. err)))
     (str/trim out)))
 
 (defn slurp-json
@@ -144,17 +144,37 @@
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
 
+;; visible-for-testing
+(defn retry-on-server-error [seconds thunk]
+  (let [max 3]
+    (loop [attempt 1]
+      (or (try
+            (thunk)
+            (catch IOException ex
+              (when-not (and
+                         (str/includes? (.getMessage ex) "503 Server Error")
+                         (< attempt max))
+                (throw ex))
+              (log/warnf "received 503 (attempt %s of %s)" attempt max)
+              (log/info "sleeping before another attempt")
+              (.sleep TimeUnit/SECONDS seconds)))
+          (recur (inc attempt))))))
+
+(defn gsutil [& args]
+  "Shell out to gsutil with ARGS. Retry when gsutil responds with 503."
+  (retry-on-server-error 30 #(apply shell! "gsutil" args)))
+
 (defn gcs-object-exists?
   "Return PATH when there is a GCS object at PATH.  Otherwise nil."
   [path]
   (when (string? path)
     (do-or-nil-silently
-     (shell! "gsutil" "stat" path))))
+     (gsutil "stat" path))))
 
 (defn get-md5-hash
   "Return the md5 hash of a file."
   [path]
-  (-> (shell! "gsutil" "hash" "-m" path)
+  (-> (gsutil "hash" "-m" path)
       (str/split #":")
       (last)
       (str/trim)))

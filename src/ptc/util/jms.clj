@@ -1,8 +1,8 @@
 (ns ptc.util.jms
   "Adapt JMS messages into upload actions and workflow parameters."
   (:require [clojure.data.json :as json]
-            [clojure.string    :as str]
-            [ptc.util.misc     :as misc]))
+            [clojure.string :as str]
+            [ptc.util.misc :as misc]))
 
 (def cromwell
   "Use this Cromwell.  Should depend on deployment environment."
@@ -135,7 +135,7 @@
   then return its path in the cloud."
   [prefix workflow]
   (let [result (str/join "/" [(cloud-prefix prefix workflow) "params.txt"])]
-    (misc/shell! "gsutil" "cp" "-" result :in (jms->params workflow))
+    (misc/gsutil "cp" "-" result :in (jms->params workflow))
     result))
 
 (defn jms->notification
@@ -152,7 +152,7 @@
                 m))]
       (doseq [f sources]
         (let [hash (misc/get-md5-hash f)]
-          (misc/shell! "gsutil" "-h" (str "Content-MD5:" hash) "cp" f cloud)))
+          (misc/gsutil "-h" (str "Content-MD5:" hash) "cp" f cloud)))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
 (def aou-reference-bucket
@@ -181,7 +181,7 @@
         vector
         (->> (assoc append-to-aou-request :notifications))
         json/write-str
-        (->> (misc/shell! "gsutil" "cp" "-" ptc :in)))
+        (->> (misc/gsutil "cp" "-" ptc :in)))
     [params ptc]))
 
 (defn ednify
