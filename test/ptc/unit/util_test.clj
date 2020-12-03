@@ -71,11 +71,10 @@
 (deftest test-retry-on-server-error
   (letfn [(throw-n-times [n]
             (let [counter (atom n)]
-              #(do
-                 (let [x (swap! counter dec)]
-                   (or (zero? x) (throw (IOException. "503 Server Error")))))))]
-    (testing "handles two reties"
-      (is (misc/retry-on-server-error (throw-n-times 2) 1)))
-    (testing "Fails on third"
-      (is (thrown? Exception (misc/retry-on-server-error (throw-n-times 4) 1))))))
+              #(let [x (swap! counter dec)]
+                 (or (> 1 x) (throw (IOException. "503 Server Error"))))))]
+    (testing "handles at most 3 retries"
+      (is (misc/retry-on-server-error (throw-n-times 3) 1))
+      (testing "Gives up after third"
+        (is (thrown? Exception (misc/retry-on-server-error (throw-n-times 4) 1)))))))
 
