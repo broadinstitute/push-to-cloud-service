@@ -32,7 +32,7 @@
    ::copy   true     :analysis_version_number             :analysisCloudVersion
    ::copy   true     :chip_well_barcode                   :chipWellBarcode
    ::copy   true     :cloud_chip_metadata_directory       :cloudChipMetaDataDirectory
-   ::copy   false    :environment                         :environment
+   ::copy   true     :environment                         :environment
    ::copy   true     :extended_illumina_manifest_filename :extendedIlluminaManifestFileName
    ::copy   false    :minor_allele_frequency_file         :minorAlleleFrequencyFileCloudPath
    ::copy   true     :reported_gender                     :gender
@@ -127,8 +127,8 @@
 (defn cloud-prefix
   "Return the cloud GCS URL with PREFIX for WORKFLOW."
   [prefix workflow]
-  (let [{:keys [analysisCloudVersion chipName chipWellBarcode]} workflow]
-    (str/join "/" [prefix chipName chipWellBarcode analysisCloudVersion])))
+  (let [{:keys [analysisCloudVersion chipName chipWellBarcode environment]} workflow]
+    (str/join "/" [prefix environment chipName chipWellBarcode analysisCloudVersion])))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
