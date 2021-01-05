@@ -1,0 +1,12 @@
+[Unit]
+Description=start vault
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/vault agent -config=/home/unix/ptc/vault-agent/vault-agent.hcl
+User=ptc
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
