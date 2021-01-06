@@ -128,7 +128,7 @@
   "Return the cloud GCS URL with PREFIX for WORKFLOW."
   [prefix workflow]
   (let [{:keys [analysisCloudVersion chipName chipWellBarcode environment]} workflow]
-    (str/join "/" [prefix environment chipName chipWellBarcode analysisCloudVersion])))
+    (str/join "/" [prefix (str/lower-case environment) chipName chipWellBarcode analysisCloudVersion])))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
