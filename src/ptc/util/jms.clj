@@ -39,6 +39,7 @@
    ::copy   true     :sample_alias                        :sampleAlias
    ::copy   true     :sample_lsid                         :sampleLsid
    ::copy   true     :call_rate_threshold                 :callRateThreshold
+   ::copy   true     :vault_token_path                    :vaultTokenPath
    ::chip   true     :bead_pool_manifest_file             :beadPoolManifestPath
    ::chip   true     :cluster_file                        :clusterFilePath
    ::chip   false    :gender_cluster_file                 :genderClusterFilePath
