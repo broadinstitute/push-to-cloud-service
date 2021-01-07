@@ -38,5 +38,6 @@
             :sampleAlias "NA12878"
             :sampleId "SM-3S2IV"
             :sampleLsid "broadinstitute.org:bsp.dev.sample:NOTREAL.NA12878"
+            :vaultTokenPath "gs://storage/token"
             :zCallThresholdsPath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/IBDPRISM_EX.egt.thresholds.txt"}}
 }}
