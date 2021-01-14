@@ -23,7 +23,7 @@ main() {
         && sed -i '/User=ptc/d' ${UNIT_DIR}/push-to-cloud.service \
         && systemctl --user daemon-reload
     
-    cp in/unit/ptc-vault.service ${UNIT_DIR}/ptc-vault.service \
+    cp in/unit/ptc-vault.service.in ${UNIT_DIR}/ptc-vault.service \
         && systemctl --user daemon-reload
 }
 
