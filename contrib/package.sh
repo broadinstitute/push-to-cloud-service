@@ -31,6 +31,7 @@ main() {
 
     mkdir -p "${out}/in/unit"
     cp in/unit/push-to-cloud.service.in "${out}/in/unit"
+    cp in/unit/ptc-vault.service.in "${out}/in/unit"
 
     mkdir -p "${out}/lib"
     cp target/push-to-cloud-service.jar "${out}/lib"
