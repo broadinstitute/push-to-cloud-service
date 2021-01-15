@@ -61,7 +61,7 @@
           (is (= (gcs/gcs-cat params) (jms/jms->params workflow))))))
     (testing "Cromwell workflow is started by WFL"
       (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
-        (is (not= ::timed-out workflow-id ) "Timeout waiting for workflow creation")
+        (is (not= ::timed-out workflow-id) "Timeout waiting for workflow creation")
         (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
           (let [workflow-timeout 1800000
