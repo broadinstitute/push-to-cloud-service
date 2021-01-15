@@ -18,14 +18,14 @@
                   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.0.629"}
                                 com.google.auth/google-auth-library-oauth2-http {:mvn/version "0.21.1"}}
                   :main-opts   ["-m" "kaocha.runner"]}
-           :build  {:extra-deps  {uberdeps {:mvn/version "0.1.10"}}
+           :build  {:extra-deps  {uberdeps/uberdeps {:mvn/version "0.1.10"}}
                     :main-opts   ["-e" "(compile,'ptc.start)"
                                   "-m" "uberdeps.uberjar"
                                   "--main-class" "ptc.start"
                                   "--multi-release"]}
-           :lint   {:extra-deps  {cljfmt {:mvn/version "0.6.8"}}
+           :lint   {:extra-deps  {cljfmt/cljfmt {:mvn/version "0.6.8"}}
                     :main-opts   ["-m" "cljfmt.main" "check"]}
-           :format {:extra-deps  {cljfmt {:mvn/version "0.6.8"}}
+           :format {:extra-deps  {cljfmt/cljfmt {:mvn/version "0.6.8"}}
                     :main-opts   ["-m" "cljfmt.main" "fix"]}
            :queue  {:extra-paths ["test"]
                     :main-opts   ["-m" "ptc.tools.jms"]}}
