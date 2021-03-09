@@ -64,6 +64,6 @@
         (is (not= ::timed-out workflow-id) "Timeout waiting for workflow creation")
         (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
-          (let [workflow-timeout 1800000
+          (let [workflow-timeout 3600000
                 result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
             (is (= "Succeeded" result) "Cromwell workflow failed")))))))
