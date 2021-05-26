@@ -74,7 +74,11 @@
     :pipelineGitHash                             "1abfaded"
     :pipelineVersion                             "Arrays_v2.0"
     :podRoot                                     "/pod/root"
-    :positiveControl                             false
+    :positiveControl                             true
+    :controlSampleName                           "NA12878"
+    :controlSampleCloudVcfPath                   "bogus-control-vcf.vcf.gz"
+    :controlSampleCloudVcfIndexPath              "bogus-control-vcf-index.vcf.gz.tbi"
+    :controlSampleCloudIntervalsFilePath         "bogus-control-intervals.interval_list"
     :productFamily                               "Whole Genome Genotyping"
     :productName                                 "Infinium Global Diversity Array Processing (High Volume, >100,000 samples)"
     :productOrderId                              "PDO-21602"

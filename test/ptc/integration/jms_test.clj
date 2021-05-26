@@ -4,7 +4,6 @@
             [ptc.start :as start]
             [ptc.tools.gcs :as gcs]
             [ptc.tools.jms :as jms-tools]
-            [ptc.tools.utils :as utils]
             [ptc.util.jms :as jms]
             [ptc.util.misc :as misc])
   (:import [java.util UUID]))
