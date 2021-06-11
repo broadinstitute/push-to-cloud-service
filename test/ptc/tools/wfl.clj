@@ -15,6 +15,15 @@
         :body misc/parse-json-string
         (->> (filter aou?)))))
 
+(defn get-workflows
+  "List the workflows managed by the `_workload` from WFL at `wfl-url`."
+  [wfl-url {:keys [uuid] :as _workload}]
+  (let [path (format "/api/v1/workload/%s/workflows" uuid)]
+    (-> (str wfl-url path)
+        (client/get {:headers (gcs/get-auth-header!)})
+        :body
+        misc/parse-json-string)))
+
 (defn aou-uuid
   "Return a semipredicate that returns nil or the UUID of WORKFLOW when
   its :inputs submap has CHIPWELL-BARCODE and ANALYSIS-VERSION-NUMBER."
@@ -31,7 +40,7 @@
   (let [match? (aou-uuid chipwell-barcode analysis-version-number)]
     (->> wfl-url
          get-aou-workloads
-         (mapcat :workflows)
+         (mapcat (partial get-workflows wfl-url))
          (keep match?))))
 
 (defn wait-for-workflow-creation
