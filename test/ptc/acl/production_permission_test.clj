@@ -1,4 +1,4 @@
-(ns ptc.acl.permission-test
+(ns ptc.acl.production-permission-test
   "Test that the right permissions are granted for AoU project."
   (:require [ptc.tools.gcs :as gcs]
             [ptc.tools.cromwell :as cromwell]
