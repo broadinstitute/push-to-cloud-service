@@ -37,7 +37,7 @@
                       .refreshAccessToken .getTokenValue)]
     {"Authorization" (str/join \space ["Bearer" token])}))
 
-(deftest bucket-permission-test
+(deftest ^:excluded bucket-permission-test
   (testing "Unauthorized user cannot list the PTC buckets."
     (with-redefs [gcs/get-auth-header! get-test-user-header]
       (try
@@ -75,7 +75,7 @@
           (is (contains? #{403 404} (:status (ex-data e)))
               "The user is able to delete object from the output bucket!!"))))))
 
-(deftest workflow-permission-test
+(deftest ^:excluded workflow-permission-test
   (testing "Unauthorized users cannot query for workflows in the AoU Cromwell."
     (try
       (with-redefs [gcs/get-auth-header! get-test-user-header]
