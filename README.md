@@ -73,14 +73,28 @@ export WFL_URL="https://aou-wfl.gotc-prod.broadinstitute.org"
 clojure -A:test integration
 ```
 
-There's also an `ACL` testing to check if the permissions of (AoU) Bucket and Cromwell are in general set properly. You could invoke it with:
+There is another test target named `acl-in-production`.
+That runs a test
+that includes reading from and writing to
+the production Google Cloud Storage buckets.
+The `acl-in-production` test is disabled
+because it runs in production
+and can break the AllOfUs pipeline.
+Do not run it while the AllOfUs pipeline is in use.
+
+You can edit code to enable the test
+after you've verified that no samples
+are in the AllOfUs pipeline,
+and run it like this:
 
 ```bash
- clojure -A:test acl
- ```
+ clojure -A:test acl-in-production
+```
 
-which will run the end to end test including uploading some files to the
-testing Google Cloud Storage Bucket.
+The `acl-in-production` test verifies
+that the permissions on the production AllOfUs buckets
+and the production Cromwell are set properly.
+
 
 ## Build
 
