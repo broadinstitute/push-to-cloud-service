@@ -1,15 +1,16 @@
 ;; Configuration file for Kaocha test runner
 ;;
 #kaocha/v1
-    {:tests             [{:kaocha.testable/id :unit,
-                          :kaocha/ns-patterns ["ptc\\.unit\\..*-test$"]}
-                         {:kaocha.testable/id :integration,
-                          :kaocha/ns-patterns ["ptc\\.integration\\..*-test$"]}
-                         {:kaocha.testable/id :e2e,
-                          :kaocha/ns-patterns ["ptc\\.e2e\\..*-test$"]}
-                         {:kaocha.testable/id :acl,
-                          :kaocha/ns-patterns ["ptc\\.acl\\..*-test$"]}]
-     :kaocha/fail-fast? true
-     :color?            true
-     :reporter          [kaocha.report/documentation]
-     :capture-output?   true}
+{:tests             [{:kaocha.testable/id      :unit
+                      :kaocha/ns-patterns      ["ptc\\.unit\\..*-test$"]}
+                     {:kaocha.testable/id      :integration
+                      :kaocha/ns-patterns      ["ptc\\.integration\\..*-test$"]}
+                     {:kaocha.testable/id      :e2e
+                      :kaocha/ns-patterns      ["ptc\\.e2e\\..*-test$"]}
+                     {:kaocha.testable/id      :acl-in-production
+                      :kaocha/ns-patterns      ["ptc\\.acl\\..*-test$"]
+                      :kaocha.filter/skip-meta [:excluded]}]
+ :kaocha/fail-fast? true
+ :color?            true
+ :reporter          [kaocha.report/documentation]
+ :capture-output?   true}

@@ -1,4 +1,4 @@
-(ns ptc.acl.permission-test
+(ns ptc.acl.production-permission-test
   "Test that the right permissions are granted for AoU project."
   (:require [ptc.tools.gcs :as gcs]
             [ptc.tools.cromwell :as cromwell]
@@ -29,15 +29,18 @@
 (defn get-test-user-header
   "Generate auth header from the ACL test user service account."
   []
-  (let [token (some-> test-user misc/vault-secrets (:value) .getBytes
+  (let [scope ["https://www.googleapis.com/auth/cloud-platform"
+               "https://www.googleapis.com/auth/userinfo.email"
+               "https://www.googleapis.com/auth/userinfo.profile"]
+        token (some-> test-user misc/vault-secrets (:value) .getBytes
                       io/input-stream GoogleCredentials/fromStream
-                      (.createScoped ["https://www.googleapis.com/auth/cloud-platform"
-                                      "https://www.googleapis.com/auth/userinfo.email"
-                                      "https://www.googleapis.com/auth/userinfo.profile"])
+                      (.createScoped scope)
                       .refreshAccessToken .getTokenValue)]
+    (is token "No credentials for test-user.")
     {"Authorization" (str/join \space ["Bearer" token])}))
 
-(deftest bucket-permission-test
+(deftest ^:excluded bucket-permission-test
+  (is false "Do you really want to run this in production?")
   (testing "Unauthorized user cannot list the PTC buckets."
     (with-redefs [gcs/get-auth-header! get-test-user-header]
       (try
@@ -75,7 +78,8 @@
           (is (contains? #{403 404} (:status (ex-data e)))
               "The user is able to delete object from the output bucket!!"))))))
 
-(deftest workflow-permission-test
+(deftest ^:excluded workflow-permission-test
+  (is false "Do you really want to run this in production?")
   (testing "Unauthorized users cannot query for workflows in the AoU Cromwell."
     (try
       (with-redefs [gcs/get-auth-header! get-test-user-header]
