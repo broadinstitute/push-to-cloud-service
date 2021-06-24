@@ -38,6 +38,7 @@
     {"Authorization" (str/join \space ["Bearer" token])}))
 
 (deftest ^:excluded bucket-permission-test
+  (is false "Do you really want to run this in production?")
   (testing "Unauthorized user cannot list the PTC buckets."
     (with-redefs [gcs/get-auth-header! get-test-user-header]
       (try
@@ -76,6 +77,7 @@
               "The user is able to delete object from the output bucket!!"))))))
 
 (deftest ^:excluded workflow-permission-test
+  (is false "Do you really want to run this in production?")
   (testing "Unauthorized users cannot query for workflows in the AoU Cromwell."
     (try
       (with-redefs [gcs/get-auth-header! get-test-user-header]
