@@ -29,12 +29,14 @@
 (defn get-test-user-header
   "Generate auth header from the ACL test user service account."
   []
-  (let [token (some-> test-user misc/vault-secrets (:value) .getBytes
+  (let [scope ["https://www.googleapis.com/auth/cloud-platform"
+               "https://www.googleapis.com/auth/userinfo.email"
+               "https://www.googleapis.com/auth/userinfo.profile"]
+        token (some-> test-user misc/vault-secrets (:value) .getBytes
                       io/input-stream GoogleCredentials/fromStream
-                      (.createScoped ["https://www.googleapis.com/auth/cloud-platform"
-                                      "https://www.googleapis.com/auth/userinfo.email"
-                                      "https://www.googleapis.com/auth/userinfo.profile"])
+                      (.createScoped scope)
                       .refreshAccessToken .getTokenValue)]
+    (is token "No credentials for test-user.")
     {"Authorization" (str/join \space ["Bearer" token])}))
 
 (deftest ^:excluded bucket-permission-test
