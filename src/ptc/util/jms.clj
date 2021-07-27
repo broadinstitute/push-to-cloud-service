@@ -85,6 +85,7 @@
          (map key->key)
          (into {}))))
 
+;; See https://broadinstitute.slack.com/archives/CTUD7J18A/p1622739649003800
 (defn wfl-keys->jms-keys-for
   "Return wfl-keys->jms-keys modified for WORKFLOW."
   [workflow]
@@ -94,6 +95,123 @@
               (if (misc/gcs-object-exists? (cloud workflow))
                 [k cloud]
                 [k local])))))
+
+#_(defn wfl-keys->jms-keys-for
+    "Return wfl-keys->jms-keys modified for WORKFLOW."
+    [workflow]
+    (letfn [(adapt [keymap [k v]] (assoc-in keymap [::push k] v))]
+      (reduce adapt (dissoc wfl-keys->jms-keys ::push)
+        (for [[k [cloud local]] (::push wfl-keys->jms-keys)]
+          (cond
+            (misc/gcs-object-exists? ()) [k ptc-managed-cloud-key]
+            (do (prn (cloud workflow))
+              (misc/gcs-object-exists? (cloud workflow))) [k cloud]
+            (misc/gcs-object-exists? (cloud workflow)) [k cloud]
+            :else [k local])))))
+
+(comment
+
+  (let [workflow {:aggregationPendingQueue                     "aggregation.pending.queue"
+                  :analysisCloudPath                           "gs://storage/pipeline/204339030085_R08C01/v3/"
+                  :analysisCloudVersion                        3
+                  :analysisDirectory                           "/v3"
+                  :beadPoolManifestPath                        "bogus-bead-pool-manifest.bpm"
+                  :blacklistSchema                             "blacklistSchema"
+                  :bsMap                                       "/3rd_party/bsmap/bsmap"
+                  :bwa                                         "/3rd_party/bwa/bwa"
+                  :bwa64                                       "/3rd_party/bwa_64/bwa"
+                  :bwaMem                                      "/3rd_party/bwa_mem/bwa"
+                  :bwaMem_0_7_15                               "/3rd_party/bwa_mem_0.7.15/bwa"
+                  :callRateThreshold                           0.98
+                  :chipManifestPath                            "bogus-chip-manifest.csv"
+                  :chipName                                    "PsychChip_v1-1_15073391_A1"
+                  :chipWellBarcode                             "3999595072_R06C01"
+                  :clioClientJarPath                           "/current/clio-client.jar"
+                  :clioPort                                    443
+                  :clioServer                                  "clioServer"
+                  :clioUseHttps                                true
+                  :cloudChipMetaDataDirectory                  "gs://storage/pipeline/arrays_metadata/PsychChip_v1-1_15073391_A1/"
+                  :cloudGreenIdatPath                          "gs://storage/pipeline/RP-1044/NA12878/3999595072_R06C01/idats/3999595072_R06C01_Grn.idat"
+                  :cloudRedIdatPath                            "gs://storage/pipeline/RP-1044/NA12878/3999595072_R06C01/idats/3999595072_R06C01_Red.idat"
+                  :cloudSoftwarePath                           "/seq/cloud/prod/software"
+                  :clusterFilePath                             "bogus-cluster.egt"
+                  :collaboratorParticipantId                   "3999595072"
+                  :controlDataDirectory                        "gs://storage/pipeline/arrays_controldata/"
+                  :cromwellBaseExecutionCloudPath              "gs://execution/"
+                  :cromwellBaseUrl                             "https://cromwell"
+                  :cromwellJarPath                             "/cromwell/current/cromwell.jar"
+                  :cromwellWorkflowDependenciesZip             "/workflows/Arrays/Arrays_v2.0.57db33b.zip"
+                  :cromwellWorkflowGoogleProject               "arrays"
+                  :cromwellWorkflowName                        "Arrays"
+                  :cromwellWorkflowOptionsFile                 "/workflows/Arrays/Arrays_v2.0.57db33b.options.json"
+                  :cromwellWorkflowWdlFile                     "/workflows/Arrays/Arrays_v2.0.57db33b.wdl"
+                  :dbSnpFilePath                               "/WGS/v2/dbsnp_138.b37.vcf.gz"
+                  :environment                                 "Prod"
+                  :errors                                      []
+                  :extendedIlluminaManifestFileName            "PsychChip_v1-1_15073391_A1.1.5.extended.csv"
+                  :extendedIlluminaManifestVersion             "1.5"
+                  :extraRLibsDir                               "/3rd_party/r"
+                  :farpointQueue                               "farpointQueue"
+                  :fileNameSafeSampleAlias                     "3999595072_R06C01"
+                  :flowcellAnalysisDirectory                   "/flowcell/analysis/directory"
+                  :gatk2Jar                                    "/3rd_party/gatk/GenomeAnalysisTK-3.4-g3c929b0.jar"
+                  :gender                                      "F"
+                  :greenIDatPath                               "bogus-green.idat"
+                  :haplotypeMap                                "/v1/Homo_sapiens_assembly19.haplotype_database.txt"
+                  :identifyBamId                               "/3rd_party/verifybamid/verifyBamID"
+                  :isPodWorkflow                               false
+                  :jarPath                                     "/jar/path"
+                  :jmsPort                                     66666
+                  :jmsServer                                   "jms-server"
+                  :jmsVaultPath                                "secret/something/or/other"
+                  :labBatch                                    "ARRAY-15769"
+                  :latexClassesDir                             "/3rd_party/latex"
+                  :maq                                         "/3rd_party/maq/maq"
+                  :mercuryFingerprintStoreCredentialsVaultPath "secret/something/or/other"
+                  :mercuryFingerprintStoreURI                  "https://mercury/fingerprint/store"
+                  :metricsSchema                               "metricsSchema"
+                  :monitoringScriptPath                        "gs://storage/monitoring_script.sh"
+                  :negativeControl                             false
+                  :notificationEmailAddresses                  "someone@somewhere.org"
+                  :participantId                               "3999595072"
+                  :picardSchema                                "picardSchema"
+                  :pipelineGitHash                             "1abfaded"
+                  :pipelineVersion                             "Arrays_v2.0"
+                  :podRoot                                     "/pod/root"
+                  :positiveControl                             true
+                  :controlSampleName                           "NA12878"
+                  :controlSampleCloudVcfPath                   "bogus-control-vcf.vcf.gz"
+                  :controlSampleCloudVcfIndexPath              "bogus-control-vcf-index.vcf.gz.tbi"
+                  :controlSampleCloudIntervalsFilePath         "bogus-control-intervals.interval_list"
+                  :productFamily                               "Whole Genome Genotyping"
+                  :productName                                 "Infinium Global Diversity Array Processing (High Volume, >100,000 samples)"
+                  :productOrderId                              "PDO-21602"
+                  :productPartNumber                           "P-WG-0114"
+                  :productType                                 "aou_array"
+                  :rapidQcPendingAggregationQueue              "rapid.Qc.Pending.Aggregation.Queue"
+                  :redIDatPath                                 "bogus-red.idat"
+                  :referenceFasta                              "/v1/Homo_sapiens_assembly19.fasta"
+                  :referenceResourceFile                       "/v1/Homo_sapiens_assembly19.cloud_references.json"
+                  :regulatoryDesignation                       "REGULATORY_DESIGNATION"
+                  :requeryLimsForIdats                         true
+                  :researchProjectId                           "RP-1044"
+                  :samblaster                                  "/3rd_party/samblaster/samblaster"
+                  :sampleAlias                                 "NA12878"
+                  :sampleId                                    "R06C01"
+                  :sampleLsid                                  "broadinstitute:lims.sample:R06C01"
+                  :samtools                                    "/3rd_party/samtools/samtools"
+                  :samtoolsRapidQc                             "/3rd_party/samtools_rapidqc/samtools"
+                  :serviceAccountJsonPath                      "/service/account/json/path.json"
+                  :serviceAccountJsonVaultPath                 "service/account/json/vault/path.pem"
+                  :snap                                        "/3rd_party/snap/snap-aligner"
+                  :snapThreadCount                             0
+                  :starAligner                                 "/3rd_party/star/STAR"
+                  :topHat                                      "/3rd_party/tophat/tophat.sh"
+                  :variantCallingRequestQueue                  "gvcfCallingRequest"
+                  :vaultTokenPath                              "gs://storage/token"
+                  :warnings                                    []}]
+    (wfl-keys->jms-keys-for workflow))
+  )
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
@@ -135,6 +253,14 @@
   [prefix workflow]
   (let [{:keys [analysisCloudVersion chipName chipWellBarcode environment]} workflow]
     (str/join "/" [prefix (str/lower-case environment) chipName chipWellBarcode analysisCloudVersion])))
+
+;; See https://broadinstitute.slack.com/archives/CTUD7J18A/p1622739649003800
+(defn legacy-cloud-prefix
+  "Return the cloud GCS URL with PREFIX for WORKFLOW,
+   without environment sub path in it."
+  [prefix workflow]
+  (let [{:keys [analysisCloudVersion chipName chipWellBarcode]} workflow]
+    (str/join "/" [prefix chipName chipWellBarcode analysisCloudVersion])))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
