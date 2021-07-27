@@ -144,6 +144,22 @@
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
 
+(defn gs-object-leaf
+  "Return object LEAF from a gs://bucket/object URL."
+  [url]
+  (-> (parse-gs-url url) second (str/split #"/") last))
+
+(comment
+  (or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input")
+
+  (->  (gs-object-leaf url)
+       (#(str/join "/" [#_(or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input")
+                        (legacy-cloud-prefix prefix workflow) %])))
+
+
+
+  )
+
 ;; visible-for-testing
 (defn retry-on-server-error [seconds thunk]
   (let [max 3]
