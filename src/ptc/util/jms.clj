@@ -120,49 +120,51 @@
    :size                 #(.getSize                 %)
    :timestamp            #(.getTimestamp            %)})
 
-(defn cloud-prefix
+(defn cloud-suffix
+  "Return the end part of the cloud prefix for WORKFLOW."
+  [{:keys [analysisCloudVersion chipName chipWellBarcode] :as _workflow}]
+  (str/join "/" [chipName chipWellBarcode analysisCloudVersion]))
+
+(defn env-prefix
   "Return the cloud GCS URL with PREFIX for WORKFLOW."
   [prefix workflow]
-  (let [{:keys [analysisCloudVersion chipName chipWellBarcode environment]} workflow]
-    (str/join "/" [prefix (str/lower-case environment) chipName chipWellBarcode analysisCloudVersion])))
+  (let [{:keys [environment]} workflow]
+    (str/join "/" [prefix (str/lower-case environment) (cloud-suffix workflow)])))
 
 ;; See https://broadinstitute.slack.com/archives/CTUD7J18A/p1622739649003800
-(defn legacy-cloud-prefix
+(defn legacy-prefix
   "Return the cloud GCS URL with PREFIX for WORKFLOW,
    without environment sub path in it."
   [prefix workflow]
-  (let [{:keys [analysisCloudVersion chipName chipWellBarcode]} workflow]
-    (str/join "/" [prefix chipName chipWellBarcode analysisCloudVersion])))
+  (str/join "/" [prefix (cloud-suffix workflow)]))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
   then return its path in the cloud."
   [prefix workflow]
-  (let [result (str/join "/" [(cloud-prefix prefix workflow) "params.txt"])]
+  (let [cloud  (env-prefix prefix workflow)
+        result (str/join "/" [cloud "params.txt"])]
     (misc/gsutil "cp" "-" result :in (jms->params workflow))
     result))
 
 (defn lookup-inputs-existence
-  "Check multiple places in order to see if the required inputs exist.
+  "Find ::push paths from WORKFLOW using PREFIX.
    Use Green IDAT file as an example, the lookup order look like:
-   1. gs://broad-arrays-prod-storage/pipeline/{CHIPWELL_BARCODE}/idats/{CHIPWELL_BARCODE}_Grn.idat
-   2. /humgen/illumina_data/{CHIPWELL_BARCODE_FIRST_PART}/{CHIPWELL_BARCODE}_Grn.idat
-   3. gs://{prefix}/{ENVIRONMENT}/{CHIPNAME}/{CHIPWELL_BARCODE}/{ANALYSIS_VERSION_NUMBER}/{CHIPWELL_BARCODE}_Grn.idat
-   4. gs://{prefix}/{CHIPNAME}/{CHIPWELL_BARCODE}/{ANALYSIS_VERSION_NUMBER}/{CHIPWELL_BARCODE}_Grn.idat"
+   1. the value of the :cloudGreenIdatPath key
+   2. the value of the local :greenIDatPath key
+   3. (env-prefix    prefix workflow)/{CHIPWELL_BARCODE}_Grn.idat
+   4. (legacy-prefix prefix workflow)/{CHIPWELL_BARCODE}_Grn.idat"
   [prefix workflow]
   (for [[cloud local] (vals (::push wfl-keys->jms-keys))
-        :let [cloud-path-in-JMS (cloud workflow)
-              on-prem-path-in-JMS (local workflow)
-              cloud-path-in-most-recent-PTC-path (misc/JMS->re-prefixed-path (cloud-prefix prefix workflow) cloud-path-in-JMS)]]
+        :let [jms-cloud (cloud workflow)
+              jms-local (local workflow)
+              leaf      (last (str/split jms-cloud))
+              env-cloud (str/join "/" [(env-prefix prefix workflow) leaf])]]
     (cond
-      (misc/gcs-object-exists? cloud-path-in-JMS) cloud-path-in-JMS
-      (misc/gcs-object-exists? on-prem-path-in-JMS) on-prem-path-in-JMS
-      (misc/gcs-object-exists? cloud-path-in-most-recent-PTC-path) cloud-path-in-most-recent-PTC-path
-      :else (misc/JMS->re-prefixed-path (legacy-cloud-prefix prefix workflow) cloud-path-in-JMS))))
-
-(comment
-  (check-existence (or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input") workflow)
-  )
+      (misc/gcs-object-exists? jms-cloud) jms-cloud
+      (misc/gcs-object-exists? jms-local) jms-local
+      (misc/gcs-object-exists? env-cloud) env-cloud
+      :else (str/join "/" [(legacy-prefix prefix workflow) leaf]))))
 
 (defn jms->copy-part-of-notification
   "Return copy part of notification for WORKFLOW."
@@ -172,13 +174,13 @@
 
 (comment
   {:bead_pool_manifest_file
-   "gs://bucket//prod/GDA-8v1-0_A5/204579630079_R01C01/2/GDA-8v1-0_A5.bpm",
+   "gs://bucket/prod/GDA-8v1-0_A5/204579630079_R01C01/2/GDA-8v1-0_A5.bpm",
    :red_idat_cloud_path
-   "gs://bucket//prod/GDA-8v1-0_A5/204579630079_R01C01/2/204579630079_R01C01_Red.idat",
+   "gs://bucket/prod/GDA-8v1-0_A5/204579630079_R01C01/2/204579630079_R01C01_Red.idat",
    :cluster_file
-   "gs://bucket//prod/GDA-8v1-0_A5/204579630079_R01C01/2/GDA-8v1-0_A1_ClusterFile.egt",
+   "gs://bucket/prod/GDA-8v1-0_A5/204579630079_R01C01/2/GDA-8v1-0_A1_ClusterFile.egt",
    :green_idat_cloud_path
-   "gs://bucket//prod/GDA-8v1-0_A5/204579630079_R01C01/2/204579630079_R01C01_Grn.idat"}
+   "gs://bucket/prod/GDA-8v1-0_A5/204579630079_R01C01/2/204579630079_R01C01_Grn.idat"}
   )
 
 (def aou-reference-bucket
@@ -200,15 +202,15 @@
   with PARAMS."
   [prefix workflow params]
   (letfn [(rekey [m [k v]] (assoc m k (v workflow)))]
-    (let [ptc (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])]
+    (let [ptc (str/join "/" [(env-prefix prefix workflow) "ptc.json"])]
       (-> wfl-keys->jms-keys ::copy
-        (->> (reduce rekey {}))
-        (assoc :params_file params)
-        (assoc :extended_chip_manifest_file (get-extended-chip-manifest workflow))
-        vector
-        (->> (assoc append-to-aou-request :notifications))
-        json/write-str
-        (->> (misc/gsutil "cp" "-" ptc :in)))
+          (->> (reduce rekey {}))
+          (assoc :params_file params)
+          (assoc :extended_chip_manifest_file (get-extended-chip-manifest workflow))
+          vector
+          (->> (assoc append-to-aou-request :notifications))
+          json/write-str
+          (->> (misc/gsutil "cp" "-" ptc :in)))
       [params ptc])))
 
 (defn ednify
