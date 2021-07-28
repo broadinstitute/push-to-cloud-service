@@ -166,12 +166,6 @@
       (misc/gcs-object-exists? env-cloud) env-cloud
       :else (str/join "/" [(legacy-prefix prefix workflow) leaf]))))
 
-(defn jms->copy-part-of-notification
-  "Return copy part of notification for WORKFLOW."
-  [workflow]
-  (letfn [(rekey [m [k v]] (assoc m k (v workflow)))]
-    (reduce rekey {} (::copy wfl-keys->jms-keys))))
-
 (comment
   {:bead_pool_manifest_file
    "gs://bucket/prod/GDA-8v1-0_A5/204579630079_R01C01/2/GDA-8v1-0_A5.bpm",
