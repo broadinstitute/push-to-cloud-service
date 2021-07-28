@@ -149,16 +149,10 @@
   [url]
   (-> (parse-gs-url url) second (str/split #"/") last))
 
-(comment
-  (or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input")
-
-  (->  (gs-object-leaf url)
-       (#(str/join "/" [#_(or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input")
-                        (legacy-cloud-prefix prefix workflow) %])))
-
-
-
-  )
+(defn JMS->re-prefixed-path
+  "Given a `jms-cloud-path`, re-prefix it with a new prefix."
+  [prefix jms-cloud-path]
+  (str/join "/" [prefix (gs-object-leaf jms-cloud-path)]))
 
 ;; visible-for-testing
 (defn retry-on-server-error [seconds thunk]
