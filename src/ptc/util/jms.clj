@@ -1,8 +1,11 @@
 (ns ptc.util.jms
   "Adapt JMS messages into upload actions and workflow parameters."
   (:require [clojure.data.json :as json]
+            [clojure.java.io :as io]
             [clojure.string :as str]
-            [ptc.util.misc :as misc]))
+            [clojure.tools.logging :as log]
+            [ptc.util.misc :as misc])
+  (:import [java.io FileNotFoundException]))
 
 (def cromwell
   "Use this Cromwell.  Should depend on deployment environment."
@@ -48,8 +51,8 @@
    ::chip   true     :cluster_file                        :clusterFilePath
    ::chip   false    :gender_cluster_file                 :genderClusterFilePath
    ::chip   false    :zcall_thresholds_file               :zCallThresholdsPath
-   ::push   true     :green_idat_cloud_path               [:cloudGreenIdatPath :greenIDatPath]
-   ::push   true     :red_idat_cloud_path                 [:cloudRedIdatPath   :redIDatPath]
+   ::push   true     :green_idat_cloud_path               :greenIDatPath
+   ::push   true     :red_idat_cloud_path                 :redIDatPath
    ::param  true     :CHIP_TYPE_NAME                      :chipName
    ::param  true     :CHIP_WELL_BARCODE                   :chipWellBarcode
    ::param  true     :INDIVIDUAL_ALIAS                    :collaboratorParticipantId
@@ -84,16 +87,6 @@
          (group-by first)
          (map key->key)
          (into {}))))
-
-(defn wfl-keys->jms-keys-for
-  "Return wfl-keys->jms-keys modified for WORKFLOW."
-  [workflow]
-  (letfn [(adapt [keymap [k v]] (assoc-in keymap [::push k] v))]
-    (reduce adapt (dissoc wfl-keys->jms-keys ::push)
-            (for [[k [cloud local]] (::push wfl-keys->jms-keys)]
-              (if (misc/gcs-object-exists? (cloud workflow))
-                [k cloud]
-                [k local])))))
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
@@ -130,36 +123,84 @@
    :size                 #(.getSize                 %)
    :timestamp            #(.getTimestamp            %)})
 
-(defn cloud-prefix
+(defn cloud-suffix
+  "Return the end part of the cloud prefix for WORKFLOW."
+  [{:keys [analysisCloudVersion chipName chipWellBarcode] :as _workflow}]
+  (str/join "/" [chipName chipWellBarcode analysisCloudVersion]))
+
+(defn env-prefix
   "Return the cloud GCS URL with PREFIX for WORKFLOW."
   [prefix workflow]
-  (let [{:keys [analysisCloudVersion chipName chipWellBarcode environment]} workflow]
-    (str/join "/" [prefix (str/lower-case environment) chipName chipWellBarcode analysisCloudVersion])))
+  (let [{:keys [environment]} workflow]
+    (str/join "/" [prefix (str/lower-case environment) (cloud-suffix workflow)])))
+
+(defn all-versions-env-prefixes
+  "Return a seq of cloud GCS URL with PREFIX for WORKFLOW,
+   with all potential analysisCloudVersion and sorted in
+   descending order."
+  [prefix {:keys [analysisCloudVersion chipName chipWellBarcode environment] :as _workflow}]
+  (for [version (range analysisCloudVersion 0 -1)]
+    (str/join "/" [prefix (str/lower-case environment) chipName chipWellBarcode version])))
+
+(defn legacy-prefix
+  "Return the cloud GCS URL with PREFIX for WORKFLOW,
+   without environment sub path in it."
+  [prefix workflow]
+  (str/join "/" [prefix (cloud-suffix workflow)]))
+
+(defn all-versions-legacy-prefixes
+  "Return a seq of cloud GCS URL with PREFIX for WORKFLOW,
+   without environment sub path in it, with all potential
+   analysisCloudVersion and sorted in descending order."
+  [prefix {:keys [analysisCloudVersion chipName chipWellBarcode] :as _workflow}]
+  (for [version (range analysisCloudVersion 0 -1)]
+    (str/join "/" [prefix chipName chipWellBarcode version])))
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
   then return its path in the cloud."
   [prefix workflow]
-  (let [result (str/join "/" [(cloud-prefix prefix workflow) "params.txt"])]
+  (let [cloud  (env-prefix prefix workflow)
+        result (str/join "/" [cloud "params.txt"])]
     (misc/gsutil "cp" "-" result :in (jms->params workflow))
     result))
 
-(defn jms->notification
-  "Push files to PREFIX and return notification for WORKFLOW."
+;; See https://broadinstitute.atlassian.net/wiki/spaces/GHConfluence/pages/2853961731/2021-07-28+AoU+Processing+Issue+Discussion
+;;
+(defn lookup-push-values
+  "Find ::push paths from WORKFLOW using PREFIX.
+   Use Green IDAT file as an example, the lookup order look like:
+   1. the value of the local :greenIDatPath key
+   2. (env-prefix    prefix workflow)/{CHIPWELL_BARCODE}_Grn.idat
+   3. (legacy-prefix prefix workflow)/{CHIPWELL_BARCODE}_Grn.idat
+  Return a single map of wfl-keys and their corresponding looked up values.
+  Note we should not look at :cloudGreenIdatPath key in JMS as it is
+  for general arrays not AoU arrays!"
   [prefix workflow]
-  (let [cloud (cloud-prefix prefix workflow)
-        {:keys [::chip ::copy ::push]} (wfl-keys->jms-keys-for workflow)
-        chip-and-push (merge chip push)
-        sources (keep workflow (vals chip-and-push))]
-    (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
-            (cloudify [m [k v]]
-              (if-let [path (v workflow)]
-                (assoc m k (str/join "/" [cloud (last (str/split path #"/"))]))
-                m))]
-      (doseq [f sources]
-        (let [hash (misc/get-md5-hash f)]
-          (misc/gsutil "-h" (str "Content-MD5:" hash) "cp" f cloud)))
-      (reduce cloudify (reduce rekey {} copy) chip-and-push))))
+  (->> (for [[k local] (vec (::push wfl-keys->jms-keys))
+             :let [jms-local (local workflow)
+                   leaf      (last (str/split jms-local #"/"))
+                   glue-leaf #(str/join "/" [% leaf])
+                   lookup    (map glue-leaf
+                                  (concat
+                                   (all-versions-env-prefixes prefix workflow)
+                                   (all-versions-legacy-prefixes prefix workflow)))]]
+         (let [found (if (.exists (io/file jms-local))
+                       jms-local
+                       (loop [lookup lookup]
+                         (when (seq lookup)
+                           (if (misc/gcs-object-exists? (first lookup))
+                             (first lookup)
+                             (recur (rest lookup))))))]
+           (when-not found
+             (log/errorf (format "Failed to find %s based on %s in %s!"
+                                 leaf (first lookup) lookup))
+             (throw (FileNotFoundException.
+                     (format "Failed to find %s based on %s in %s!"
+                             leaf (first lookup) lookup))))
+           (log/info (format "Found a match at %s for %s." found leaf))
+           [k found]))
+       (into {})))
 
 (def aou-reference-bucket
   "The AllOfUs reference bucket or broad-arrays-dev-storage."
@@ -175,11 +216,32 @@
                             bucket aou-reference-bucket)
          extendedIlluminaManifestFileName)))
 
+(defn jms->notification
+  "Push files to PREFIX and return notification for WORKFLOW.
+   For files with ::push key, always use the looked up values instead of
+   what is in the jms message."
+  [prefix workflow]
+  (let [cloud (env-prefix prefix workflow)
+        {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
+        chip-and-push (merge chip push)
+        chips (keep workflow (vals chip))
+        pushes (lookup-push-values prefix workflow)
+        sources (concat chips (vals pushes))]
+    (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
+            (cloudify [m [k v]]
+              (if-let [path (v workflow)]
+                (assoc m k (str/join "/" [cloud (last (str/split path #"/"))]))
+                m))]
+      (doseq [f sources]
+        (let [hash (misc/get-md5-hash f)]
+          (misc/gsutil "-h" (str "Content-MD5:" hash) "cp" f cloud)))
+      (reduce cloudify (reduce rekey {} copy) chip-and-push))))
+
 (defn push-append-to-aou-request
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX
   with PARAMS."
   [prefix workflow params]
-  (let [ptc (str/join "/" [(cloud-prefix prefix workflow) "ptc.json"])]
+  (let [ptc (str/join "/" [(env-prefix prefix workflow) "ptc.json"])]
     (-> prefix
         (jms->notification workflow)
         (assoc :params_file params)
