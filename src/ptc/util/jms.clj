@@ -1,10 +1,11 @@
 (ns ptc.util.jms
   "Adapt JMS messages into upload actions and workflow parameters."
   (:require [clojure.data.json :as json]
-            [clojure.tools.logging :as log]
+            [clojure.java.io :as io]
             [clojure.string :as str]
+            [clojure.tools.logging :as log]
             [ptc.util.misc :as misc])
-  (:import (java.io FileNotFoundException)))
+  (:import [java.io FileNotFoundException]))
 
 (def cromwell
   "Use this Cromwell.  Should depend on deployment environment."
@@ -172,36 +173,34 @@
    1. the value of the local :greenIDatPath key
    2. (env-prefix    prefix workflow)/{CHIPWELL_BARCODE}_Grn.idat
    3. (legacy-prefix prefix workflow)/{CHIPWELL_BARCODE}_Grn.idat
-
-   Return a single map of wfl-keys and their corresponding looked up
-   values. Optionally takes a `other-paths` coll.
-
-   Note we should not look at :cloudGreenIdatPath key in JMS as
-   it is for general arrays not AoU arrays!"
-  ([prefix workflow other-paths]
-   (->> (for [[k local] (vec (::push wfl-keys->jms-keys))
-              :let [jms-local (local workflow)
-                    leaf      (last (str/split jms-local #"/"))
-                    glue-leaf #(str/join "/" [% leaf])
-                    lookup    (conj (concat
-                                      (map glue-leaf (all-versions-env-prefixes prefix workflow))
-                                      (map glue-leaf (all-versions-legacy-prefixes prefix workflow))
-                                      (map glue-leaf other-paths))
-                                jms-local)]]
-          (let [object-to-use (loop [lookup lookup]
-                               (when (seq lookup)
-                                 (if (misc/gcs-object-exists? (first lookup))
-                                   (first lookup)
-                                   (recur (rest lookup)))))]
-            ;; if failed to find a match, we report and throw the on-prem path for debug purposes
-            (if object-to-use
-              (log/info (format "Found a match at %s for %s." object-to-use leaf))
-              (do (log/errorf (format "Failed to find %s based on %s in %s!" leaf (first lookup) lookup))
-                (throw (FileNotFoundException. (format "Failed to find %s based on %s in %s!" leaf (first lookup) lookup)))))
-            {k object-to-use}))
-     (into {})))
-  ([prefix workflow]
-   (lookup-push-values prefix workflow nil)))
+  Return a single map of wfl-keys and their corresponding looked up values.
+  Note we should not look at :cloudGreenIdatPath key in JMS as it is
+  for general arrays not AoU arrays!"
+  [prefix workflow]
+  (->> (for [[k local] (vec (::push wfl-keys->jms-keys))
+             :let [jms-local (local workflow)
+                   leaf      (last (str/split jms-local #"/"))
+                   glue-leaf #(str/join "/" [% leaf])
+                   lookup    (map glue-leaf
+                                  (concat
+                                   (all-versions-env-prefixes prefix workflow)
+                                   (all-versions-legacy-prefixes prefix workflow)))]]
+         (let [found (if (.exists (io/file jms-local))
+                       jms-local
+                       (loop [lookup lookup]
+                         (when (seq lookup)
+                           (if (misc/gcs-object-exists? (first lookup))
+                             (first lookup)
+                             (recur (rest lookup))))))]
+           (when-not found
+             (log/errorf (format "Failed to find %s based on %s in %s!"
+                                 leaf (first lookup) lookup))
+             (throw (FileNotFoundException.
+                     (format "Failed to find %s based on %s in %s!"
+                             leaf (first lookup) lookup))))
+           (log/info (format "Found a match at %s for %s." found leaf))
+           [k found]))
+       (into {})))
 
 (def aou-reference-bucket
   "The AllOfUs reference bucket or broad-arrays-dev-storage."
