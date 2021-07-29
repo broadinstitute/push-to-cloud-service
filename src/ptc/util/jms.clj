@@ -234,7 +234,7 @@
                 m))]
       (doseq [f sources]
         (let [hash (misc/get-md5-hash f)]
-            (misc/gsutil "-h" (str "Content-MD5:" hash) "cp" f cloud)))
+          (misc/gsutil "-h" (str "Content-MD5:" hash) "cp" f cloud)))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
 (defn push-append-to-aou-request
@@ -243,13 +243,13 @@
   [prefix workflow params]
   (let [ptc (str/join "/" [(env-prefix prefix workflow) "ptc.json"])]
     (-> prefix
-      (jms->notification workflow)
-      (assoc :params_file params)
-      (assoc :extended_chip_manifest_file (get-extended-chip-manifest workflow))
-      vector
-      (->> (assoc append-to-aou-request :notifications))
-      json/write-str
-      (->> (misc/gsutil "cp" "-" ptc :in)))
+        (jms->notification workflow)
+        (assoc :params_file params)
+        (assoc :extended_chip_manifest_file (get-extended-chip-manifest workflow))
+        vector
+        (->> (assoc append-to-aou-request :notifications))
+        json/write-str
+        (->> (misc/gsutil "cp" "-" ptc :in)))
     [params ptc]))
 
 (defn ednify

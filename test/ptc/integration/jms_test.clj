@@ -55,15 +55,15 @@
                                (apply gcs/list-objects))))))
           (testing "a GOOD message"
             (start/produce connection queue
-              "GOOD" (::jms/Properties (jms/encode good)))
+                           "GOOD" (::jms/Properties (jms/encode good)))
             (let [msg    (start/consume connection queue)
                   [params ptc] (jms/handle-message folder (jms/ednify msg))
                   {:keys [notifications]} (gcs/gcs-edn ptc)
                   {:keys [::jms/chip ::jms/push]} jms/wfl-keys->jms-keys
                   push   (-> jms/wfl-keys->jms-keys ::jms/push
-                           (->> (merge chip))
-                           keys
-                           (->> (apply juxt)))
+                             (->> (merge chip))
+                             keys
+                             (->> (apply juxt)))
                   inputs (remove nil? (push (first notifications)))
                   pushed (into [params ptc] inputs)
                   gcs    (gcs/list-gcs-folder folder)]
