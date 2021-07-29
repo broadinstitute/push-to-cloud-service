@@ -47,7 +47,7 @@
                                    [::jms/Properties :payload :workflow :analysisCloudVersion] analysis-version)
         chipwell-barcode (get-in message [::jms/Properties :payload :workflow :chipWellBarcode])
         workflow         (get-in message [::jms/Properties :payload :workflow])
-        cloud-prefix     (jms/cloud-prefix ptc-bucket-url workflow)]
+        cloud-prefix     (jms/env-prefix ptc-bucket-url workflow)]
     (jms-tools/queue-messages 1 zamboni-activemq-server-url zamboni-activemq-queue-name zamboni-activemq-secret-path message)
     (testing "Files are uploaded to the input bucket"
       (let [params      (str cloud-prefix "/params.txt")
