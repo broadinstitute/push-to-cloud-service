@@ -144,16 +144,6 @@
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
 
-(defn gs-object-leaf
-  "Return object LEAF from a gs://bucket/object URL."
-  [url]
-  (-> (parse-gs-url url) second (str/split #"/") last))
-
-(defn JMS->re-prefixed-path
-  "Given a `jms-cloud-path`, re-prefix it with a new prefix."
-  [prefix jms-cloud-path]
-  (str/join "/" [prefix (gs-object-leaf jms-cloud-path)]))
-
 ;; visible-for-testing
 (defn retry-on-server-error [seconds thunk]
   (let [max 3]
