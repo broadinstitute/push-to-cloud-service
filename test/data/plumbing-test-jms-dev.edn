@@ -2,42 +2,40 @@
  {:action "start"
   :sender "sender"
   :payload
-          {:Zamboni
-           {:workflow "IlluminaArraysWorkflow"
-            :workflowPriority 1005
-            :zamboniClientVersion "e531c5382d56d69bb72e42e44bc2672ab25fdbb6_2020-07-16T10:08:44-0400"}
-           :workflow
-           {:analysisCloudVersion 1
-            :beadPoolManifestPath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExome-12v1-1_A.bpm"
-            :callRateThreshold 0.98
-            :chipManifestPath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExome-12v1-1_A.1.3.extended.csv"
-            :chipName "HumanExome-12v1-1_A"
-            :chipWellBarcode "7991775143_R01C01"
-            :cloudChipMetaDataDirectory "gs://storage/pipeline/arrays_metadata/HumanExome-12v1-1_A/"
-            :cloudGreenIdatPath "gs://storage/pipeline/RP-1044/NA12878/3999595072_R06C01/idats/3999595072_R06C01_Grn.idat"
-            :cloudRedIdatPath "gs://storage/pipeline/RP-1044/NA12878/3999595072_R06C01/idats/3999595072_R06C01_Red.idat"
-            :clusterFilePath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_CEPH_A.egt"
-            :collaboratorParticipantId "NA12878"
-            :environment "dev"
-            :extendedIlluminaManifestFileName "HumanExome-12v1-1_A.1.3.extended.csv"
-            :extendedIlluminaManifestVersion "1.3"
-            :gender "Female"
-            :genderClusterFilePath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_gender.egt"
-            :greenIDatPath "/home/unix/ptc/data/arrays/HumanExome-12v1-1_A/idats/7991775143_R01C01/7991775143_R01C01_Grn.idat"
-            :labBatch "ARRAY-CO-5799466"
-            :minorAlleleFrequencyFileCloudPath "gs://broad-gotc-dev-storage/pipeline/arrays_metadata/GDA-8v1-0_A5/GDA-8v1-0_A5.MAF.txt"
-            :participantId "PT-97GM"
-            :productFamily "Whole Genome Genotyping"
-            :productName "Infinium Exome V1_A"
-            :productOrderId "PDO-15923"
-            :productPartNumber "P-WG-0094"
-            :productType "aou_array"
-            :redIDatPath "/home/unix/ptc/data/arrays/HumanExome-12v1-1_A/idats/7991775143_R01C01/7991775143_R01C01_Red.idat"
-            :regulatoryDesignation "RESEARCH_ONLY"
-            :researchProjectId "RP-45"
-            :sampleAlias "NA12878"
-            :sampleId "SM-3S2IV"
-            :sampleLsid "broadinstitute.org:bsp.dev.sample:NOTREAL.NA12878"
-            :vaultTokenPath "gs://broad-dsp-gotc-arrays-dev-tokens/arrayswdl.token"
-            :zCallThresholdsPath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/IBDPRISM_EX.egt.thresholds.txt"}}
-}}
+  {:Zamboni
+   {:workflow "IlluminaArraysWorkflow"
+    :workflowPriority 1005
+    :zamboniClientVersion "e531c5382d56d69bb72e42e44bc2672ab25fdbb6_2020-07-16T10:08:44-0400"}
+   :workflow
+   {:analysisCloudVersion 1
+    :beadPoolManifestPath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExome-12v1-1_A.bpm"
+    :callRateThreshold 0.98
+    :chipManifestPath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExome-12v1-1_A.1.3.extended.csv"
+    :chipName "HumanExome-12v1-1_A"
+    :chipWellBarcode "7991775143_R01C01"
+    :cloudChipMetaDataDirectory "gs://storage/pipeline/arrays_metadata/HumanExome-12v1-1_A/"
+    :clusterFilePath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_CEPH_A.egt"
+    :collaboratorParticipantId "NA12878"
+    :environment "dev"
+    :extendedIlluminaManifestFileName "HumanExome-12v1-1_A.1.3.extended.csv"
+    :extendedIlluminaManifestVersion "1.3"
+    :gender "Female"
+    :genderClusterFilePath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_gender.egt"
+    :greenIDatPath "/home/unix/ptc/data/arrays/HumanExome-12v1-1_A/idats/7991775143_R01C01/7991775143_R01C01_Grn.idat"
+    :labBatch "ARRAY-CO-5799466"
+    :minorAlleleFrequencyFileCloudPath "gs://broad-gotc-dev-storage/pipeline/arrays_metadata/GDA-8v1-0_A5/GDA-8v1-0_A5.MAF.txt"
+    :participantId "PT-97GM"
+    :productFamily "Whole Genome Genotyping"
+    :productName "Infinium Exome V1_A"
+    :productOrderId "PDO-15923"
+    :productPartNumber "P-WG-0094"
+    :productType "aou_array"
+    :redIDatPath "/home/unix/ptc/data/arrays/HumanExome-12v1-1_A/idats/7991775143_R01C01/7991775143_R01C01_Red.idat"
+    :regulatoryDesignation "RESEARCH_ONLY"
+    :researchProjectId "RP-45"
+    :sampleAlias "NA12878"
+    :sampleId "SM-3S2IV"
+    :sampleLsid "broadinstitute.org:bsp.dev.sample:NOTREAL.NA12878"
+    :vaultTokenPath "gs://broad-dsp-gotc-arrays-dev-tokens/arrayswdl.token"
+    :zCallThresholdsPath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/IBDPRISM_EX.egt.thresholds.txt"}}
+  }}
