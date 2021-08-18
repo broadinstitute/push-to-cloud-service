@@ -74,7 +74,7 @@
 (defn listen-and-consume-from-queue
   "Listen to QUEUE on CONNECTION for messages,
   and call (TASK! message) until it is false."
-  [task! connection queue]
+  [task! connection queue dead-letter-queue]
   (loop [counter 0]
     (if-let [peeked (peek-message connection queue)]
       ; to avoid NPE on ednify
@@ -93,7 +93,7 @@
               (log/errorf
                (str/join
                 \space ["Task returned nil/false,"
-                        "not consuming message %s and instead exiting"])
+                        "not consuming message %s, moving it to dead letter queue and continue..."])
                counter)
               peeked))))
       (recur counter))))
@@ -101,15 +101,16 @@
 (defn- message-loop
   "Loop and consume messages using the Zamboni ActiveMQ server."
   []
-  (let [queue          (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-        url            (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
-        vault-path     (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
-        bucket-url     (misc/getenv-or-throw "PTC_BUCKET_URL")
-        upload-sample! (partial jms/handle-message bucket-url)
+  (let [queue               (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+        dead-letter-queue   (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
+        url                 (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
+        vault-path          (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
+        bucket-url          (misc/getenv-or-throw "PTC_BUCKET_URL")
+        upload-sample!      (partial jms/handle-message bucket-url)
         {:keys [username password]} (misc/vault-secrets vault-path)]
     (try
       (with-open [connection (create-queue-connection url username password)]
-        (listen-and-consume-from-queue upload-sample! connection queue))
+        (listen-and-consume-from-queue upload-sample! connection queue dead-letter-queue))
       (catch Throwable x
         (log/fatal x "Fatal error in message loop")
         (System/exit 1)))))
