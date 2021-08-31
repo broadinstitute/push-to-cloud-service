@@ -65,6 +65,7 @@ The e2e test runs in the dev environment by default. To run in production:
 ```bash
 export ZAMBONI_ACTIVEMQ_SERVER_URL="failover:ssl://vpicard-jms.broadinstitute.org:61616"
 export ZAMBONI_ACTIVEMQ_QUEUE_NAME="wfl.broad.pushtocloud.enqueue.prod-test"
+export ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME="wfl.broad.pushtocloud.enqueue.prod-test-dlq"
 export ZAMBONI_ACTIVEMQ_SECRET_PATH="secret/dsde/gotc/prod/activemq/logins/zamboni"
 export PTC_BUCKET_URL="gs://broad-aou-arrays-input"
 export CROMWELL_URL="https://cromwell-aou.gotc-prod.broadinstitute.org"

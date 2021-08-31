@@ -17,6 +17,9 @@
 (def zamboni-activemq-queue-name
   (or (System/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME") "wfl.broad.pushtocloud.enqueue.dev"))
 
+(def zamboni-activemq-dead-letter-queue-name
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME") "wfl.broad.pushtocloud.enqueue.dev-dlq"))
+
 (def zamboni-activemq-secret-path
   (or (System/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH") "secret/dsde/gotc/dev/activemq/logins/zamboni"))
 

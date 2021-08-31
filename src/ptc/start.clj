@@ -74,28 +74,21 @@
 (defn listen-and-consume-from-queue
   "Listen to QUEUE on CONNECTION for messages,
   and call (TASK! message) until it is false."
-  [task! connection queue dead-letter-queue]
+  [task! connection queue]
   (loop [counter 0]
     (if-let [peeked (peek-message connection queue)]
       ; to avoid NPE on ednify
       (let [peeked (jms/ednify peeked)]
         (do
           (log/infof "Peeked message %s: %s" counter peeked)
-          (if (task! peeked)
+          (when (task! peeked connection)
             (let [consumed (jms/ednify (consume connection queue))]
               (log/infof "Task complete, consumed message %s" counter)
               (if (not (misc/message-ids-equal? peeked consumed))
                 (log/warnf
-                 (str/join \space ["Messages differ:"
-                                   (with-out-str (pprint (data/diff peeked consumed)))])))
-              (recur (inc counter)))
-            (do
-              (log/errorf
-               (str/join
-                \space ["Task returned nil/false,"
-                        "not consuming message %s, moving it to dead letter queue and continue..."])
-               counter)
-              peeked))))
+                  (str/join \space ["Messages differ:"
+                                    (with-out-str (pprint (data/diff peeked consumed)))])))
+              (recur (inc counter))))))
       (recur counter))))
 
 (defn- message-loop
@@ -106,11 +99,20 @@
         url                 (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
         vault-path          (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
         bucket-url          (misc/getenv-or-throw "PTC_BUCKET_URL")
-        upload-sample!      (partial jms/handle-message bucket-url)
+        upload-sample-or-move-to-dlq! (fn [jms connection]
+                                        (try
+                                          (jms/handle-message bucket-url jms)
+                                          (catch Throwable x
+                                            (produce connection dead-letter-queue (str misc/utc-now) jms)
+                                            (log/errorf
+                                              (str/join
+                                                \space ["Task returned nil/false,"
+                                                        "not consuming message %s, moving it to dead letter queue and continue..."])))
+                                          (finally true)))
         {:keys [username password]} (misc/vault-secrets vault-path)]
     (try
       (with-open [connection (create-queue-connection url username password)]
-        (listen-and-consume-from-queue upload-sample! connection queue dead-letter-queue))
+        (listen-and-consume-from-queue upload-sample-or-move-to-dlq! connection queue))
       (catch Throwable x
         (log/fatal x "Fatal error in message loop")
         (System/exit 1)))))
