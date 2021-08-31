@@ -86,8 +86,8 @@
               (log/infof "Task complete, consumed message %s" counter)
               (if (not (misc/message-ids-equal? peeked consumed))
                 (log/warnf
-                  (str/join \space ["Messages differ:"
-                                    (with-out-str (pprint (data/diff peeked consumed)))])))
+                 (str/join \space ["Messages differ:"
+                                   (with-out-str (pprint (data/diff peeked consumed)))])))
               (recur (inc counter))))))
       (recur counter))))
 
@@ -105,9 +105,9 @@
                                           (catch Throwable x
                                             (produce connection dead-letter-queue (str misc/utc-now) jms)
                                             (log/errorf
-                                              (str/join
-                                                \space ["Task returned nil/false,"
-                                                        "not consuming message %s, moving it to dead letter queue and continue..."])))
+                                             (str/join
+                                              \space ["Task returned nil/false,"
+                                                      "not consuming message %s, moving it to dead letter queue and continue..."])))
                                           (finally true)))
         {:keys [username password]} (misc/vault-secrets vault-path)]
     (try
