@@ -81,14 +81,24 @@
       (let [peeked (jms/ednify peeked)]
         (do
           (log/infof "Peeked message %s: %s" counter peeked)
-          (when (task! peeked connection)
+          (if (task! peeked connection)
             (let [consumed (jms/ednify (consume connection queue))]
               (log/infof "Task complete, consumed message %s" counter)
               (if (not (misc/message-ids-equal? peeked consumed))
                 (log/warnf
                  (str/join \space ["Messages differ:"
                                    (with-out-str (pprint (data/diff peeked consumed)))])))
-              (recur (inc counter))))))
+              (recur (inc counter)))
+            ;; this is for testing, in production, the task!
+            ;; should always return `true` and this branch should
+            ;; never gets reached.
+            (do
+              (log/errorf
+               (str/join
+                \space ["Task returned nil/false,"
+                        "not consuming message %s and instead exiting"])
+               peeked)
+              peeked))))
       (recur counter))))
 
 (defn- message-loop
@@ -99,23 +109,24 @@
         url                 (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
         vault-path          (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
         bucket-url          (misc/getenv-or-throw "PTC_BUCKET_URL")
-        upload-sample-or-move-to-dlq! (fn [jms connection]
-                                        (try
-                                          (jms/handle-message bucket-url jms)
-                                          (catch Throwable x
-                                            (produce connection dead-letter-queue (str misc/utc-now) jms)
-                                            (log/errorf
-                                             (str/join
-                                              \space ["Task returned nil/false,"
-                                                      "not consuming message %s, moving it to dead letter queue and continue..."])))
-                                          (finally true)))
         {:keys [username password]} (misc/vault-secrets vault-path)]
-    (try
-      (with-open [connection (create-queue-connection url username password)]
-        (listen-and-consume-from-queue upload-sample-or-move-to-dlq! connection queue))
-      (catch Throwable x
-        (log/fatal x "Fatal error in message loop")
-        (System/exit 1)))))
+    (letfn [(upload-sample-or-move-to-dlq! [jms connection] (try
+                                                              (jms/handle-message bucket-url jms)
+                                                              (catch Throwable x
+                                                                (log/errorf
+                                                                 (str/join
+                                                                  \space ["Failed to handle the message %s due to %s"
+                                                                          "moving it to dead letter queue and continue..."])
+                                                                 x jms)
+                                                                (produce connection dead-letter-queue (str x) jms))
+                                                              ;; so the jms message is always consumed from main queue
+                                                              (finally true)))]
+      (try
+        (with-open [connection (create-queue-connection url username password)]
+          (listen-and-consume-from-queue upload-sample-or-move-to-dlq! connection queue))
+        (catch Throwable x
+          (log/fatal x "Fatal error in message loop")
+          (System/exit 1))))))
 
 (defn -main
   []

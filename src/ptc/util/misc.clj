@@ -180,7 +180,3 @@
       (last)
       (str/trim)))
 
-(defn utc-now
-  "Return OffsetDateTime/now in UTC."
-  []
-  (OffsetDateTime/now (ZoneId/of "UTC")))
