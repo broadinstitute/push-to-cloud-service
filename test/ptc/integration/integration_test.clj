@@ -13,13 +13,14 @@
 (deftest integration
   (let [prefix     (str "test/" (UUID/randomUUID))
         properties (::jms/Properties (jms/encode @jms-tools/good-jms-message))]
-    (letfn [(task [_]
+    (letfn [(task [_ _]
               (testing "upload a file to the bucket"
                 (let [object (str prefix "/deps.edn")]
                   (try
                     (gcs/upload-file "deps.edn" bucket object)
                     (gcs/list-objects bucket object)
                     (finally (gcs/delete-object bucket object)))))
+              ;; to break out from the loop
               false)
             (flow [connection queue]
               (start/produce connection queue "text" properties)
@@ -31,7 +32,7 @@
 
 (deftest peeking
   (let [properties (::jms/Properties (jms/encode @jms-tools/good-jms-message))]
-    (letfn [(task [message] (is message) false)]
+    (letfn [(task [message _] (is message) false)]
       (jms-tools/with-test-queue-connection
         (fn [connection queue]
           (testing "Message given to task isn't nil"

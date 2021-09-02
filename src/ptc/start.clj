@@ -81,7 +81,7 @@
       (let [peeked (jms/ednify peeked)]
         (do
           (log/infof "Peeked message %s: %s" counter peeked)
-          (if (task! peeked)
+          (if (task! peeked connection)
             (let [consumed (jms/ednify (consume connection queue))]
               (log/infof "Task complete, consumed message %s" counter)
               (if (not (misc/message-ids-equal? peeked consumed))
@@ -89,30 +89,44 @@
                  (str/join \space ["Messages differ:"
                                    (with-out-str (pprint (data/diff peeked consumed)))])))
               (recur (inc counter)))
+            ;; this is for testing, in production, the task!
+            ;; should always return `true` and this branch should
+            ;; never gets reached.
             (do
               (log/errorf
                (str/join
                 \space ["Task returned nil/false,"
                         "not consuming message %s and instead exiting"])
-               counter)
+               peeked)
               peeked))))
       (recur counter))))
 
 (defn- message-loop
   "Loop and consume messages using the Zamboni ActiveMQ server."
   []
-  (let [queue          (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-        url            (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
-        vault-path     (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
-        bucket-url     (misc/getenv-or-throw "PTC_BUCKET_URL")
-        upload-sample! (partial jms/handle-message bucket-url)
+  (let [queue               (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+        dlq                 (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
+        url                 (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
+        vault-path          (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
+        bucket-url          (misc/getenv-or-throw "PTC_BUCKET_URL")
         {:keys [username password]} (misc/vault-secrets vault-path)]
-    (try
-      (with-open [connection (create-queue-connection url username password)]
-        (listen-and-consume-from-queue upload-sample! connection queue))
-      (catch Throwable x
-        (log/fatal x "Fatal error in message loop")
-        (System/exit 1)))))
+    (letfn [(handle-or-dlq! [jms connection] (try
+                                               (jms/handle-message bucket-url jms)
+                                               (catch Throwable x
+                                                 (log/errorf
+                                                  (str/join
+                                                   \space ["Failed to handle the message %s due to %s"
+                                                           "moving it to %s and continue..."])
+                                                  x jms dlq)
+                                                 (produce connection dlq (str x) jms))
+                                                              ;; so the jms message is always consumed from main queue
+                                               (finally true)))]
+      (try
+        (with-open [connection (create-queue-connection url username password)]
+          (listen-and-consume-from-queue handle-or-dlq! connection queue))
+        (catch Throwable x
+          (log/fatal x "Fatal error in message loop")
+          (System/exit 1))))))
 
 (defn -main
   []
