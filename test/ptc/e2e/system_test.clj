@@ -6,31 +6,39 @@
             [ptc.tools.gcs :as gcs]
             [ptc.tools.wfl :as wfl]
             [ptc.tools.utils :as utils]
+            [ptc.util.misc :as misc]
             [ptc.util.jms :as jms]
             [ptc.tools.jms :as jms-tools])
   (:import [java.lang Integer]
            [java.util UUID]))
 
 (def zamboni-activemq-server-url
-  (or (System/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL") "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616"))
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL")
+      "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616"))
 
 (def zamboni-activemq-queue-name
-  (or (System/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME") "wfl.broad.pushtocloud.enqueue.dev"))
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+      "wfl.broad.pushtocloud.enqueue.dev"))
 
 (def zamboni-activemq-dead-letter-queue-name
-  (or (System/getenv "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME") "wfl.broad.pushtocloud.enqueue.dev-dlq"))
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
+      "wfl.broad.pushtocloud.enqueue.dev-dlq"))
 
 (def zamboni-activemq-secret-path
-  (or (System/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH") "secret/dsde/gotc/dev/activemq/logins/zamboni"))
+  (or (System/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH")
+      "secret/dsde/gotc/dev/activemq/logins/zamboni"))
 
 (def ptc-bucket-url
-  (or (System/getenv "PTC_BUCKET_URL") "gs://dev-aou-arrays-input"))
+  (or (System/getenv "PTC_BUCKET_URL")
+      "gs://dev-aou-arrays-input"))
 
 (def cromwell-url
-  (or (System/getenv "CROMWELL_URL") "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org"))
+  (or (System/getenv "CROMWELL_URL")
+      "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org"))
 
 (def wfl-url
-  (or (System/getenv "WFL_URL") "https://dev-wfl.gotc-dev.broadinstitute.org"))
+  (or (System/getenv "WFL_URL")
+      "https://dev-wfl.gotc-dev.broadinstitute.org"))
 
 (def jms-message
   (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn")))
@@ -47,11 +55,18 @@
 (deftest test-end-to-end
   (let [analysis-version (rand-int Integer/MAX_VALUE)
         message          (assoc-in jms-message
-                                   [::jms/Properties :payload :workflow :analysisCloudVersion] analysis-version)
-        chipwell-barcode (get-in message [::jms/Properties :payload :workflow :chipWellBarcode])
-        workflow         (get-in message [::jms/Properties :payload :workflow])
+                                   [::jms/Properties
+                                    :payload :workflow
+                                    :analysisCloudVersion] analysis-version)
+        chipwell-barcode (get-in message [::jms/Properties
+                                          :payload :workflow
+                                          :chipWellBarcode])
+        workflow         (get-in message [::jms/Properties
+                                          :payload :workflow])
         cloud-prefix     (jms/env-prefix ptc-bucket-url workflow)]
-    (jms-tools/queue-messages 1 zamboni-activemq-server-url zamboni-activemq-queue-name zamboni-activemq-secret-path message)
+    (jms-tools/queue-messages 1 zamboni-activemq-server-url
+                              zamboni-activemq-queue-name
+                              zamboni-activemq-secret-path message)
     (testing "Files are uploaded to the input bucket"
       (let [params      (str cloud-prefix "/params.txt")
             ptc-file    (str cloud-prefix "/ptc.json")
@@ -70,3 +85,20 @@
           (let [workflow-timeout 3600000
                 result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
             (is (= "Succeeded" result) "Cromwell workflow failed")))))))
+
+(deftest test-dead-letter-queue
+  (testing "a bad message winds up in the dead-letter queue"
+    (let [version (rand-int Integer/MAX_VALUE)
+          path    [::jms/Properties :payload :workflow]
+          message (-> jms-message
+                      (get-in path)
+                      (assoc  :analysisCloudVersion version)
+                      (dissoc :chipWellBarcode)
+                      (->> (assoc-in jms-message path)))]
+      (jms-tools/queue-messages 1 zamboni-activemq-server-url
+                                zamboni-activemq-queue-name
+                                zamboni-activemq-secret-path message))))
+
+(comment
+  (clojure.test/test-vars [#'test-dead-letter-queue])
+  )

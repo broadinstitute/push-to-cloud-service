@@ -104,23 +104,23 @@
 (defn- message-loop
   "Loop and consume messages using the Zamboni ActiveMQ server."
   []
-  (let [queue               (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-        dlq                 (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
-        url                 (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
-        vault-path          (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
-        bucket-url          (misc/getenv-or-throw "PTC_BUCKET_URL")
+  (let [queue      (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+        dlq        (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
+        url        (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
+        vault-path (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
+        bucket-url (misc/getenv-or-throw "PTC_BUCKET_URL")
         {:keys [username password]} (misc/vault-secrets vault-path)]
-    (letfn [(handle-or-dlq! [jms connection] (try
-                                               (jms/handle-message bucket-url jms)
-                                               (catch Throwable x
-                                                 (log/errorf
-                                                  (str/join
-                                                   \space ["Failed to handle the message %s due to %s"
-                                                           "moving it to %s and continue..."])
-                                                  x jms dlq)
-                                                 (produce connection dlq (str x) jms))
-                                                              ;; so the jms message is always consumed from main queue
-                                               (finally true)))]
+    (letfn [(handle-or-dlq! [jms connection]
+              (try (jms/handle-message bucket-url jms)
+                   (catch Throwable x
+                     (log/errorf
+                      (str/join
+                       \space ["Failed to handle the message %s due to %s"
+                               "moving it to %s and continue..."])
+                      x jms dlq)
+                     (produce connection dlq (str x) jms))
+                   ;; so the jms message is always consumed from main queue
+                   (finally true)))]
       (try
         (with-open [connection (create-queue-connection url username password)]
           (listen-and-consume-from-queue handle-or-dlq! connection queue))

@@ -272,7 +272,7 @@
                                              :escape-slash false))]
     (assoc message ::Properties (update Properties :payload jsonify))))
 
-(def missing-keys-message "Missing JMS keys:") ; for tests
+(def ^:private missing-keys-message "Missing JMS keys:")
 
 (defn handle-message
   "Throw or push to cloud at PREFIX all the files for ednified JMS message."

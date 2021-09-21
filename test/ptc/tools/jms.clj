@@ -48,7 +48,7 @@
   "Queue N copies of MESSAGE given a JMS URL, QUEUE and VAULT-PATH."
   [n url queue vault-path message]
   (let [blame (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")]
-    (let [payload  (-> message jms/encode ::jms/Properties)
+    (let [payload  (misc/trace (-> message jms/encode ::jms/Properties))
           enqueue! (fn [[con queue]] (start/produce con queue blame payload))]
       (with-queue-connection url queue vault-path
         (fn [con queue]
