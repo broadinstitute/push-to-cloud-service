@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [ptc.ptc :as ptc]
+            [ptc.util.environment :as env]
             [ptc.util.jms :as jms]
             [ptc.util.misc :as misc])
   (:import [javax.jms TextMessage DeliveryMode Session]
@@ -104,11 +105,11 @@
 (defn- message-loop
   "Loop and consume messages using the Zamboni ActiveMQ server."
   []
-  (let [queue      (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-        dlq        (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
-        url        (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
-        vault-path (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
-        bucket-url (misc/getenv-or-throw "PTC_BUCKET_URL")
+  (let [queue      (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+        dlq        (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
+        url        (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
+        vault-path (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
+        bucket-url (env/getenv-or-throw "PTC_BUCKET_URL")
         {:keys [username password]} (misc/vault-secrets vault-path)]
     (letfn [(handle-or-dlq! [jms connection]
               (try (jms/handle-message bucket-url jms)

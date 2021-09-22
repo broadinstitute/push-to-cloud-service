@@ -6,39 +6,14 @@
             [ptc.tools.gcs :as gcs]
             [ptc.tools.wfl :as wfl]
             [ptc.tools.utils :as utils]
-            [ptc.util.misc :as misc]
+            [ptc.util.environment :as env]
             [ptc.util.jms :as jms]
+            [ptc.util.misc :as misc]
             [ptc.tools.jms :as jms-tools])
   (:import [java.lang Integer]
            [java.util UUID]))
 
-(def zamboni-activemq-server-url
-  (or (System/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL")
-      "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616"))
-
-(def zamboni-activemq-queue-name
-  (or (System/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-      "wfl.broad.pushtocloud.enqueue.dev"))
-
-(def zamboni-activemq-dead-letter-queue-name
-  (or (System/getenv "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
-      "wfl.broad.pushtocloud.enqueue.dev-dlq"))
-
-(def zamboni-activemq-secret-path
-  (or (System/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH")
-      "secret/dsde/gotc/dev/activemq/logins/zamboni"))
-
-(def ptc-bucket-url
-  (or (System/getenv "PTC_BUCKET_URL")
-      "gs://dev-aou-arrays-input"))
-
-(def cromwell-url
-  (or (System/getenv "CROMWELL_URL")
-      "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org"))
-
-(def wfl-url
-  (or (System/getenv "WFL_URL")
-      "https://dev-wfl.gotc-dev.broadinstitute.org"))
+"failover:ssl://vpicard-jms-dev.broadinstitute.org:61616"
 
 (def jms-message
   (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn")))
@@ -63,10 +38,12 @@
                                           :chipWellBarcode])
         workflow         (get-in message [::jms/Properties
                                           :payload :workflow])
-        cloud-prefix     (jms/env-prefix ptc-bucket-url workflow)]
-    (jms-tools/queue-messages 1 zamboni-activemq-server-url
-                              zamboni-activemq-queue-name
-                              zamboni-activemq-secret-path message)
+        cloud-prefix     (jms/env-prefix (env/getenv "PTC_BUCKET_URL") workflow)]
+    (jms-tools/queue-messages
+     1
+     (env/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL")
+     (env/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+     (env/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH"))
     (testing "Files are uploaded to the input bucket"
       (let [params      (str cloud-prefix "/params.txt")
             ptc-file    (str cloud-prefix "/ptc.json")
@@ -78,12 +55,12 @@
           (is (not= expected-present ::timed-out) "Timed out waiting for expected files to upload")
           (is (= (gcs/gcs-cat params) (jms/jms->params workflow))))))
     (testing "Cromwell workflow is started by WFL"
-      (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation wfl-url chipwell-barcode analysis-version))]
+      (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation (System/getenv "WFL_URL") chipwell-barcode analysis-version))]
         (is (not= ::timed-out workflow-id) "Timeout waiting for workflow creation")
         (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
           (let [workflow-timeout 3600000
-                result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete cromwell-url workflow-id))]
+                result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete (System/getenv "CROMWELL_URL") workflow-id))]
             (is (= "Succeeded" result) "Cromwell workflow failed")))))))
 
 (deftest test-dead-letter-queue
@@ -95,9 +72,11 @@
                       (assoc  :analysisCloudVersion version)
                       (dissoc :chipWellBarcode)
                       (->> (assoc-in jms-message path)))]
-      (jms-tools/queue-messages 1 zamboni-activemq-server-url
-                                zamboni-activemq-queue-name
-                                zamboni-activemq-secret-path message))))
+      (jms-tools/queue-messages
+       1
+       (env/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL")
+       (env/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+       (env/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH")))))
 
 (comment
   (clojure.test/test-vars [#'test-dead-letter-queue])

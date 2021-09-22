@@ -126,22 +126,14 @@
   (or (empty? messages)
       (apply = (map :properties messages))))
 
-(defn getenv-or-throw
-  "Get value of environment variable NAME or throw if nil."
-  [name]
-  (let [value (System/getenv name)]
-    (when (nil? value)
-      (throw (IllegalStateException. (str name " must not be nil"))))
-    value))
-
 (defn parse-gs-url
   "Return BUCKET and OBJECT from a gs://bucket/object URL."
   [url]
   (let [[gs-colon nada bucket object] (str/split url #"/" 4)]
     (when-not
-     (and (every? seq [gs-colon bucket])
-          (= "gs:" gs-colon)
-          (= "" nada))
+        (and (every? seq [gs-colon bucket])
+             (= "gs:" gs-colon)
+             (= "" nada))
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
 
@@ -179,4 +171,3 @@
       (str/split #":")
       (last)
       (str/trim)))
-
