@@ -40,7 +40,7 @@
                                           :payload :workflow])
         cloud-prefix     (jms/env-prefix (env/getenv "PTC_BUCKET_URL") workflow)]
     (jms-tools/queue-messages
-     1
+     message 1
      (env/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL")
      (env/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
      (env/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH"))
@@ -73,7 +73,7 @@
                       (dissoc :chipWellBarcode)
                       (->> (assoc-in jms-message path)))]
       (jms-tools/queue-messages
-       1
+       message 1
        (env/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL")
        (env/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
        (env/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH")))))
