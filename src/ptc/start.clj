@@ -78,7 +78,7 @@
   [task! connection queue]
   (loop [counter 0]
     (if-let [peeked (peek-message connection queue)]
-      ; to avoid NPE on ednify
+                                        ; to avoid NPE on ednify
       (let [peeked (jms/ednify peeked)]
         (do
           (log/infof "Peeked message %s: %s" counter peeked)
@@ -112,6 +112,7 @@
         bucket-url (env/getenv-or-throw "PTC_BUCKET_URL")
         {:keys [username password]} (misc/vault-secrets vault-path)]
     (letfn [(handle-or-dlq! [jms connection]
+              (misc/trace jms)
               (try (jms/handle-message bucket-url jms)
                    (catch Throwable x
                      (log/errorf
@@ -127,7 +128,7 @@
           (listen-and-consume-from-queue handle-or-dlq! connection queue))
         (catch Throwable x
           (log/fatal x "Fatal error in message loop")
-          (System/exit 1))))))
+          #_(System/exit 1))))))
 
 (defn -main
   []

@@ -177,6 +177,7 @@
   Note we should not look at :cloudGreenIdatPath key in JMS as it is
   for general arrays not AoU arrays!"
   [prefix workflow]
+  (misc/trace ['lookup-push-values prefix workflow])
   (->> (for [[k local] (vec (::push wfl-keys->jms-keys))
              :let [jms-local (local workflow)
                    leaf      (last (str/split jms-local #"/"))
@@ -192,6 +193,7 @@
                            (if (misc/gcs-object-exists? (first lookup))
                              (first lookup)
                              (recur (rest lookup))))))]
+           (misc/trace found)
            (when-not found
              (log/errorf (format "Failed to find %s based on %s in %s!"
                                  leaf (first lookup) lookup))
@@ -200,6 +202,7 @@
                              leaf (first lookup) lookup))))
            (log/info (format "Found a match at %s for %s." found leaf))
            [k found]))
+       misc/trace
        (into {})))
 
 (def aou-reference-bucket
@@ -221,6 +224,7 @@
    For files with ::push key, always use the looked up values instead of
    what is in the jms message."
   [prefix workflow]
+  (misc/trace [prefix workflow])
   (let [cloud (env-prefix prefix workflow)
         {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
         chip-and-push (merge chip push)
@@ -234,6 +238,7 @@
                 m))]
       (doseq [f sources]
         (let [hash (misc/get-md5-hash f)]
+          (misc/trace [f hash])
           (misc/gsutil "-h" (str "Content-MD5:" hash) "cp" f cloud)))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
@@ -241,15 +246,20 @@
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX
   with PARAMS."
   [prefix workflow params]
+  (misc/trace [prefix workflow params])
   (let [ptc (str/join "/" [(env-prefix prefix workflow) "ptc.json"])]
+    (misc/trace ptc)
     (-> prefix
         (jms->notification workflow)
+        misc/trace
         (assoc :params_file params)
         (assoc :extended_chip_manifest_file (get-extended-chip-manifest workflow))
         vector
         (->> (assoc append-to-aou-request :notifications))
         json/write-str
-        (->> (misc/gsutil "cp" "-" ptc :in)))
+        misc/trace
+        (->> (misc/gsutil "cp" "-" ptc :in))
+        misc/trace)
     [params ptc]))
 
 (defn ednify
@@ -277,6 +287,8 @@
 (defn handle-message
   "Throw or push to cloud at PREFIX all the files for ednified JMS message."
   [prefix jms]
+  (misc/trace prefix)
+  (misc/trace jms)
   (let [workflow (get-in jms [::Properties :payload :workflow])
         optional (group-by vector? required-jms-keys)
         required (sort (optional false))
@@ -286,8 +298,10 @@
               (when (not-any? one-of (keys workflow))
                 one-of))]
       (let [missing (concat (keep missing? required) (keep none? one-ofs))]
+        (misc/trace missing)
         (when (seq missing)
           (throw (IllegalArgumentException.
                   (str/join \space [missing-keys-message (vec missing)])))))
       (let [params (push-params prefix workflow)]
+        (misc/trace params)
         (push-append-to-aou-request prefix workflow params)))))
