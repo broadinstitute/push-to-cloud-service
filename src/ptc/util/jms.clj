@@ -225,15 +225,15 @@
   (find-input-file-or-throw :greenIDatPath prefix workflow)
   )
 
-;; See https://broadinstitute.atlassian.net/wiki/spaces/GHConfluence/pages/2853961731/2021-07-28+AoU+Processing+Issue+Discussion
+;; https://broadinstitute.atlassian.net/wiki/spaces/GHConfluence/pages/2853961731/2021-07-28+AoU+Processing+Issue+Discussion
 ;; Look first in local filesystem for (input-key workflow).
 ;; Then try "prefix/environment/path/leaf".
 ;; If still not found, try "prefix/path/leaf".
 ;; Otherwise throw.
 ;;
-(defn find-input-file-or-throw
+(defn find-input-or-throw
   "Throw or find the input file in WORKFLOW using INPUT-KEY and PREFIX."
-  [input-key prefix workflow]
+  [prefix workflow input-key]
   (let [path  [:environment :chipName :chipWellBarcode :analysisCloudVersion]
         local (input-key workflow)]
     (if (.exists (io/file local))
@@ -245,10 +245,10 @@
             old   (join (cons prefix (rest parts)))]
         (cond (misc/gcs-object-exists? new) new
               (misc/gcs-object-exists? old) old
-              :else (let [message (format "Cannot find %s in %s"
-                                          leaf [local new old])]
-                      (log/info message)
-                      (throw (FileNotFoundException. message))))))))
+              :else old #_(let [message (format "Cannot find %s in %s"
+                                                leaf [local new old])]
+                            (log/info message)
+                            (throw (FileNotFoundException. message))))))))
 
 (def aou-reference-bucket
   "The AllOfUs reference bucket or broad-arrays-dev-storage."
@@ -264,26 +264,35 @@
                             bucket aou-reference-bucket)
          extendedIlluminaManifestFileName)))
 
+(comment
+  (get-extended-chip-manifest workflow)
+  (jms->notification prefix workflow)
+  )
+
+;; Ignore cloud paths for files with ::push key.
+;;
 (defn jms->notification
-  "Push files to PREFIX and return notification for WORKFLOW.
-   For files with ::push key, always use the looked up values instead of
-   what is in the jms message."
+  "Push files to PREFIX and return notification for WORKFLOW."
   [prefix workflow]
   (let [cloud (env-prefix prefix workflow)
         {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
-        chip-and-push (merge chip push)
-        chips (keep workflow (vals chip))
-        pushes (lookup-push-values prefix workflow)
-        sources (concat chips (vals pushes))]
-    (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
-            (cloudify [m [k v]]
-              (if-let [path (v workflow)]
-                (assoc m k (str/join "/" [cloud (last (str/split path #"/"))]))
-                m))]
-      (doseq [f sources]
-        (let [hash (misc/get-md5-hash f)]
-          (misc/gsutil "-h" (str "Content-MD5:" hash) "cp" f cloud)))
-      (reduce cloudify (reduce rekey {} copy) chip-and-push))))
+        chip-and-push (misc/trace (merge chip push))
+        sources (->> push vals
+                     (map (partial find-input-or-throw prefix workflow))
+                     (zipmap (keys push))
+                     #_(concat (keep workflow (vals chip))))]
+    (misc/trace sources)
+    (misc/trace (keep workflow (vals chip)))
+
+    #_(letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
+              (cloudify [m [k v]]
+                (if-let [path (v workflow)]
+                  (assoc m k (str/join "/" [cloud (last (str/split path #"/"))]))
+                  m))]
+        (doseq [f sources]
+          (let [hash (misc/get-md5-hash f)]
+            (misc/gsutil "-h" (str "Content-MD5:" hash) "cp" f cloud)))
+        (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
 (defn push-append-to-aou-request
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX
