@@ -165,45 +165,90 @@
     (misc/gsutil "cp" "-" result :in (jms->params workflow))
     result))
 
+(comment
+  (do
+    (def prefix "gs://dev-aou-arrays-input")
+    (def workflow
+      {:minorAlleleFrequencyFileCloudPath
+       "gs://broad-gotc-dev-storage/pipeline/arrays_metadata/GDA-8v1-0_A5/GDA-8v1-0_A5.MAF.txt",
+       :productPartNumber "P-WG-0094",
+       :sampleAlias "NA12878",
+       :callRateThreshold 0.98,
+       :clusterFilePath
+       "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_CEPH_A.egt",
+       :labBatch "ARRAY-CO-5799466",
+       :cloudChipMetaDataDirectory
+       "gs://storage/pipeline/arrays_metadata/HumanExome-12v1-1_A/",
+       :researchProjectId "RP-45",
+       :sampleId "SM-3S2IV",
+       :productName "Infinium Exome V1_A",
+       :extendedIlluminaManifestVersion "1.3",
+       :chipName "HumanExome-12v1-1_A",
+       :vaultTokenPath
+       "gs://broad-dsp-gotc-arrays-dev-tokens/arrayswdl.token",
+       :redIDatPath
+       "/home/unix/ptc/data/arrays/HumanExome-12v1-1_A/idats/7991775143_R01C01/7991775143_R01C01_Red.idat",
+       :chipWellBarcode "7991775143_R01C01",
+       :productType "aou_array",
+       :productOrderId "PDO-15923",
+       :greenIDatPath
+       "/home/unix/ptc/data/arrays/HumanExome-12v1-1_A/idats/7991775143_R01C01/7991775143_R01C01_Grn.idat",
+       :regulatoryDesignation "RESEARCH_ONLY",
+       :collaboratorParticipantId "NA12878",
+       :zCallThresholdsPath
+       "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/IBDPRISM_EX.egt.thresholds.txt",
+       :environment "dev",
+       :sampleLsid "broadinstitute.org:bsp.dev.sample:NOTREAL.NA12878",
+       :gender "Female",
+       :genderClusterFilePath
+       "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_gender.egt",
+       :extendedIlluminaManifestFileName
+       "HumanExome-12v1-1_A.1.3.extended.csv",
+       :chipManifestPath
+       "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExome-12v1-1_A.1.3.extended.csv",
+       :analysisCloudVersion 506988414,
+       :beadPoolManifestPath
+       "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExome-12v1-1_A.bpm",
+       :participantId "PT-97GM",
+       :productFamily "Whole Genome Genotyping"}))
+  (lookup-push-values prefix workflow)
+  (take 23 (all-versions-env-prefixes prefix workflow))
+  (take 23 (all-versions-legacy-prefixes prefix workflow))
+  (for [[k local] (vec (::push wfl-keys->jms-keys))
+        :let [jms-local (local workflow)
+              leaf      (last (str/split jms-local #"/"))
+              glue-leaf #(str/join "/" [% leaf])
+              lookup    (map glue-leaf
+                             (concat
+                              (all-versions-env-prefixes prefix workflow)
+                              (all-versions-legacy-prefixes prefix workflow)))]])
+  (find-input-file-or-throw :greenIDatPath prefix workflow)
+  )
+
 ;; See https://broadinstitute.atlassian.net/wiki/spaces/GHConfluence/pages/2853961731/2021-07-28+AoU+Processing+Issue+Discussion
+;; Look first in local filesystem for (input-key workflow).
+;; Then try "prefix/environment/path/leaf".
+;; If still not found, try "prefix/path/leaf".
+;; Otherwise throw.
 ;;
-(defn lookup-push-values
-  "Find ::push paths from WORKFLOW using PREFIX.
-   Use Green IDAT file as an example, the lookup order look like:
-   1. the value of the local :greenIDatPath key
-   2. (env-prefix    prefix workflow)/{CHIPWELL_BARCODE}_Grn.idat
-   3. (legacy-prefix prefix workflow)/{CHIPWELL_BARCODE}_Grn.idat
-  Return a single map of wfl-keys and their corresponding looked up values.
-  Note we should not look at :cloudGreenIdatPath key in JMS as it is
-  for general arrays not AoU arrays!"
-  [prefix workflow]
-  (misc/trace ['lookup-push-values prefix workflow])
-  (->> (for [[k local] (vec (::push wfl-keys->jms-keys))
-             :let [jms-local (local workflow)
-                   leaf      (last (str/split jms-local #"/"))
-                   glue-leaf #(str/join "/" [% leaf])
-                   lookup    (map glue-leaf
-                                  (concat
-                                   (all-versions-env-prefixes prefix workflow)
-                                   (all-versions-legacy-prefixes prefix workflow)))]]
-         (let [found (if (.exists (io/file jms-local))
-                       jms-local
-                       (loop [lookup lookup]
-                         (when (seq lookup)
-                           (if (misc/gcs-object-exists? (first lookup))
-                             (first lookup)
-                             (recur (rest lookup))))))]
-           (misc/trace found)
-           (when-not found
-             (log/errorf (format "Failed to find %s based on %s in %s!"
-                                 leaf (first lookup) lookup))
-             (throw (FileNotFoundException.
-                     (format "Failed to find %s based on %s in %s!"
-                             leaf (first lookup) lookup))))
-           (log/info (format "Found a match at %s for %s." found leaf))
-           [k found]))
-       misc/trace
-       (into {})))
+(defn find-input-file-or-throw
+  "Throw or find the input file in WORKFLOW using INPUT-KEY and PREFIX."
+  [input-key prefix workflow]
+  (let [path  [:environment :chipName :chipWellBarcode :analysisCloudVersion]
+        local (input-key workflow)]
+    (if (.exists (io/file local))
+      local
+      (let [join  (partial str/join "/")
+            leaf  (last (str/split local #"/"))
+            parts (conj ((apply juxt path) workflow) leaf)
+            new   (join (cons prefix parts))
+            old   (join (cons prefix (rest parts)))]
+        (cond (misc/gcs-object-exists? new) new
+              (misc/gcs-object-exists? old) old
+              :else (let [message (format "Cannot find %s in %s"
+                                          leaf [local new old])]
+                      (log/info message)
+                      (throw (FileNotFoundException. message))))))))
 
 (def aou-reference-bucket
   "The AllOfUs reference bucket or broad-arrays-dev-storage."
@@ -224,7 +269,6 @@
    For files with ::push key, always use the looked up values instead of
    what is in the jms message."
   [prefix workflow]
-  (misc/trace [prefix workflow])
   (let [cloud (env-prefix prefix workflow)
         {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
         chip-and-push (merge chip push)
@@ -238,7 +282,6 @@
                 m))]
       (doseq [f sources]
         (let [hash (misc/get-md5-hash f)]
-          (misc/trace [f hash])
           (misc/gsutil "-h" (str "Content-MD5:" hash) "cp" f cloud)))
       (reduce cloudify (reduce rekey {} copy) chip-and-push))))
 
@@ -246,20 +289,15 @@
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX
   with PARAMS."
   [prefix workflow params]
-  (misc/trace [prefix workflow params])
   (let [ptc (str/join "/" [(env-prefix prefix workflow) "ptc.json"])]
-    (misc/trace ptc)
     (-> prefix
         (jms->notification workflow)
-        misc/trace
         (assoc :params_file params)
         (assoc :extended_chip_manifest_file (get-extended-chip-manifest workflow))
         vector
         (->> (assoc append-to-aou-request :notifications))
         json/write-str
-        misc/trace
-        (->> (misc/gsutil "cp" "-" ptc :in))
-        misc/trace)
+        (->> (misc/gsutil "cp" "-" ptc :in)))
     [params ptc]))
 
 (defn ednify
@@ -287,8 +325,6 @@
 (defn handle-message
   "Throw or push to cloud at PREFIX all the files for ednified JMS message."
   [prefix jms]
-  (misc/trace prefix)
-  (misc/trace jms)
   (let [workflow (get-in jms [::Properties :payload :workflow])
         optional (group-by vector? required-jms-keys)
         required (sort (optional false))
@@ -298,10 +334,8 @@
               (when (not-any? one-of (keys workflow))
                 one-of))]
       (let [missing (concat (keep missing? required) (keep none? one-ofs))]
-        (misc/trace missing)
         (when (seq missing)
           (throw (IllegalArgumentException.
                   (str/join \space [missing-keys-message (vec missing)])))))
       (let [params (push-params prefix workflow)]
-        (misc/trace params)
         (push-append-to-aou-request prefix workflow params)))))

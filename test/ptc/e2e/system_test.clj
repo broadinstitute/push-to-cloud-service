@@ -38,12 +38,13 @@
                                           :chipWellBarcode])
         workflow         (get-in message [::jms/Properties
                                           :payload :workflow])
-        cloud-prefix     (jms/env-prefix (env/getenv "PTC_BUCKET_URL") workflow)]
+        cloud-prefix     (jms/env-prefix (env/getenv-or-throw "PTC_BUCKET_URL")
+                                         workflow)]
     (jms-tools/queue-messages
      message 1
-     (env/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL")
-     (env/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-     (env/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH"))
+     (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
+     (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+     (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH"))
     (testing "Files are uploaded to the input bucket"
       (let [params      (str cloud-prefix "/params.txt")
             ptc-file    (str cloud-prefix "/ptc.json")
@@ -55,12 +56,18 @@
           (is (not= expected-present ::timed-out) "Timed out waiting for expected files to upload")
           (is (= (gcs/gcs-cat params) (jms/jms->params workflow))))))
     (testing "Cromwell workflow is started by WFL"
-      (let [workflow-id (timeout 180000 #(wfl/wait-for-workflow-creation (System/getenv "WFL_URL") chipwell-barcode analysis-version))]
+      (let [workflow-id (timeout 180000
+                                 #(wfl/wait-for-workflow-creation
+                                   (env/getenv-or-throw "WFL_URL")
+                                   chipwell-barcode analysis-version))]
         (is (not= ::timed-out workflow-id) "Timeout waiting for workflow creation")
         (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
           (let [workflow-timeout 3600000
-                result (timeout workflow-timeout #(cromwell/wait-for-workflow-complete (System/getenv "CROMWELL_URL") workflow-id))]
+                result (timeout workflow-timeout
+                                #(cromwell/wait-for-workflow-complete
+                                  (env/getenv-or-throw "CROMWELL_URL")
+                                  workflow-id))]
             (is (= "Succeeded" result) "Cromwell workflow failed")))))))
 
 (deftest test-dead-letter-queue
@@ -74,9 +81,9 @@
                       (->> (assoc-in jms-message path)))]
       (jms-tools/queue-messages
        message 1
-       (env/getenv "ZAMBONI_ACTIVEMQ_SERVER_URL")
-       (env/getenv "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-       (env/getenv "ZAMBONI_ACTIVEMQ_SECRET_PATH")))))
+       (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
+       (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+       (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")))))
 
 (comment
   (clojure.test/test-vars [#'test-dead-letter-queue])

@@ -88,7 +88,8 @@
               (if (not (misc/message-ids-equal? peeked consumed))
                 (log/warnf
                  (str/join \space ["Messages differ:"
-                                   (with-out-str (pprint (data/diff peeked consumed)))])))
+                                   (with-out-str
+                                     (pprint (data/diff peeked consumed)))])))
               (recur (inc counter)))
             ;; this is for testing, in production, the task!
             ;; should always return `true` and this branch should
@@ -112,7 +113,6 @@
         bucket-url (env/getenv-or-throw "PTC_BUCKET_URL")
         {:keys [username password]} (misc/vault-secrets vault-path)]
     (letfn [(handle-or-dlq! [jms connection]
-              (misc/trace jms)
               (try (jms/handle-message bucket-url jms)
                    (catch Throwable x
                      (log/errorf
@@ -134,3 +134,7 @@
   []
   (log/infof "%s starting up" ptc/the-name)
   (message-loop))
+
+(comment
+  (-main)
+  )
