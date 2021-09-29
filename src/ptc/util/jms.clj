@@ -178,7 +178,7 @@
        "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_CEPH_A.egt",
        :labBatch "ARRAY-CO-5799466",
        :cloudChipMetaDataDirectory
-       "gs://storage/pipeline/arrays_metadata/HumanExome-12v1-1_A/",
+       "gs://broad-arrays-prod-storage/pipeline/arrays_metadata/HumanExome-12v1-1_A/",
        :researchProjectId "RP-45",
        :sampleId "SM-3S2IV",
        :productName "Infinium Exome V1_A",
@@ -273,16 +273,28 @@
 ;;
 (defn jms->notification
   "Push files to PREFIX and return notification for WORKFLOW."
-  [prefix workflow]
+  [prefix {:keys [cloudChipMetaDataDirectory] :as workflow}]
   (let [cloud (env-prefix prefix workflow)
         {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
         chip-and-push (misc/trace (merge chip push))
         sources (->> push vals
                      (map (partial find-input-or-throw prefix workflow))
                      (zipmap (keys push))
-                     #_(concat (keep workflow (vals chip))))]
+                     #_(concat (keep workflow (vals chip))))
+        pushes (->> push vals
+                    (map (partial find-input-or-throw prefix workflow))
+                    (zipmap (keys push)))
+        chips  (->> chip vals
+                    (map workflow)
+                    (map (fn [f] (when-not (nil? f) (last (str/split f #"/")))))
+                    (map (fn [f] (when-not (nil? f) (str cloudChipMetaDataDirectory f))))
+                    (zipmap (keys chip))
+                    (remove (comp nil? second))
+                    (into {}))]
     (misc/trace sources)
+    (misc/trace pushes)
     (misc/trace (keep workflow (vals chip)))
+    chips
 
     #_(letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
               (cloudify [m [k v]]
