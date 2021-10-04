@@ -1,6 +1,7 @@
 (ns ptc.unit.jms-test
   (:require [clojure.edn :as edn]
             [clojure.test :refer [deftest is testing]]
+            [ptc.util.gcs :as gcs]
             [ptc.util.jms :as jms]
             [ptc.util.misc :as misc]))
 
@@ -12,8 +13,8 @@
           workflow (get-in jms [::jms/Properties :payload :workflow])
           {:keys [cloudGreenIdatPath cloudRedIdatPath]} workflow
           push (::jms/push jms/wfl-keys->jms-keys)]
-      (is (not (misc/gcs-object-exists? cloudGreenIdatPath)))
-      (is (not (misc/gcs-object-exists? cloudRedIdatPath)))
+      (is (not (gcs/gcs-object-exists? cloudGreenIdatPath)))
+      (is (not (gcs/gcs-object-exists? cloudRedIdatPath)))
       (is (= (:green_idat_cloud_path push) :greenIDatPath))
       (is (= (:red_idat_cloud_path   push) :redIDatPath)))))
 

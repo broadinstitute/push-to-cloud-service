@@ -25,7 +25,7 @@
   "
   [uri & body]
   `(let [name# (str "ptc-test-" (UUID/randomUUID))
-         ~uri (misc/gs-url gcs-test-bucket name#)]
+         ~uri (ptc.util.gcs/gs-url gcs-test-bucket name#)]
      (try
        ~@body
        (finally
@@ -51,7 +51,7 @@
               (is (thrown-with-msg? IllegalArgumentException missing
                                     (jms/handle-message folder (jms/ednify msg))))
               (is (empty? (->> folder
-                               gcs/parse-gs-url
+                               ptc.util.gcs/parse-gs-url
                                (apply gcs/list-objects))))))
           (testing "a GOOD message"
             (start/produce connection queue

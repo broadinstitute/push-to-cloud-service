@@ -8,6 +8,7 @@
             [clojure.tools.logging :as log]
             [clj-http.client :as http]
             [clj-http.util :as http-util]
+            [ptc.util.gcs :as gcs]
             [ptc.util.misc :as misc]))
 
 (def api-url
@@ -68,27 +69,31 @@
   ([bucket]
    (list-objects bucket "")))
 
+(comment
+  (list-objects )
+  )
+
 (defn list-gcs-folder
   "Nil or URLs for the GCS objects of folder."
   [folder]
   (-> folder
       (vector "**")
       (->> (str/join "/")
-           (misc/gsutil "ls"))
+           (gcs/gsutil "ls"))
       (str/split #"\n")
       misc/do-or-nil))
 
 (defn delete-object
   "Delete URL or OBJECT from BUCKET"
   ([url]
-   (misc/gsutil "rm" url))
+   (gcs/gsutil "rm" url))
   ([bucket object]
    (delete-object (str "gs://" bucket "/" object))))
 
 (defn upload-file
   "Upload FILE to BUCKET with name OBJECT."
   ([file url]
-   (misc/gsutil "cp" file url))
+   (gcs/gsutil "cp" file url))
   ([file bucket object]
    (upload-file file (str "gs://" bucket "/" object))))
 
@@ -108,7 +113,7 @@
   [files]
   (let [seconds 15]
     (if-let [file (first files)]
-      (if (misc/gcs-object-exists? file)
+      (if (gcs/gcs-object-exists? file)
         (do
           (log/infof "Found %s in bucket" file)
           (recur (rest files)))

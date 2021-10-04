@@ -5,16 +5,6 @@
             [ptc.tools.gcs :as gcs])
   (:import (java.io StringWriter IOException)))
 
-(deftest test-notify-everyone-on-the-list-with-message
-  (letfn [(notify [msg to-list]
-            (map (partial str msg) to-list))]
-    (let [msg      "test"
-          ppl      ["A" "B"]
-          expected ["\"test\"\nA" "\"test\"\nB"]]
-      (testing "notify-everyone-on-the-list-with-message works for notify func"
-        (is (= (misc/notify-everyone-on-the-list-with-message notify msg ppl)
-               expected))))))
-
 (deftest gs-url-test
   (testing "URL utilities"
     (testing "parse-gs-url ok"
@@ -56,7 +46,7 @@
       (testing "returns text"
         (binding [*out* output
                   *err* output]
-          (is (not (empty? (misc/gcs-object-exists? "--help"))))))
+          (is (not (empty? (ptc.util.gcs/gcs-object-exists? "--help"))))))
       (testing "prints nothing"
         (is (empty? (str output))))))
   (testing "error case"
@@ -64,7 +54,7 @@
       (testing "returns nothing"
         (binding [*out* output
                   *err* output]
-          (is (nil? (misc/gcs-object-exists? "non/gcs/path")))))
+          (is (nil? (ptc.util.gcs/gcs-object-exists? "non/gcs/path")))))
       (testing "prints nothing"
         (is (empty? (str output)))))))
 
@@ -77,4 +67,3 @@
       (is (misc/retry-on-server-error 1 (throw-n-times 3))))
     (testing "Gives up after third"
       (is (thrown? Exception (misc/retry-on-server-error 1 (throw-n-times 4)))))))
-

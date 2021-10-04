@@ -6,11 +6,10 @@
             [clojure.pprint        :refer [pprint]]
             [clojure.string        :as str]
             [clojure.tools.logging :as log]
-            [ptc.ptc               :as ptc]
             [vault.client.http]         ; vault.core needs this
             [vault.core            :as vault])
-  (:import [java.util UUID]
-           (java.io IOException)))
+  (:import [java.io IOException]
+           [java.util UUID]))
 
 (defmacro do-or-nil
   "Value of BODY or nil if it throws."
@@ -61,13 +60,6 @@
            (log/warn e "Issue with Vault")
            (log/debug "Perhaps run 'vault login' and try again")))))
 
-(defn notify-everyone-on-the-list-with-message
-  "Notify everyone on the TO-LIST with MSG using METHOD."
-  [method msg to-list]
-  (method (with-out-str (pprint msg))
-          (or (seq to-list) ["tbl@broadinstitute.org"
-                             "chengche@broadinstitute.org"])))
-
 (defn shell!
   "Run ARGS in a shell and return stdout or throw."
   [& args]
@@ -86,21 +78,6 @@
   "The nil UUID."
   (UUID/fromString "00000000-0000-0000-0000-000000000000"))
 
-(defn gs-url
-  "Format BUCKET and OBJECT into a gs://bucket/object URL."
-  ([bucket object]
-   (when-not (and (string?        bucket)
-                  (seq            bucket)
-                  (not-any? #{\/} bucket))
-     (let [fmt "The bucket (%s) must be a non-empty string."
-           msg (format fmt bucket)]
-       (throw (IllegalArgumentException. msg))))
-   (if (nil? object)
-     (str "gs://" bucket)
-     (str "gs://" bucket "/" object)))
-  ([bucket]
-   (gs-url bucket nil)))
-
 (defn parse-json-string
   "Parse the json string STR into a keyword-string map"
   [str]
@@ -112,18 +89,6 @@
   (or (empty? messages)
       (apply = (map :properties messages))))
 
-(defn parse-gs-url
-  "Return BUCKET and OBJECT from a gs://bucket/object URL."
-  [url]
-  (let [[gs-colon nada bucket object] (str/split url #"/" 4)]
-    (when-not
-        (and (every? seq [gs-colon bucket])
-             (= "gs:" gs-colon)
-             (= "" nada))
-      (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
-    [bucket (or object "")]))
-
-;; visible-for-testing
 (defn retry-on-server-error [seconds thunk]
   (let [max 3]
     (loop [attempt 1]
@@ -138,22 +103,3 @@
               (log/info "sleeping before another attempt")
               (sleep-seconds seconds)))
           (recur (inc attempt))))))
-
-(defn gsutil [& args]
-  "Shell out to gsutil with ARGS. Retry when gsutil responds with 503."
-  (retry-on-server-error 30 #(apply shell! "gsutil" args)))
-
-(defn gcs-object-exists?
-  "Return PATH when there is a GCS object at PATH.  Otherwise nil."
-  [path]
-  (when (string? path)
-    (do-or-nil-silently
-     (gsutil "stat" path))))
-
-(defn get-md5-hash
-  "Return the md5 hash of a file."
-  [path]
-  (-> (gsutil "hash" "-m" path)
-      (str/split #":")
-      (last)
-      (str/trim)))

@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
+            [ptc.util.gcs :as gcs]
             [ptc.util.misc :as misc])
   (:import [java.io FileNotFoundException]))
 
@@ -128,11 +129,19 @@
   [prefix workflow]
   (let [params (conj ((apply juxt cloud-keys) workflow) "params.txt")
         result (str/join "/" (cons prefix params))]
-    (misc/gsutil "cp" "-" result :in (jms->params workflow))
+    (gcs/gsutil "cp" "-" result :in (jms->params workflow))
     result))
 
 (comment
   (do
+    (def bunch "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/204842480106_R01C01/")
+    [2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/204842480106_R01C01/"
+     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R01C01/"
+     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R02C01/"
+     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R03C01/"
+     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R04C01/"
+     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R05C01/"
+     3 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205128030063_R06C01/"]
     (def prefix "gs://dev-aou-arrays-input")
     (def workflow
       {:minorAlleleFrequencyFileCloudPath
@@ -191,16 +200,16 @@
   (let [local        (input-key workflow)
         join         (partial str/join "/")
         leaf         (last (str/split local #"/"))
-        [env & tail] (conj ((apply juxt cloud-keys) workflow) leaf)
+        [env & tail] ((apply juxt cloud-keys) workflow)
         parts        (cons (str/lower-case env) tail)
         new          (join (cons prefix parts))
         old          (join (cons prefix (rest parts)))]
     (letfn [(upload []
-              (misc/gsutil "-h" (str "Content-MD5:" (misc/get-md5-hash local))
-                           "cp" local new))]
+              (gcs/gsutil "-h" (str "Content-MD5:" (gcs/get-md5-hash local))
+                          "cp" local new))]
       (cond (.exists (io/file local))     (upload)
-            (misc/gcs-object-exists? new) new
-            (misc/gcs-object-exists? old) old
+            (gcs/gcs-object-exists? new) new
+            (gcs/gcs-object-exists? old) old
             :else (let [message (format "Cannot find %s in %s"
                                         leaf [local new old])]
                     (log/info message)
@@ -215,7 +224,7 @@
   "Get the extended_chip_manifest_file from _WORKFLOW."
   [{:keys [cloudChipMetaDataDirectory extendedIlluminaManifestFileName]
     :as _workflow}]
-  (let [[bucket _] (misc/parse-gs-url cloudChipMetaDataDirectory)]
+  (let [[bucket _] (gcs/parse-gs-url cloudChipMetaDataDirectory)]
     (str (str/replace-first cloudChipMetaDataDirectory
                             bucket aou-reference-bucket)
          extendedIlluminaManifestFileName)))
@@ -259,7 +268,7 @@
         vector
         (->> (assoc append-to-aou-request :notifications))
         json/write-str
-        (->> (misc/gsutil "cp" "-" ptc :in)))
+        (->> (gcs/gsutil "cp" "-" ptc :in)))
     [params ptc]))
 
 (defn ednify
