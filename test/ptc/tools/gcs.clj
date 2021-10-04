@@ -1,9 +1,6 @@
 (ns ptc.tools.gcs
   "Utility functions for Google Cloud Storage shared across this program."
   (:require [clojure.data.json :as json]
-            [clojure.java.io :as io]
-            [clojure.pprint :refer [pprint]]
-            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [clj-http.client :as http]
@@ -68,10 +65,6 @@
      (each "")))
   ([bucket]
    (list-objects bucket "")))
-
-(comment
-  (list-objects )
-  )
 
 (defn list-gcs-folder
   "Nil or URLs for the GCS objects of folder."
