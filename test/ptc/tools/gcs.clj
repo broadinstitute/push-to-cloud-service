@@ -122,4 +122,3 @@
               (log/infof "Found %s in bucket" file)))
           (wait-for-files-in-bucket (rest files)))
       true)))
-
