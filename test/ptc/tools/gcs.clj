@@ -7,10 +7,8 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [clj-http.client :as http]
-            [ptc.util.misc :as misc]
-            [clj-http.util :as http-util])
-  (:import [org.apache.tika Tika]
-           [java.util.concurrent TimeUnit]))
+            [clj-http.util :as http-util]
+            [ptc.util.misc :as misc]))
 
 (def api-url
   "The Google Cloud API URL."
@@ -105,20 +103,17 @@
   (-> url gcs-cat misc/parse-json-string))
 
 (defn wait-for-files-in-bucket
-  "Wait for gsutil to successfully `stat` each given `gs://` file path.
-
-  Exists to block and will always return true when it returns. May block
-  forever."
+  "Block until gsutil successfully `stat`s each `gs://` path in `files`.
+  Return `true`, but may block forever."
   [files]
-  (let [seconds 15
-        file (first files)]
-    (if file
-      (do (loop []
-            (if (not (misc/gcs-object-exists? file))
-              (do
-                (log/infof "Couldn't find %s, sleeping %s seconds" file seconds)
-                (.sleep TimeUnit/SECONDS seconds)
-                (recur))
-              (log/infof "Found %s in bucket" file)))
-          (wait-for-files-in-bucket (rest files)))
+  (let [seconds 15]
+    (if-let [file (first files)]
+      (if (misc/gcs-object-exists? file)
+        (do
+          (log/infof "Found %s in bucket" file)
+          (recur (rest files)))
+        (do
+          (log/infof "Couldn't find %s, sleeping %s seconds" file seconds)
+          (misc/sleep-seconds seconds)
+          (recur files)))
       true)))

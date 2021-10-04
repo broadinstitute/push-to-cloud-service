@@ -10,9 +10,6 @@
             [vault.client.http]         ; vault.core needs this
             [vault.core            :as vault])
   (:import [java.util UUID]
-           [java.util.concurrent TimeUnit]
-           [org.apache.commons.mail SimpleEmail]
-           [java.time OffsetDateTime ZoneId]
            (java.io IOException)))
 
 (defmacro do-or-nil
@@ -46,6 +43,11 @@
          (pprint {:file ~*file* :line ~line '~expression x#})
          x#))))
 
+(defn sleep-seconds
+  "Sleep for N seconds."
+  [n]
+  (Thread/sleep (* n 1000)))
+
 (defn vault-secrets
   "Return the vault-secrets at PATH."
   [path]
@@ -58,22 +60,6 @@
          (catch Throwable e
            (log/warn e "Issue with Vault")
            (log/debug "Perhaps run 'vault login' and try again")))))
-
-(defn email
-  "Email MESSAGE to TO-LIST from with SUBJECT."
-  [message to-list]
-  (letfn [(add-to [mail to] (.addTo mail to))
-          (add-to-list [mail to-list] (run! (partial add-to mail) to-list))]
-    (let [from (str ptc/the-name "@broadinstitute.org")
-          subject "This thing is from PTC service"]
-      (doto (-> (new SimpleEmail)
-                (.setFrom from)
-                (.setSubject subject)
-                (.setMsg message))
-        (add-to-list to-list)
-        (.setAuthentication from "fake-password")
-        (.setHostName "smtp.gmail.com")
-        (.send)))))
 
 (defn notify-everyone-on-the-list-with-message
   "Notify everyone on the TO-LIST with MSG using METHOD."
@@ -150,7 +136,7 @@
                 (throw ex))
               (log/warnf "received 503 (attempt %s of %s)" attempt max)
               (log/info "sleeping before another attempt")
-              (.sleep TimeUnit/SECONDS seconds)))
+              (sleep-seconds seconds)))
           (recur (inc attempt))))))
 
 (defn gsutil [& args]
