@@ -6,7 +6,8 @@
             [clj-http.client :as http]
             [clj-http.util :as http-util]
             [ptc.util.gcs :as gcs]
-            [ptc.util.misc :as misc]))
+            [ptc.util.misc :as misc])
+  (:import [java.util UUID]))
 
 (def api-url
   "The Google Cloud API URL."
@@ -34,9 +35,9 @@
   [url]
   (let [[gs-colon nada bucket object] (str/split url #"/" 4)]
     (when-not
-     (and (every? seq [gs-colon bucket])
-          (= "gs:" gs-colon)
-          (= "" nada))
+        (and (every? seq [gs-colon bucket])
+             (= "gs:" gs-colon)
+             (= "" nada))
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
 
@@ -115,3 +116,28 @@
           (misc/sleep-seconds seconds)
           (recur files)))
       true)))
+
+(def gcs-test-bucket
+  "Throw test files in this bucket."
+  "broad-gotc-dev-wfl-ptc-test-outputs")
+
+(defmacro with-temporary-gcs-folder
+  "
+  Create a temporary folder in GCS-TEST-BUCKET for use in BODY.
+  The folder will be deleted after execution transfers from BODY.
+
+  Example
+  -------
+    (with-temporary-gcs-folder uri
+      ;; use temporary folder at `uri`)
+      ;; <- temporary folder deleted
+  "
+  [uri & body]
+  `(let [name# (str "ptc-test-" (UUID/randomUUID))
+         ~uri (gcs/gs-url gcs-test-bucket name#)]
+     (try
+       ~@body
+       (finally
+         (->>
+          (list-objects gcs-test-bucket name#)
+          (run! (comp (partial delete-object gcs-test-bucket) :name)))))))

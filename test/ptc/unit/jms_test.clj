@@ -24,7 +24,3 @@
           workflow (get-in jms [::jms/Properties :payload :workflow])
           prefix "gs://broad-gotc-dev-wfl-ptc-test-inputs"]
       (is (misc/trace (#'jms/find-input-or-throw prefix workflow :greenIDatPath))))))
-
-(comment
-  (use-cloud-idat-paths)
-  )

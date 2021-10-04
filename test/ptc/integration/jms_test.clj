@@ -5,33 +5,7 @@
             [ptc.tools.gcs :as gcs]
             [ptc.tools.jms :as jms-tools]
             [ptc.util.jms :as jms]
-            [ptc.util.misc :as misc])
-  (:import [java.util UUID]))
-
-(def gcs-test-bucket
-  "Throw test files in this bucket."
-  "broad-gotc-dev-wfl-ptc-test-outputs")
-
-(defmacro with-temporary-gcs-folder
-  "
-  Create a temporary folder in GCS-TEST-BUCKET for use in BODY.
-  The folder will be deleted after execution transfers from BODY.
-
-  Example
-  -------
-    (with-temporary-gcs-folder uri
-      ;; use temporary folder at `uri`)
-      ;; <- temporary folder deleted
-  "
-  [uri & body]
-  `(let [name# (str "ptc-test-" (UUID/randomUUID))
-         ~uri (ptc.util.gcs/gs-url gcs-test-bucket name#)]
-     (try
-       ~@body
-       (finally
-         (->>
-          (gcs/list-objects gcs-test-bucket name#)
-          (run! (comp (partial gcs/delete-object gcs-test-bucket) :name)))))))
+            [ptc.util.misc :as misc]))
 
 (deftest push-notification-for-jms
   (let [path     [::jms/Properties :payload :workflow]
@@ -41,7 +15,7 @@
                      (->> (str (var-get #'jms/missing-keys-message) ".*"))
                      re-pattern)
         workflow (get-in good path)]
-    (with-temporary-gcs-folder folder
+    (gcs/with-temporary-gcs-folder folder
       (jms-tools/with-test-queue-connection
         (fn [connection queue]
           (testing "a BAD message"
@@ -51,7 +25,7 @@
               (is (thrown-with-msg? IllegalArgumentException missing
                                     (jms/handle-message folder (jms/ednify msg))))
               (is (empty? (->> folder
-                               ptc.util.gcs/parse-gs-url
+                               gcs/parse-gs-url
                                (apply gcs/list-objects))))))
           (testing "a GOOD message"
             (start/produce connection queue

@@ -1,9 +1,9 @@
 (ns ptc.unit.util-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.edn :as edn]
-            [ptc.util.misc :as misc]
-            [ptc.tools.gcs :as gcs])
-  (:import (java.io StringWriter IOException)))
+            [ptc.tools.gcs :as gcs]
+            [ptc.util.misc :as misc])
+  (:import [java.io IOException]))
 
 (deftest gs-url-test
   (testing "URL utilities"
@@ -39,24 +39,6 @@
         (is (not (misc/message-ids-equal? test-msg test-msg-different))))
       (testing "not equal even if only one argument isn't"
         (is (not (misc/message-ids-equal? test-msg test-msg test-msg-different)))))))
-
-(deftest test-silent-stat
-  (testing "success case"
-    (let [output (StringWriter.)]
-      (testing "returns text"
-        (binding [*out* output
-                  *err* output]
-          (is (not (empty? (ptc.util.gcs/gcs-object-exists? "--help"))))))
-      (testing "prints nothing"
-        (is (empty? (str output))))))
-  (testing "error case"
-    (let [output (StringWriter.)]
-      (testing "returns nothing"
-        (binding [*out* output
-                  *err* output]
-          (is (nil? (ptc.util.gcs/gcs-object-exists? "non/gcs/path")))))
-      (testing "prints nothing"
-        (is (empty? (str output)))))))
 
 (deftest test-retry-on-server-error
   (letfn [(throw-n-times [n]
