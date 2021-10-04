@@ -7,23 +7,18 @@
             [ptc.util.misc :as misc])
   (:import [java.io FileNotFoundException]))
 
-(def cromwell
-  "Use this Cromwell.  Should depend on deployment environment."
-  "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org/")
-
-(def environment
-  "Run in this deployment environment.
-  WFL should get this from ZERO_DEPLOY_ENVIRONMENT"
-  "aou-dev")
-
 (def uuid
   "Pass this to WFL for some reason. WFL should generate the UUID."
   misc/uuid-nil)
 
+(def cloud-keys
+  "Workflow keys ordered for the destination path in the cloud."
+  [:environment :chipName :chipWellBarcode :analysisCloudVersion])
+
 (def append-to-aou-request
   "An empty append_to_aou request with placeholder symbols."
-  {:cromwell                    cromwell
-   :environment                 environment
+  {:cromwell                    'cromwell
+   :environment                 'environment
    :extended_chip_manifest_file 'extended_chip_manifest_file
    :notifications               'notifications
    :params_file                 'params_file
@@ -88,6 +83,12 @@
          (map key->key)
          (into {}))))
 
+(defn env-prefix
+  "Return the input prefix for cloud files."
+  [prefix workflow]
+  (let [[environment & tail] ((apply juxt cloud-keys) workflow)]
+    (str/join "/" (conj tail (str/lower-case environment) prefix))))
+
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
   [workflow]
@@ -122,10 +123,6 @@
    :responseRequired     #(.isResponseRequired      %)
    :size                 #(.getSize                 %)
    :timestamp            #(.getTimestamp            %)})
-
-(def cloud-keys
-  "Workflow keys ordered for the destination path in the cloud."
-  [:environment :chipName :chipWellBarcode :analysisCloudVersion])
 
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
@@ -193,13 +190,13 @@
 (defn ^:private find-input-or-throw
   "Throw or find the input file in WORKFLOW using INPUT-KEY and PREFIX."
   [prefix workflow input-key]
-  (let [local (input-key workflow)
-        join  (partial str/join "/")
-        leaf  (last (str/split local #"/"))
-        part  (conj ((apply juxt cloud-keys) workflow) leaf)
-        parts (cons (str/lower-case (first part)) (rest part))
-        new   (join (cons prefix parts))
-        old   (join (cons prefix (rest parts)))]
+  (let [local        (input-key workflow)
+        join         (partial str/join "/")
+        leaf         (last (str/split local #"/"))
+        [env & tail] (conj ((apply juxt cloud-keys) workflow) leaf)
+        parts        (cons (str/lower-case env) tail)
+        new          (join (cons prefix parts))
+        old          (join (cons prefix (rest parts)))]
     (letfn [(upload []
               (misc/gsutil "-h" (str "Content-MD5:" (misc/get-md5-hash local))
                            "cp" local new))]

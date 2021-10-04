@@ -13,8 +13,6 @@
   (:import [java.lang Integer]
            [java.util UUID]))
 
-"failover:ssl://vpicard-jms-dev.broadinstitute.org:61616"
-
 (def jms-message
   (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn")))
 

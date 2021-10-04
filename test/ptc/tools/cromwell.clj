@@ -11,8 +11,9 @@
   "Status of the workflow with ID at CROMWELL-URL."
   [cromwell-url id]
   (let [auth-header (gcs/get-auth-header!)
-        response    (client/get (str cromwell-url "/api/workflows/v1/" id "/status")
-                                {:headers auth-header})]
+        response    (client/get
+                     (str cromwell-url "/api/workflows/v1/" id "/status")
+                     {:headers auth-header})]
     (->> (:body response)
          (misc/parse-json-string)
          (:status))))
@@ -21,17 +22,18 @@
   "Query for a workflow with ID at CROMWELL-URL."
   [cromwell-url id]
   (let [auth-header (gcs/get-auth-header!)
-        response    (client/get (str cromwell-url "/api/workflows/v1/" id "/query")
-                                {:headers auth-header})]
+        response    (client/get
+                     (str cromwell-url "/api/workflows/v1/" id "/query")
+                     {:headers auth-header})]
     (->> (:body response)
          (misc/parse-json-string)
          (:results))))
 
 (defn work-around-cromwell-fail-bug
-  "Wait 2 seconds and ignore up to N times a bogus failure response from
-  Cromwell for workflow ID in ENVIRONMENT.  Work around the 'sore spot'
-  reported in https://github.com/broadinstitute/cromwell/issues/2671.
-  From https://github.com/broadinstitute/wfl/blob/master/api/src/zero/service/cromwell.clj#L266"
+  "Wait 2 seconds and ignore up to N times a bogus failure response
+  from Cromwell for workflow ID.  Work around the 'sore spot' reported
+  in https://github.com/broadinstitute/cromwell/issues/2671.  From
+  https://github.com/broadinstitute/wfl/blob/master/api/src/zero/service/cromwell.clj#L266"
   [n cromwell-url id]
   (.sleep TimeUnit/SECONDS 2)
   (let [fail {"status" "fail" "message" (str "Unrecognized workflow ID: " id)}
