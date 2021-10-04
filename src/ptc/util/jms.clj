@@ -7,14 +7,12 @@
             [ptc.util.misc :as misc])
   (:import [java.io FileNotFoundException]))
 
-(def uuid
-  "Pass this to WFL for some reason. WFL should generate the UUID."
-  misc/uuid-nil)
-
 (def cloud-keys
   "Workflow keys ordered for the destination path in the cloud."
   [:environment :chipName :chipWellBarcode :analysisCloudVersion])
 
+;; Pass uuid-nil because WFL should generate the UUID.
+;;
 (def append-to-aou-request
   "An empty append_to_aou request with placeholder symbols."
   {:cromwell                    'cromwell
@@ -22,7 +20,7 @@
    :extended_chip_manifest_file 'extended_chip_manifest_file
    :notifications               'notifications
    :params_file                 'params_file
-   :uuid                        (str uuid)})
+   :uuid                        (str misc/uuid-nil)})
 
 (def wfl-keys->jms-keys-table
   "How to satisfy notification keys in WFL request."
