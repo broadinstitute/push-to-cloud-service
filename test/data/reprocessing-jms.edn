@@ -9,7 +9,7 @@
    :workflow
    {:aggregationPendingQueue                     "aggregation.pending.queue"
     :analysisCloudPath                           "gs://storage/pipeline/204339030085_R08C01/v3/"
-    :analysisCloudVersion                        3
+    :analysisCloudVersion                        2
     :analysisDirectory                           "/v3"
     :beadPoolManifestPath                        "bogus-bead-pool-manifest.bpm"
     :blacklistSchema                             "blacklistSchema"

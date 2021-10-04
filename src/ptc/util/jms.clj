@@ -190,19 +190,19 @@
 ;; If still not found, try "prefix/path/leaf".
 ;; Otherwise throw.
 ;;
-(defn find-input-or-throw
+(defn ^:private find-input-or-throw
   "Throw or find the input file in WORKFLOW using INPUT-KEY and PREFIX."
   [prefix workflow input-key]
   (let [local (input-key workflow)
         join  (partial str/join "/")
         leaf  (last (str/split local #"/"))
-        parts (conj ((apply juxt cloud-keys) workflow) leaf)
+        part  (conj ((apply juxt cloud-keys) workflow) leaf)
+        parts (cons (str/lower-case (first part)) (rest part))
         new   (join (cons prefix parts))
         old   (join (cons prefix (rest parts)))]
     (letfn [(upload []
-              (misc/gsutil
-               "-h" (str "Content-MD5:" (misc/get-md5-hash local))
-               "cp" local new))]
+              (misc/gsutil "-h" (str "Content-MD5:" (misc/get-md5-hash local))
+                           "cp" local new))]
       (cond (.exists (io/file local))     (upload)
             (misc/gcs-object-exists? new) new
             (misc/gcs-object-exists? old) old
