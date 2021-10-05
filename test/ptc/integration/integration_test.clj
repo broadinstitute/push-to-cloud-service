@@ -1,8 +1,9 @@
 (ns ptc.integration.integration-test
   (:require [clojure.test :refer [deftest is testing]]
             [ptc.start :as start]
-            [ptc.tools.gcs :as gcs]
+            [ptc.tools.gcs :as gcs-tools]
             [ptc.tools.jms :as jms-tools]
+            [ptc.util.gcs :as gcs]
             [ptc.util.jms :as jms])
   (:import (java.util UUID)))
 
@@ -17,9 +18,9 @@
               (testing "upload a file to the bucket"
                 (let [object (str prefix "/deps.edn")]
                   (try
-                    (gcs/upload-file "deps.edn" bucket object)
-                    (ptc.util.gcs/list-objects bucket object)
-                    (finally (gcs/delete-object bucket object)))))
+                    (gcs-tools/upload-file "deps.edn" bucket object)
+                    (gcs/list-objects bucket object)
+                    (finally (gcs-tools/delete-object bucket object)))))
               ;; to break out from the loop
               false)
             (flow [connection queue]
