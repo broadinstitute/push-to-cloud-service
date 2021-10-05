@@ -1,25 +1,11 @@
 (ns ptc.tools.gcs
   "Utility functions for Google Cloud Storage shared across this program."
-  (:require [clojure.data.json :as json]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [clojure.tools.logging :as log]
-            [clj-http.client :as http]
             [clj-http.util :as http-util]
             [ptc.util.gcs :as gcs]
             [ptc.util.misc :as misc])
   (:import [java.util UUID]))
-
-(def api-url
-  "The Google Cloud API URL."
-  "https://www.googleapis.com/")
-
-(def storage-url
-  "The Google Cloud URL for storage operations."
-  (str api-url "storage/v1/"))
-
-(def bucket-url
-  "The Google Cloud Storage URL for bucket operations."
-  (str storage-url "b/"))
 
 (defn bucket-object-url
   "The API URL referring to OBJECT in BUCKET."
@@ -40,32 +26,6 @@
              (= "" nada))
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
-
-(defn get-auth-header!
-  "Return an Authorization header with a Bearer token."
-  []
-  {"Authorization"
-   (str "Bearer" \space (misc/shell! "gcloud" "auth" "print-access-token"))})
-
-(defn list-objects
-  "The objects in BUCKET with PREFIX in a lazy sequence."
-  ([bucket prefix]
-   (letfn [(each [pageToken]
-             (let [{:keys [items nextPageToken]}
-                   (-> {:method       :get   ;; :debug true :debug-body true
-                        :url          (str bucket-url bucket "/o")
-                        :content-type :application/json
-                        :headers      (get-auth-header!)
-                        :query-params {:prefix prefix
-                                       :maxResults 999
-                                       :pageToken pageToken}}
-                       http/request
-                       :body
-                       (json/read-str :key-fn keyword))]
-               (lazy-cat items (when nextPageToken (each nextPageToken)))))]
-     (each "")))
-  ([bucket]
-   (list-objects bucket "")))
 
 (defn list-gcs-folder
   "Nil or URLs for the GCS objects of folder."

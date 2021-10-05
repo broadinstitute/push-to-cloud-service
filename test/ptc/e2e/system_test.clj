@@ -36,8 +36,8 @@
                                           :chipWellBarcode])
         workflow         (get-in message [::jms/Properties
                                           :payload :workflow])
-        cloud-prefix     (jms/env-prefix (env/getenv-or-throw "PTC_BUCKET_URL")
-                                         workflow)]
+        cloud-prefix     (jms/cloud-folder (env/getenv-or-throw "PTC_BUCKET_URL")
+                                           workflow)]
     (jms-tools/queue-messages
      message 1
      (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
