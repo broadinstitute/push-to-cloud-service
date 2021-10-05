@@ -239,7 +239,7 @@
                                     [local-file new-result old-result
                                      (join [new-prefix "*" leaf])
                                      (join [old-prefix "*" leaf])])]
-                (log/info message)
+                (log/error message)
                 (throw (FileNotFoundException. message))))))))
 
 (def aou-reference-bucket
