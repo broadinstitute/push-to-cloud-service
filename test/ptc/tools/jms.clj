@@ -1,9 +1,10 @@
 (ns ptc.tools.jms
+  "Tools to aid JMS tests."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [ptc.start :as start]
-            [ptc.util.misc :as misc]
-            [ptc.util.jms :as jms]))
+            [ptc.util.jms :as jms]
+            [ptc.util.misc :as misc]))
 
 ;; Local testing for ActiveMQ
 ;; https://activemq.apache.org/how-do-i-embed-a-broker-inside-a-connection

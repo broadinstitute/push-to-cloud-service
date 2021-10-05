@@ -1,13 +1,12 @@
 (ns ptc.unit.logging-test
-  "Test that logging is functional (since there's several layers of delegation)"
-  (:require
-   [clojure.tools.logging :as log]
-   [clojure.tools.logging.test :refer [logged? with-log]]
-   [clojure.test :refer [is deftest testing]]))
+  "Test that logging works (since there are several layers of delegation)."
+  (:require [clojure.test :refer [is deftest testing]]
+            [clojure.tools.logging :as log]
+            [clojure.tools.logging.test :refer [logged? with-log]]))
 
-;; This file exists as a smoke test for having not totally messed up the
-;; logging dependencies (since clojure.tools.logging finds a backend at
-;; runtime)
+;; This file exists as a smoke test for having not totally messed up
+;; the logging dependencies (since clojure.tools.logging finds a
+;; backend at runtime)
 
 (deftest level-test
   (testing "basic logging levels"
@@ -19,7 +18,7 @@
       (log/error "and this is an error")
       (is (logged? 'ptc.unit.logging-test :error "and this is an error"))
       (log/debug "This is just a debugging message")
-      (is (logged? 'ptc.unit.logging-test :debug "This is just a debugging message"))
+      (is (logged? 'ptc.unit.logging-test :debug "This is a debugging message"))
       (log/trace "This is a trace")
       (is (logged? 'ptc.unit.logging-test :trace "This is a trace")))))
 
@@ -39,4 +38,5 @@
         (catch Exception e
           (log/error e "Oops!"))
         (finally
-          (is (logged? 'ptc.unit.logging-test :error [Throwable #"cannot be cast"] #"Oops!")))))))
+          (is (logged? 'ptc.unit.logging-test
+                       :error [Throwable #"cannot be cast"] #"Oops!")))))))

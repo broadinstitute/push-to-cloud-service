@@ -1,8 +1,8 @@
 (ns ptc.acl.production-permission-test
   "Test that the right permissions are granted for AoU project."
-  (:require [clojure.java.io :as io]
+  (:require [clojure.test :refer [deftest is testing]]
+            [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
             [ptc.tools.cromwell :as cromwell]
             [ptc.tools.gcs :as gcs-tools]
             [ptc.util.gcs :as gcs]

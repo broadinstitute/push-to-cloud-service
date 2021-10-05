@@ -1,7 +1,7 @@
 (ns ptc.e2e.system-test
-  (:require [clojure.edn :as edn]
+  (:require [clojure.test :refer [deftest is testing]]
+            [clojure.edn :as edn]
             [clojure.set :as set]
-            [clojure.test :refer [deftest is testing]]
             [ptc.tools.cromwell :as cromwell]
             [ptc.tools.gcs :as gcs]
             [ptc.tools.wfl :as wfl]

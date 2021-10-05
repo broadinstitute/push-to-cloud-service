@@ -1,6 +1,7 @@
 (ns ptc.unit.jms-test
-  (:require [clojure.edn :as edn]
-            [clojure.test :refer [deftest is testing]]
+  "Test some of ptc.util.jms."
+  (:require [clojure.test :refer [deftest is testing]]
+            [clojure.edn :as edn]
             [ptc.util.gcs :as gcs]
             [ptc.util.jms :as jms]
             [ptc.util.misc :as misc]))

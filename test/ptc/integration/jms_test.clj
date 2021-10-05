@@ -1,6 +1,6 @@
 (ns ptc.integration.jms-test
-  (:require [clojure.data :as data]
-            [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing]]
+            [clojure.data :as data]
             [ptc.start :as start]
             [ptc.tools.gcs :as gcs-tools]
             [ptc.tools.jms :as jms-tools]

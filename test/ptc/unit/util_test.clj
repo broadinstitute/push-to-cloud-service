@@ -1,4 +1,5 @@
 (ns ptc.unit.util-test
+  "Test some ptc.util.* functions."
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.edn :as edn]
             [ptc.tools.gcs :as gcs]

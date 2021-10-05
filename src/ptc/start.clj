@@ -78,7 +78,6 @@
   [task! connection queue]
   (loop [counter 0]
     (if-let [peeked (peek-message connection queue)]
-                                        ; to avoid NPE on ednify
       (let [peeked (jms/ednify peeked)]
         (do
           (log/infof "Peeked message %s: %s" counter peeked)
@@ -91,9 +90,7 @@
                                    (with-out-str
                                      (pprint (data/diff peeked consumed)))])))
               (recur (inc counter)))
-            ;; this is for testing, in production, the task!
-            ;; should always return `true` and this branch should
-            ;; never gets reached.
+            ;; For testing: In production, task! should always return true.
             (do
               (log/errorf
                (str/join
@@ -128,13 +125,9 @@
           (listen-and-consume-from-queue handle-or-dlq! connection queue))
         (catch Throwable x
           (log/fatal x "Fatal error in message loop")
-          #_(System/exit 1))))))
+          (System/exit 1))))))
 
 (defn -main
   []
   (log/infof "%s starting up" ptc/the-name)
   (message-loop))
-
-(comment
-  (-main)
-  )

@@ -152,66 +152,11 @@
     (gcs/gsutil "cp" "-" result :in (jms->params workflow))
     result))
 
-(comment
-  (do
-    (def bunch "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/204842480106_R01C01")
-    [2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/204842480106_R01C01"
-     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R01C01"
-     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R02C01"
-     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R03C01"
-     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R04C01"
-     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R05C01"
-     3 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205128030063_R06C01"]
-    (def prefix "gs://dev-aou-arrays-input")
-    (def workflow
-      {:minorAlleleFrequencyFileCloudPath
-       "gs://broad-gotc-dev-storage/pipeline/arrays_metadata/GDA-8v1-0_A5/GDA-8v1-0_A5.MAF.txt",
-       :productPartNumber "P-WG-0094",
-       :sampleAlias "NA12878",
-       :callRateThreshold 0.98,
-       :clusterFilePath
-       "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_CEPH_A.egt",
-       :labBatch "ARRAY-CO-5799466",
-       :cloudChipMetaDataDirectory
-       "gs://broad-arrays-prod-storage/pipeline/arrays_metadata/HumanExome-12v1-1_A/",
-       :researchProjectId "RP-45",
-       :sampleId "SM-3S2IV",
-       :productName "Infinium Exome V1_A",
-       :extendedIlluminaManifestVersion "1.3",
-       :chipName "HumanExome-12v1-1_A",
-       :vaultTokenPath
-       "gs://broad-dsp-gotc-arrays-dev-tokens/arrayswdl.token",
-       :redIDatPath
-       "/home/unix/ptc/data/arrays/HumanExome-12v1-1_A/idats/7991775143_R01C01/7991775143_R01C01_Red.idat",
-       :chipWellBarcode "7991775143_R01C01",
-       :productType "aou_array",
-       :productOrderId "PDO-15923",
-       :greenIDatPath
-       "/home/unix/ptc/data/arrays/HumanExome-12v1-1_A/idats/7991775143_R01C01/7991775143_R01C01_Grn.idat",
-       :regulatoryDesignation "RESEARCH_ONLY",
-       :collaboratorParticipantId "NA12878",
-       :zCallThresholdsPath
-       "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/IBDPRISM_EX.egt.thresholds.txt",
-       :environment "dev",
-       :sampleLsid "broadinstitute.org:bsp.dev.sample:NOTREAL.NA12878",
-       :gender "Female",
-       :genderClusterFilePath
-       "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_gender.egt",
-       :extendedIlluminaManifestFileName
-       "HumanExome-12v1-1_A.1.3.extended.csv",
-       :chipManifestPath
-       "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExome-12v1-1_A.1.3.extended.csv",
-       :analysisCloudVersion 506988414,
-       :beadPoolManifestPath
-       "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExome-12v1-1_A.bpm",
-       :participantId "PT-97GM",
-       :productFamily "Whole Genome Genotyping"}))
-  )
-
 ;; https://broadinstitute.atlassian.net/wiki/spaces/GHConfluence/pages/2853961731/2021-07-28+AoU+Processing+Issue+Discussion
 ;; Look first in local filesystem for (input-key workflow).
-;; Then try "prefix/environment/path/leaf".
-;; If still not found, try "prefix/path/leaf".
+;; Then try "prefix/environment/path/leaf" in the cloud.
+;; If still not found, try "prefix/path/leaf" in the cloud.
+;; Finally look for cloud files that differ in :analysisCloudVersion parts.
 ;; Otherwise throw.
 ;;
 (defn ^:private find-input-or-throw
@@ -255,11 +200,6 @@
     (str (str/replace-first cloudChipMetaDataDirectory
                             bucket aou-reference-bucket)
          extendedIlluminaManifestFileName)))
-
-(comment
-  (get-extended-chip-manifest workflow)
-  (jms->notification prefix workflow)
-  )
 
 ;; Ignore cloud paths for files with ::push key.
 ;;

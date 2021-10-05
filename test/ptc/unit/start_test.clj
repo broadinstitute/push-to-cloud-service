@@ -1,8 +1,9 @@
 (ns ptc.unit.start-test
+  "Test JMS message peek and consume functions."
   (:require [clojure.test :refer [deftest is testing]]
             [ptc.start :as start]
-            [ptc.util.jms :as jms]
-            [ptc.tools.jms :as jms-tools]))
+            [ptc.tools.jms :as jms-tools]
+            [ptc.util.jms :as jms]))
 
 (deftest produce-consume-message
   (let [text       "consume"
