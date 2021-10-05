@@ -70,21 +70,19 @@
       (str/trim)))
 
 (defn list-objects
-  "The objects in BUCKET with PREFIX in a lazy sequence."
+  "The sequence of objects at URL or in BUCKET with PREFIX."
   ([bucket prefix]
    (letfn [(each [pageToken]
              (let [{:keys [items nextPageToken]}
-                   (-> {:method       :get ; :debug true :debug-body true
+                   (-> {:method       :get
                         :url          (str bucket-url bucket "/o")
                         :content-type :application/json
                         :headers      (misc/get-auth-header!)
                         :query-params {:prefix prefix
                                        :maxResults 999
                                        :pageToken pageToken}}
-                       http/request
-                       :body
+                       http/request :body
                        (json/read-str :key-fn keyword))]
                (lazy-cat items (when nextPageToken (each nextPageToken)))))]
      (each "")))
-  ([bucket]
-   (list-objects bucket "")))
+  ([url] (apply list-objects (parse-gs-url url))))
