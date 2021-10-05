@@ -23,8 +23,9 @@
             (start/produce connection queue
                            "BAD" (::jms/Properties (jms/encode bad)))
             (let [msg (start/consume connection queue)]
-              (is (thrown-with-msg? IllegalArgumentException missing
-                                    (jms/handle-message folder (jms/ednify msg))))
+              (is (thrown-with-msg?
+                   IllegalArgumentException missing
+                   (jms/handle-message folder (jms/ednify msg))))
               (is (empty? (gcs/list-objects folder)))))
           (testing "a GOOD message"
             (start/produce connection queue
@@ -41,4 +42,5 @@
                   pushed (into [params ptc] inputs)
                   gcs    (gcs-tools/list-gcs-folder folder)]
               (is (= (set pushed) (set gcs)))
-              (is (= (jms/jms->params workflow) (gcs-tools/gcs-cat params))))))))))
+              (is (= (jms/jms->params workflow)
+                     (gcs-tools/gcs-cat params))))))))))
