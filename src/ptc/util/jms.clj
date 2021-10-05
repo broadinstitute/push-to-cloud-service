@@ -9,6 +9,8 @@
             [ptc.util.misc :as misc])
   (:import [java.io FileNotFoundException]))
 
+;; Note :environment is first and :analysisCloudVersion is last.
+;;
 (def cloud-keys
   "Workflow keys ordered for the destination path in the cloud."
   [:environment :chipName :chipWellBarcode :analysisCloudVersion])
@@ -83,29 +85,29 @@
          (map key->key)
          (into {}))))
 
-(defn cloud-folder
-  "Return the preferred input prefix for cloud files."
-  [prefix workflow]
-  (let [[env & tail] ((apply juxt cloud-keys) workflow)]
+(defn in-cloud-folder
+  "Return the path to LEAF under PREFIX for WORKFLOW."
+  [prefix workflow leaf]
+  (let [[env & tail] (conj ((apply juxt cloud-keys) workflow) leaf)]
     (str/join "/" (conj tail (str/lower-case env) prefix))))
 
-(defn latest-cloud-version
-  "Return the path PREFIX/N/SUFFIX where N is the greatest integer and
+(defn ^:private latest-cloud-version
+  "Nil or the path PREFIX/N/SUFFIX where N is the greatest integer and
   an object exists in the cloud at that path."
   [prefix suffix]
-  (let [prefix (str prefix "/")
-        suffix (str "/" suffix)
-        front  (count prefix)
-        back   (count suffix)]
-    (letfn [(suffixed? [[_ object]] (str/ends-with? object suffix))
+  (let [prefixed (str prefix "/")
+        suffixed (str "/" suffix)
+        front    (count prefixed)
+        back     (count suffixed)]
+    (letfn [(suffixed? [[_ object]] (str/ends-with? object suffixed))
             (parse     [url]        (subs url front (- (count url) back)))
-            (unparse   [n]          (str prefix n suffix))]
+            (unparse   [n]          (str prefixed n suffixed))]
       (-> prefix gcs/list-objects
           (->> (map (juxt :bucket :name))
                (filter suffixed?)
                (map (comp edn/read-string parse (partial apply gcs/gs-url)))
                (sort >))
-          first unparse))))
+          first unparse misc/do-or-nil))))
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
@@ -146,7 +148,7 @@
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
   then return its path in the cloud."
   [prefix workflow]
-  (let [result (str/join "/" [(cloud-folder prefix workflow) "params.txt"])]
+  (let [result (in-cloud-folder prefix workflow "params.txt")]
     (gcs/gsutil "cp" "-" result :in (jms->params workflow))
     result))
 
@@ -218,20 +220,27 @@
   (let [local        (input-key workflow)
         join         (partial str/join "/")
         leaf         (last (str/split local #"/"))
-        [env & tail] ((apply juxt cloud-keys) workflow)
+        [env & tail] (conj ((apply juxt cloud-keys) workflow) leaf)
         parts        (cons (str/lower-case env) tail)
         new          (join (cons prefix parts))
         old          (join (cons prefix (rest parts)))]
-    (if (.exists (io/file local))
-      (gcs/gsutil "-h" (str "Content-MD5:" (gcs/get-md5-hash local))
-                  "cp" local new)
-      (let [old (join (cons prefix (rest parts)))]
-        (cond (gcs/gcs-object-exists? new) new
-              (gcs/gcs-object-exists? old) old
-              :else (let [message (format "Cannot find %s in %s"
-                                          leaf [local new old])]
-                      (log/info message)
-                      (throw (FileNotFoundException. message))))))))
+    (or (when (.exists (io/file local))
+          (gcs/gsutil "-h" (str "Content-MD5:" (gcs/get-md5-hash local))
+                      "cp" local new)
+          new)
+        (when (gcs/gcs-object-exists? new) new)
+        (when (gcs/gcs-object-exists? old) old)
+        (let [unversioned ((apply juxt (butlast cloud-keys)) workflow)
+              new-prefix  (join (cons prefix unversioned))
+              old-prefix  (join (cons prefix (rest unversioned)))]
+          (or (latest-cloud-version new-prefix leaf)
+              (latest-cloud-version old-prefix leaf)
+              (let [message (format "Cannot find %s in %s" leaf
+                                    [local new old
+                                     (join [new-prefix "*" leaf])
+                                     (join [old-prefix "*" leaf])])]
+                (log/info message)
+                (throw (FileNotFoundException. message))))))))
 
 (def aou-reference-bucket
   "The AllOfUs reference bucket or broad-arrays-dev-storage."
@@ -277,7 +286,7 @@
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX
   with PARAMS."
   [prefix workflow params]
-  (let [ptc (str/join "/" [(cloud-folder prefix workflow) "ptc.json"])]
+  (let [ptc-json (in-cloud-folder prefix workflow "ptc.json")]
     (-> prefix
         (jms->notification workflow)
         (assoc :params_file params)
@@ -285,8 +294,8 @@
         vector
         (->> (assoc append-to-aou-request :notifications))
         json/write-str
-        (->> (gcs/gsutil "cp" "-" ptc :in)))
-    [params ptc]))
+        (->> (gcs/gsutil "cp" "-" ptc-json :in)))
+    [params ptc-json]))
 
 (defn ednify
   "Return an EDN representation of the JMS MESSAGE with keyword keys."
