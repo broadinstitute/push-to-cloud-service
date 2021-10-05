@@ -18,7 +18,7 @@
                 (let [object (str prefix "/deps.edn")]
                   (try
                     (gcs/upload-file "deps.edn" bucket object)
-                    (gcs/list-objects bucket object)
+                    (ptc.util.gcs/list-objects bucket object)
                     (finally (gcs/delete-object bucket object)))))
               ;; to break out from the loop
               false)

@@ -3,6 +3,7 @@
   (:require  [clojure.data.json :as json]
              [clojure.string :as str]
              [clj-http.client :as http]
+             [clj-http.util :as http-util]
              [ptc.util.misc  :as misc]))
 
 (def api-url
@@ -16,6 +17,11 @@
 (def bucket-url
   "The Google Cloud Storage URL for bucket operations."
   (str storage-url "b/"))
+
+(defn bucket-object-url
+  "The API URL referring to OBJECT in BUCKET."
+  [bucket object]
+  (str bucket-url bucket "/o/" (http-util/url-encode object)))
 
 (defn gs-url
   "Format BUCKET and OBJECT into a gs://bucket/object URL."
@@ -63,12 +69,6 @@
       (last)
       (str/trim)))
 
-(defn get-auth-header!
-  "Return an Authorization header with a Bearer token."
-  []
-  {"Authorization"
-   (str "Bearer" \space (misc/shell! "gcloud" "auth" "print-access-token"))})
-
 (defn list-objects
   "The objects in BUCKET with PREFIX in a lazy sequence."
   ([bucket prefix]
@@ -77,7 +77,7 @@
                    (-> {:method       :get ; :debug true :debug-body true
                         :url          (str bucket-url bucket "/o")
                         :content-type :application/json
-                        :headers      (get-auth-header!)
+                        :headers      (misc/get-auth-header!)
                         :query-params {:prefix prefix
                                        :maxResults 999
                                        :pageToken pageToken}}

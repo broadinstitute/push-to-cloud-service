@@ -10,7 +10,7 @@
   [wfl-url]
   (letfn [(aou? [workload] (= (:pipeline workload) "AllOfUsArrays"))]
     (-> (str wfl-url "/api/v1/workload")
-        (client/get {:headers (gcs/get-auth-header!)})
+        (client/get {:headers (misc/get-auth-header!)})
         :body misc/parse-json-string
         (->> (filter aou?)))))
 
@@ -19,7 +19,7 @@
   [wfl-url {:keys [uuid] :as _workload}]
   (let [path (format "/api/v1/workload/%s/workflows" uuid)]
     (-> (str wfl-url path)
-        (client/get {:headers (gcs/get-auth-header!)})
+        (client/get {:headers (misc/get-auth-header!)})
         :body
         misc/parse-json-string)))
 

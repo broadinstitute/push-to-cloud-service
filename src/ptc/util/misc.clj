@@ -103,3 +103,9 @@
               (log/info "sleeping before another attempt")
               (sleep-seconds seconds)))
           (recur (inc attempt))))))
+
+(defn get-auth-header!
+  "Return an Authorization header with a Bearer token."
+  []
+  {"Authorization"
+   (str "Bearer" \space (shell! "gcloud" "auth" "print-access-token"))})

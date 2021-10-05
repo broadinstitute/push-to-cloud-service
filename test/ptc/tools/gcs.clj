@@ -2,19 +2,9 @@
   "Utility functions for Google Cloud Storage shared across this program."
   (:require [clojure.string :as str]
             [clojure.tools.logging :as log]
-            [clj-http.util :as http-util]
             [ptc.util.gcs :as gcs]
             [ptc.util.misc :as misc])
   (:import [java.util UUID]))
-
-(defn bucket-object-url
-  "The API URL referring to OBJECT in BUCKET."
-  [bucket object]
-  (str bucket-url bucket "/o/" (http-util/url-encode object)))
-
-(def upload-url
-  "The Google Cloud Storage URL for upload operations."
-  (str api-url "upload/storage/v1/b/"))
 
 (defn parse-gs-url
   "Return BUCKET and OBJECT from a gs://bucket/object URL."
@@ -99,5 +89,5 @@
        ~@body
        (finally
          (->>
-          (list-objects gcs-test-bucket name#)
+          (gcs/list-objects gcs-test-bucket name#)
           (run! (comp (partial delete-object gcs-test-bucket) :name)))))))

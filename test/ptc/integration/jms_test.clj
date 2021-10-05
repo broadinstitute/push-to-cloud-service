@@ -26,7 +26,7 @@
                                     (jms/handle-message folder (jms/ednify msg))))
               (is (empty? (->> folder
                                gcs/parse-gs-url
-                               (apply gcs/list-objects))))))
+                               (apply ptc.util.gcs/list-objects))))))
           (testing "a GOOD message"
             (start/produce connection queue
                            "GOOD" (::jms/Properties (jms/encode good)))

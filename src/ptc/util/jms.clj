@@ -90,7 +90,7 @@
 
 (defn wildify
   [prefix suffix]
-  (gcs/))
+  )
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
