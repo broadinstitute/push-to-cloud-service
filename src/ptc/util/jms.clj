@@ -1,6 +1,7 @@
 (ns ptc.util.jms
   "Adapt JMS messages into upload actions and workflow parameters."
   (:require [clojure.data.json :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
@@ -88,9 +89,23 @@
   (let [[env & tail] ((apply juxt cloud-keys) workflow)]
     (str/join "/" (conj tail (str/lower-case env) prefix))))
 
-(defn wildify
+(defn latest-cloud-version
+  "Return the path PREFIX/N/SUFFIX where N is the greatest integer and
+  an object exists in the cloud at that path."
   [prefix suffix]
-  )
+  (let [prefix (str prefix "/")
+        suffix (str "/" suffix)
+        front  (count prefix)
+        back   (count suffix)]
+    (letfn [(suffixed? [[_ object]] (str/ends-with? object suffix))
+            (parse     [url]        (subs url front (- (count url) back)))
+            (unparse   [n]          (str prefix n suffix))]
+      (-> prefix gcs/list-objects
+          (->> (map (juxt :bucket :name))
+               (filter suffixed?)
+               (map (comp edn/read-string parse (partial apply gcs/gs-url)))
+               (sort >))
+          first unparse))))
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
@@ -137,14 +152,14 @@
 
 (comment
   (do
-    (def bunch "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/204842480106_R01C01/")
-    [2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/204842480106_R01C01/"
-     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R01C01/"
-     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R02C01/"
-     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R03C01/"
-     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R04C01/"
-     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R05C01/"
-     3 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205128030063_R06C01/"]
+    (def bunch "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/204842480106_R01C01")
+    [2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/204842480106_R01C01"
+     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R01C01"
+     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R02C01"
+     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R03C01"
+     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R04C01"
+     2 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205103240148_R05C01"
+     3 "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205128030063_R06C01"]
     (def prefix "gs://dev-aou-arrays-input")
     (def workflow
       {:minorAlleleFrequencyFileCloudPath
