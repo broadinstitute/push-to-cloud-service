@@ -74,7 +74,7 @@
   ([bucket prefix]
    (letfn [(each [pageToken]
              (let [{:keys [items nextPageToken]}
-                   (-> {:method       :get
+                   (-> {:method       :get ; :debug true :debug-body true
                         :url          (str bucket-url bucket "/o")
                         :content-type :application/json
                         :headers      (misc/get-auth-header!)
