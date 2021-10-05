@@ -45,12 +45,12 @@
   (testing "Unauthorized user cannot list the PTC buckets."
     (with-redefs [misc/get-auth-header! get-test-user-header]
       (try
-        (hash (gcs/list-objects aou-in-bucket))
+        (hash (gcs/list-objects aou-in-bucket ""))
         (catch Exception e
           (is (= 403 (:status (ex-data e)))
               "The user is able to list the input bucket!!")))
       (try
-        (hash (gcs/list-objects aou-out-bucket))
+        (hash (gcs/list-objects aou-out-bucket ""))
         (catch Exception e
           (is (= 403 (:status (ex-data e)))
               "The user is able to list the output bucket!!")))))

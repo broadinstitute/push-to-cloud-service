@@ -25,9 +25,7 @@
             (let [msg (start/consume connection queue)]
               (is (thrown-with-msg? IllegalArgumentException missing
                                     (jms/handle-message folder (jms/ednify msg))))
-              (is (empty? (->> folder
-                               gcs-tools/parse-gs-url
-                               (apply gcs/list-objects))))))
+              (is (empty? (gcs/list-objects folder)))))
           (testing "a GOOD message"
             (start/produce connection queue
                            "GOOD" (::jms/Properties (jms/encode good)))
