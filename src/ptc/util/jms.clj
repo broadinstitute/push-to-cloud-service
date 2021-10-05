@@ -217,26 +217,26 @@
 (defn ^:private find-input-or-throw
   "Throw or find the input file in WORKFLOW using INPUT-KEY and PREFIX."
   [prefix workflow input-key]
-  (let [local        (input-key workflow)
+  (let [local-file   (input-key workflow)
         join         (partial str/join "/")
-        leaf         (last (str/split local #"/"))
+        leaf         (last (str/split local-file #"/"))
         [env & tail] (conj ((apply juxt cloud-keys) workflow) leaf)
         parts        (cons (str/lower-case env) tail)
-        new          (join (cons prefix parts))
-        old          (join (cons prefix (rest parts)))]
-    (or (when (.exists (io/file local))
-          (gcs/gsutil "-h" (str "Content-MD5:" (gcs/get-md5-hash local))
-                      "cp" local new)
-          new)
-        (when (gcs/gcs-object-exists? new) new)
-        (when (gcs/gcs-object-exists? old) old)
+        new-result   (join (cons prefix parts))
+        old-result   (join (cons prefix (rest parts)))]
+    (or (when (.exists (io/file local-file))
+          (gcs/gsutil "-h" (str "Content-MD5:" (gcs/get-md5-hash local-file))
+                      "cp" local-file new-result)
+          new-result)
+        (when (gcs/gcs-object-exists? new-result) new-result)
+        (when (gcs/gcs-object-exists? old-result) old-result)
         (let [unversioned ((apply juxt (butlast cloud-keys)) workflow)
               new-prefix  (join (cons prefix unversioned))
               old-prefix  (join (cons prefix (rest unversioned)))]
           (or (latest-cloud-version new-prefix leaf)
               (latest-cloud-version old-prefix leaf)
               (let [message (format "Cannot find %s in %s" leaf
-                                    [local new old
+                                    [local-file new-result old-result
                                      (join [new-prefix "*" leaf])
                                      (join [old-prefix "*" leaf])])]
                 (log/info message)
