@@ -79,5 +79,4 @@
        (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")))))
 
 (comment
-  (clojure.test/test-vars [#'test-dead-letter-queue])
-  )
+  (clojure.test/test-vars [#'test-dead-letter-queue]))
