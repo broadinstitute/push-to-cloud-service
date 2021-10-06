@@ -73,6 +73,7 @@
   (testing "a bad message winds up in the dead-letter queue"
     (let [workflow (queue-jms-message)
           barcode  (:chipWellBarcode workflow)
-          prefix   (env/getenv-or-throw "PTC_BUCKET_URL")])))
+          prefix   (env/getenv-or-throw "PTC_BUCKET_URL")])
+    (is false)))
 
 (comment (clojure.test/test-vars [#'test-dead-letter-queue]))
