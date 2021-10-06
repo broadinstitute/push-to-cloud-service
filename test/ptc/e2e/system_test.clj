@@ -10,8 +10,7 @@
             [ptc.util.jms :as jms]
             [ptc.util.misc :as misc]
             [ptc.tools.jms :as jms-tools])
-  (:import [java.lang Integer]
-           [java.util UUID]))
+  (:import [java.util UUID]))
 
 (def jms-message
   (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn")))
