@@ -13,13 +13,15 @@
   (:import [java.util UUID]))
 
 (defn timeout
-  "Timeout FUNCTION after MILLISECONDS."
-  [milliseconds function]
-  (let [f      (future (function))
-        return (deref f milliseconds ::timed-out)]
-    (when (= ::timed-out return)
-      (future-cancel f))
-    return))
+  "Timeout FUNCTION after MINUTES."
+  ([] ::timed-out)
+  ([seconds function]
+   (let [cancel (timeout)
+         ff     (future (function))
+         result (deref ff (* 60 1000 seconds) cancel)]
+     (when (= cancel result)
+       (future-cancel ff))
+     result)))
 
 (defn queue-jms-message
   "Queue a new JMS message and return its :workflow part."
@@ -38,41 +40,33 @@
     result))
 
 (deftest test-end-to-end
-  (let [workflow (queue-jms-message)
-        barcode  (:chipWellBarcode workflow)
-        version  (:analysisCloudVersion workflow)
-        prefix   (env/getenv-or-throw "PTC_BUCKET_URL")]
+  (let [{:keys [analysisCloudVersion chipWellBarcode] :as workflow}
+        (queue-jms-message)
+        prefix (partial jms/in-cloud-folder
+                        (env/getenv-or-throw "PTC_BUCKET_URL") workflow)]
     (testing "Files are uploaded to the input bucket"
-      (let [params      (jms/in-cloud-folder prefix workflow "params.txt")
-            ptc-file    (jms/in-cloud-folder prefix workflow "ptc.json")
-            ptc-present (timeout 360000
-                                 #(gcs/wait-for-files-in-bucket [ptc-file]))]
-        (is (not= ::timed-out ptc-present)
+      (let [params   (prefix "params.txt")
+            ptc-file (prefix "ptc.json")]
+        (is (not= (timeout) (timeout 6 #(gcs/wait-for-files [ptc-file])))
             "Timed out waiting for ptc.json to upload")
-        (let [{:keys [notifications]} (gcs/gcs-edn ptc-file)
-              expected-files          (utils/pushed-files
-                                       (first notifications) params)
-              expected-present        (timeout 180000
-                                               #(gcs/wait-for-files-in-bucket
-                                                 expected-files))]
-          (is (not= expected-present ::timed-out)
+        (let [{:keys [notifications]} (gcs/gcs-edn ptc-file)]
+          (is (not= (timeout) (timeout 3 #(-> notifications first
+                                              (utils/pushed-files params)
+                                              gcs/wait-for-files)))
               "Timed out waiting for expected files to upload")
           (is (= (gcs/gcs-cat params) (jms/jms->params workflow))))))
     (testing "Cromwell workflow is started by WFL"
-      (let [workflow-id (timeout 180000
-                                 #(wfl/wait-for-workflow-creation
-                                   (env/getenv-or-throw "WFL_URL")
-                                   barcode version))]
-        (is (not= ::timed-out workflow-id)
+      (let [workflow-id (timeout 3 #(wfl/wait-for-workflow-creation
+                                     (env/getenv-or-throw "WFL_URL")
+                                     chipWellBarcode analysisCloudVersion))]
+        (is (not= (timeout) workflow-id)
             "Timeout waiting for workflow creation")
         (is (uuid? (UUID/fromString workflow-id))
             "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
-          (let [workflow-timeout 3600000
-                result (timeout workflow-timeout
-                                #(cromwell/wait-for-workflow-complete
-                                  (env/getenv-or-throw "CROMWELL_URL")
-                                  workflow-id))]
+          (let [result (timeout 60 #(cromwell/wait-for-workflow-complete
+                                     (env/getenv-or-throw "CROMWELL_URL")
+                                     workflow-id))]
             (is (= "Succeeded" result) "Cromwell workflow failed")))))))
 
 (deftest test-dead-letter-queue

@@ -25,7 +25,7 @@
    "failover:ssl://vpicard-jms-dev.broadinstitute.org:61616"})
 
 (defn getenv
-  "Get the environment variable value or its default."
+  "Get the environment variable value for NAME or its default."
   [name]
   (log/debug (format "Reading environment variable %s" name))
   (let [result (System/getenv name)]

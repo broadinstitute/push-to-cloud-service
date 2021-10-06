@@ -51,7 +51,7 @@
   [url]
   (-> url gcs-cat misc/parse-json-string))
 
-(defn wait-for-files-in-bucket
+(defn wait-for-files
   "Block until gsutil successfully `stat`s each `gs://` path in `files`.
   Return `true`, but may block forever."
   [files]
