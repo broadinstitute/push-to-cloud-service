@@ -45,20 +45,28 @@
     (testing "Files are uploaded to the input bucket"
       (let [params      (jms/in-cloud-folder prefix workflow "params.txt")
             ptc-file    (jms/in-cloud-folder prefix workflow "ptc.json")
-            ptc-present (timeout 360000 #(gcs/wait-for-files-in-bucket [ptc-file]))]
-        (is (not= ::timed-out ptc-present) "Timed out waiting for ptc.json to upload")
+            ptc-present (timeout 360000
+                                 #(gcs/wait-for-files-in-bucket [ptc-file]))]
+        (is (not= ::timed-out ptc-present)
+            "Timed out waiting for ptc.json to upload")
         (let [{:keys [notifications]} (gcs/gcs-edn ptc-file)
-              expected-files          (utils/pushed-files (first notifications) params)
-              expected-present        (timeout 180000 #(gcs/wait-for-files-in-bucket expected-files))]
-          (is (not= expected-present ::timed-out) "Timed out waiting for expected files to upload")
+              expected-files          (utils/pushed-files
+                                       (first notifications) params)
+              expected-present        (timeout 180000
+                                               #(gcs/wait-for-files-in-bucket
+                                                 expected-files))]
+          (is (not= expected-present ::timed-out)
+              "Timed out waiting for expected files to upload")
           (is (= (gcs/gcs-cat params) (jms/jms->params workflow))))))
     (testing "Cromwell workflow is started by WFL"
       (let [workflow-id (timeout 180000
                                  #(wfl/wait-for-workflow-creation
                                    (env/getenv-or-throw "WFL_URL")
                                    barcode version))]
-        (is (not= ::timed-out workflow-id) "Timeout waiting for workflow creation")
-        (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
+        (is (not= ::timed-out workflow-id)
+            "Timeout waiting for workflow creation")
+        (is (uuid? (UUID/fromString workflow-id))
+            "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
           (let [workflow-timeout 3600000
                 result (timeout workflow-timeout
