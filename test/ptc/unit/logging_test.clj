@@ -17,7 +17,7 @@
       (is (logged? 'ptc.unit.logging-test :warn "This is a warning"))
       (log/error "and this is an error")
       (is (logged? 'ptc.unit.logging-test :error "and this is an error"))
-      (log/debug "This is just a debugging message")
+      (log/debug "This is a debugging message")
       (is (logged? 'ptc.unit.logging-test :debug "This is a debugging message"))
       (log/trace "This is a trace")
       (is (logged? 'ptc.unit.logging-test :trace "This is a trace")))))
