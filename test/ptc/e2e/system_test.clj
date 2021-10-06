@@ -12,9 +12,6 @@
             [ptc.tools.jms :as jms-tools])
   (:import [java.util UUID]))
 
-(def jms-message
-  (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn")))
-
 (defn timeout
   "Timeout FUNCTION after MILLISECONDS."
   [milliseconds function]
@@ -24,19 +21,26 @@
       (future-cancel f))
     return))
 
-(deftest test-end-to-end
+(defn queue-jms-message
+  "Queue a new JMS message and return its :workflow part."
+  []
   (let [properties [::jms/Properties :payload :workflow]
         version    (rand-int Integer/MAX_VALUE)
-        template   (get-in jms-message properties)
-        workflow   (assoc template :analysisCloudVersion version)
-        message    (assoc-in jms-message properties workflow)
-        barcode    (:chipWellBarcode workflow)
-        prefix     (env/getenv-or-throw "PTC_BUCKET_URL")]
+        message    (edn/read-string
+                    (slurp "./test/data/plumbing-test-jms-dev.edn"))
+        workflow   (get-in message properties)
+        result     (assoc workflow :analysisCloudVersion version)]
     (jms-tools/queue-messages
-     message 1
+     (assoc-in message properties result) 1
      (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
      (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
      (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH"))
+    result))
+
+(deftest test-end-to-end
+  (let [workflow (queue-jms-message)
+        barcode  (:chipWellBarcode workflow)
+        prefix   (env/getenv-or-throw "PTC_BUCKET_URL")]
     (testing "Files are uploaded to the input bucket"
       (let [params      (jms/in-cloud-folder prefix workflow "params.txt")
             ptc-file    (jms/in-cloud-folder prefix workflow "ptc.json")
@@ -64,18 +68,8 @@
 
 (deftest test-dead-letter-queue
   (testing "a bad message winds up in the dead-letter queue"
-    (let [version (rand-int Integer/MAX_VALUE)
-          path    [::jms/Properties :payload :workflow]
-          message (-> jms-message
-                      (get-in path)
-                      (assoc  :analysisCloudVersion version)
-                      (dissoc :chipWellBarcode)
-                      (->> (assoc-in jms-message path)))]
-      (jms-tools/queue-messages
-       message 1
-       (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
-       (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-       (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")))))
+    (let [workflow (queue-jms-message)
+          barcode  (:chipWellBarcode workflow)
+          prefix   (env/getenv-or-throw "PTC_BUCKET_URL")])))
 
-(comment
-  (clojure.test/test-vars [#'test-dead-letter-queue]))
+(comment (clojure.test/test-vars [#'test-dead-letter-queue]))
