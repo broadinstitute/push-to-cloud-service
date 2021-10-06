@@ -40,6 +40,7 @@
 (deftest test-end-to-end
   (let [workflow (queue-jms-message)
         barcode  (:chipWellBarcode workflow)
+        version  (:analysisCloudVersion workflow)
         prefix   (env/getenv-or-throw "PTC_BUCKET_URL")]
     (testing "Files are uploaded to the input bucket"
       (let [params      (jms/in-cloud-folder prefix workflow "params.txt")
