@@ -26,26 +26,21 @@
     return))
 
 (deftest test-end-to-end
-  (let [analysis-version (rand-int Integer/MAX_VALUE)
-        message          (assoc-in jms-message
-                                   [::jms/Properties
-                                    :payload :workflow
-                                    :analysisCloudVersion] analysis-version)
-        chipwell-barcode (get-in message [::jms/Properties
-                                          :payload :workflow
-                                          :chipWellBarcode])
-        workflow         (get-in message [::jms/Properties
-                                          :payload :workflow])
-        cloud-prefix     (jms/cloud-folder (env/getenv-or-throw "PTC_BUCKET_URL")
-                                           workflow)]
+  (let [properties [::jms/Properties :payload :workflow]
+        version    (rand-int Integer/MAX_VALUE)
+        template   (get-in jms-message properties)
+        workflow   (assoc template :analysisCloudVersion version)
+        message    (assoc-in jms-message properties workflow)
+        barcode    (:chipWellBarcode workflow)
+        prefix     (env/getenv-or-throw "PTC_BUCKET_URL")]
     (jms-tools/queue-messages
      message 1
      (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
      (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
      (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH"))
     (testing "Files are uploaded to the input bucket"
-      (let [params      (str cloud-prefix "/params.txt")
-            ptc-file    (str cloud-prefix "/ptc.json")
+      (let [params      (jms/in-cloud-folder prefix workflow "params.txt")
+            ptc-file    (jms/in-cloud-folder prefix workflow "ptc.json")
             ptc-present (timeout 360000 #(gcs/wait-for-files-in-bucket [ptc-file]))]
         (is (not= ::timed-out ptc-present) "Timed out waiting for ptc.json to upload")
         (let [{:keys [notifications]} (gcs/gcs-edn ptc-file)
@@ -57,7 +52,7 @@
       (let [workflow-id (timeout 180000
                                  #(wfl/wait-for-workflow-creation
                                    (env/getenv-or-throw "WFL_URL")
-                                   chipwell-barcode analysis-version))]
+                                   barcode version))]
         (is (not= ::timed-out workflow-id) "Timeout waiting for workflow creation")
         (is (uuid? (UUID/fromString workflow-id)) "Workflow id is not a valid UUID")
         (testing "Cromwell workflow succeeds"
