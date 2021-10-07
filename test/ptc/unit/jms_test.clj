@@ -24,4 +24,4 @@
     (let [jms (read-jms-message "./test/data/reprocessing-jms.edn")
           workflow (get-in jms [::jms/Properties :payload :workflow])
           prefix "gs://broad-gotc-dev-wfl-ptc-test-inputs"]
-      (is (misc/trace (#'jms/find-input-or-throw prefix workflow :greenIDatPath))))))
+      (is (#'jms/find-input-or-throw prefix workflow :greenIDatPath)))))
