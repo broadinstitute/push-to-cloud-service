@@ -6,7 +6,7 @@
 
 ;; This file exists as a smoke test for having not totally messed up
 ;; the logging dependencies (since clojure.tools.logging finds a
-;; backend at runtime)
+;; backend at runtime).
 
 (deftest level-test
   (testing "basic logging levels"
