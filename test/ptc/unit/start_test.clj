@@ -14,7 +14,8 @@
       (if-let [msg (jms-tools/with-test-queue-connection produce-consume)]
         (testing "Message is not nil and can be properly consumed"
           (is (= text (.getText msg)))
-          (is (apply = (map ::jms/Properties [@jms-tools/good-jms-message (jms/ednify msg)]))))
+          (is (apply = (map ::jms/Properties
+                            [@jms-tools/good-jms-message (jms/ednify msg)]))))
         (is false)))))
 
 (deftest produce-peek-message
@@ -26,5 +27,6 @@
       (if-let [msg (jms-tools/with-test-queue-connection produce-peek)]
         (testing "Message is not nil and can be properly consumed"
           (is (= text (.getText msg)))
-          (is (apply = (map ::jms/Properties [@jms-tools/good-jms-message (jms/ednify msg)]))))
+          (is (apply = (map ::jms/Properties
+                            [@jms-tools/good-jms-message (jms/ednify msg)]))))
         (is false)))))
