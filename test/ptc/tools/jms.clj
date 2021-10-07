@@ -57,12 +57,19 @@
 
 (defn -main
   [& args]
-  (let [[n zamboni-activemq-server-url zamboni-activemq-queue-name zamboni-activemq-secret-path] args
-        n                (edn/read-string n)
-        analysis-version (rand-int Integer/MAX_VALUE)
-        where            [::jms/Properties :payload :workflow :analysisCloudVersion]
-        jms-message      (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn"))
-        message          (assoc-in jms-message where analysis-version)]
-    (when-not (pos-int? n)
-      (throw (IllegalArgumentException. "Must specify a positive integer")))
-    (queue-messages n zamboni-activemq-server-url zamboni-activemq-queue-name zamboni-activemq-secret-path message)))
+  (let [[n
+         zamboni-activemq-server-url
+         zamboni-activemq-queue-name
+         zamboni-activemq-secret-path] args
+        version [::jms/Properties :payload :workflow :analysisCloudVersion]
+        count   (edn/read-string n)
+        message (-> "./test/data/plumbing-test-jms-dev.edn"
+                    slurp edn/read-string
+                    (assoc-in version (rand-int Integer/MAX_VALUE)))]
+    (when-not (pos-int? count)
+      (throw (IllegalArgumentException.
+              (format "%s is not a positive integer" n))))
+    (queue-messages message count
+                    zamboni-activemq-server-url
+                    zamboni-activemq-queue-name
+                    zamboni-activemq-secret-path)))
