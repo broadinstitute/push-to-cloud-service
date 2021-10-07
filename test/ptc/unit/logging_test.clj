@@ -1,5 +1,5 @@
 (ns ptc.unit.logging-test
-  "Test that logging works (since there are several layers of delegation)."
+  "Test that logging works through several layers of delegation."
   (:require [clojure.test :refer [is deftest testing]]
             [clojure.tools.logging :as log]
             [clojure.tools.logging.test :refer [logged? with-log]]))
