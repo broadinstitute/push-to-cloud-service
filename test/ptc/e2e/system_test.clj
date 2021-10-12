@@ -23,25 +23,10 @@
        (future-cancel ff))
      result)))
 
-(defn queue-jms-message
-  "Queue a new JMS message and return its :workflow part."
-  []
-  (let [properties [::jms/Properties :payload :workflow]
-        version    (rand-int Integer/MAX_VALUE)
-        message    (edn/read-string
-                    (slurp "./test/data/plumbing-test-jms-dev.edn"))
-        workflow   (get-in message properties)
-        result     (assoc workflow :analysisCloudVersion version)]
-    (jms-tools/queue-messages
-     (assoc-in message properties result) 1
-     (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
-     (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-     (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH"))
-    result))
-
 (deftest test-end-to-end
   (let [{:keys [analysisCloudVersion chipWellBarcode] :as workflow}
-        (queue-jms-message)
+        (jms-tools/queue-one-jms-message
+         "./test/data/plumbing-test-jms-dev.edn")
         prefix (partial jms/in-cloud-folder
                         (env/getenv-or-throw "PTC_BUCKET_URL") workflow)]
     (testing "Files are uploaded to the input bucket"
@@ -68,12 +53,3 @@
                                      (env/getenv-or-throw "CROMWELL_URL")
                                      workflow-id))]
             (is (= "Succeeded" result) "Cromwell workflow failed")))))))
-
-(deftest test-dead-letter-queue
-  (testing "a bad message winds up in the dead-letter queue"
-    (let [workflow (queue-jms-message)
-          barcode  (:chipWellBarcode workflow)
-          prefix   (env/getenv-or-throw "PTC_BUCKET_URL")])
-    (is false)))
-
-(comment (clojure.test/test-vars [#'test-dead-letter-queue]))

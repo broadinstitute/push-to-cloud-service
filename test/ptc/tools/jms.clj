@@ -3,6 +3,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [ptc.start :as start]
+            [ptc.util.environment :as env]
             [ptc.util.jms :as jms]
             [ptc.util.misc :as misc]))
 
@@ -54,6 +55,21 @@
       (with-queue-connection url queue vault-path
         (fn [con queue]
           (run! enqueue! (repeat n [con queue])))))))
+
+(defn queue-one-jms-message
+  "Queue a new JMS message and return its :workflow part."
+  [jms]
+  (let [properties [::jms/Properties :payload :workflow]
+        version    (rand-int Integer/MAX_VALUE)
+        message    (edn/read-string (slurp jms))
+        workflow   (get-in message properties)
+        result     (assoc workflow :analysisCloudVersion version)]
+    (queue-messages
+     (assoc-in message properties result) 1
+     (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
+     (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+     (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH"))
+    result))
 
 (defn -main
   [& args]
