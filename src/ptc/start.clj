@@ -114,7 +114,7 @@
         {:keys [username password]} (misc/vault-secrets secrets)]
     (try
       (with-open [connection (create-queue-connection url username password)]
-        (listen-and-consume-from-queue handle-or-dlq! connection queue))
+        (listen-and-consume-from-queue handle-or-dlq connection queue))
       (catch Throwable x
         (log/fatal x "Fatal error in message loop")
         (System/exit 1)))))
