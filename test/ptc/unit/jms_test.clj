@@ -31,8 +31,7 @@
 
 (deftest test-dead-letter-queue
   (testing "a bad message winds up in the dead-letter queue"
-    (let [dlq (env/getenv-or-throw
-               "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
+    (let [dlq (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
           workflow (jms-tools/queue-one-jms-message "./test/data/bad-jms.edn")
           prefix   (env/getenv-or-throw "PTC_BUCKET_URL")]
       (jms-tools/with-queue-connection
