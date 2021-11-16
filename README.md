@@ -18,7 +18,7 @@ This project is managed by the vanilla Clojure CLI tools, make sure
 You could then run `clj -m $namespace` to run a module with given namespace. e.g.
 
 ```bash
-clojure -m ptc.start
+clojure -M --main ptc.start
 ```
 
 ## Development
