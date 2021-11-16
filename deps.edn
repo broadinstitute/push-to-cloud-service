@@ -16,7 +16,8 @@
 
  :aliases {:test {:extra-paths ["test"]
                   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.0.629"}
-                                com.google.auth/google-auth-library-oauth2-http {:mvn/version "0.21.1"}}
+                                com.google.auth/google-auth-library-oauth2-http
+                                {:mvn/version "0.21.1"}}
                   :main-opts   ["-m" "kaocha.runner"]}
            :build  {:extra-deps  {uberdeps/uberdeps {:mvn/version "0.1.10"}}
                     :main-opts   ["-e" "(compile,'ptc.start)"
