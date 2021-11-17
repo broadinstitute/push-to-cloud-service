@@ -23,20 +23,9 @@ clojure -M --main ptc.start
 
 ## Development
 
-```bash
-$ tree .
-.
-├── LICENSE
-├── README.md
-├── deps.edn
-├── src
-│   └── start.clj
-└── test
-    └── start_test.clj
-```
-The project structure is shown as above, you add new entries to `deps.edn`
-to introduce a new dependency, add new modules to `src/` and implement new
-test cases to `test/`.
+Add new dependencies to `deps.edn`.
+Add new modules to `src/`,
+and new test cases to `test/`.
 
 ## Testing
 
