@@ -87,7 +87,7 @@
   "True when the IDs of MESSAGES are the same. Otherwise false."
   [& messages]
   (or (empty? messages)
-      (apply = (map :properties messages))))
+      (apply = (trace (map :properties messages)))))
 
 (defn retry-on-server-error [seconds thunk]
   (let [max 3]

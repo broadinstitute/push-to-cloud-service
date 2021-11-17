@@ -97,11 +97,13 @@
   [jms connection]
   (let [dlq    (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
         bucket (env/getenv-or-throw "PTC_BUCKET_URL")]
+    (misc/trace jms)
     (try (jms/handle-message bucket jms)
          true
          (catch Throwable x
            (log/errorf "Catch %s and move %s to %s" x jms dlq)
            (-> jms jms/encode ::jms/Properties
+               misc/trace
                (->> (produce connection dlq (str x))))
            true))))
 
