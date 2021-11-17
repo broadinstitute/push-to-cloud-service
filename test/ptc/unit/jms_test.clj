@@ -29,6 +29,8 @@
           prefix "gs://broad-gotc-dev-wfl-ptc-test-inputs"]
       (is (#'jms/find-input-or-throw prefix workflow :greenIDatPath)))))
 
+(comment (clojure.test/test-vars [#'test-dead-letter-queue]))
+
 (deftest test-dead-letter-queue
   (testing "a bad message winds up in the dead-letter queue"
     (let [dlq (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
@@ -43,4 +45,22 @@
             (misc/trace peeked))))
       (is false))))
 
-(comment (clojure.test/test-vars [#'test-dead-letter-queue]))
+(comment (clojure.test/test-vars [#'test-message-id-equality]))
+
+(deftest test-message-id-equality
+  (let [msg       (edn/read-string (slurp "test/data/test_msg.edn"))
+        different (edn/read-string (slurp "test/data/test_msg_diff.edn"))
+        same      (edn/read-string (slurp "test/data/test_msg_same.edn"))]
+    (testing "message ID equality"
+      (testing "true with no arguments"
+        (is (jms/message-ids-equal?)))
+      (testing "true with one argument"
+        (is (jms/message-ids-equal? msg)))
+      (testing "test_msg equal to itself"
+        (is (jms/message-ids-equal? msg msg)))
+      (testing "test_msg equal to a different message with same properties"
+        (is (jms/message-ids-equal? msg same)))
+      (testing "test_msg not equal to different message with different properties"
+        (is (not (jms/message-ids-equal? msg different))))
+      (testing "not equal even if only one argument isn't"
+        (is (not (jms/message-ids-equal? msg same different)))))))

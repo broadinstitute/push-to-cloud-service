@@ -276,3 +276,11 @@
                   (str/join \space [missing-keys-message (vec missing)])))))
       (let [params (push-params prefix workflow)]
         (push-append-to-aou-request prefix workflow params)))))
+
+(defn message-ids-equal?
+  "True when the IDs of JMS MESSAGES are the same. Otherwise false."
+  [& messages]
+  (let [ids (map (comp :messageId ::Headers) messages)]
+    (or (empty? ids)
+        (and (not-any? nil? ids)
+             (apply = ids)))))

@@ -83,12 +83,6 @@
   [str]
   (json/read-str str :key-fn keyword))
 
-(defn message-ids-equal?
-  "True when the IDs of MESSAGES are the same. Otherwise false."
-  [& messages]
-  (or (empty? messages)
-      (apply = (trace (map :properties messages)))))
-
 (defn retry-on-server-error [seconds thunk]
   (let [max 3]
     (loop [attempt 1]

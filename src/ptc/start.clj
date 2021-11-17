@@ -82,7 +82,7 @@
         (if (task! peeked connection)
           (let [consumed (jms/ednify (consume connection queue))]
             (log/infof "Task complete, consumed message %s" counter)
-            (if (not (misc/message-ids-equal? peeked consumed))
+            (if (not (jms/message-ids-equal? peeked consumed))
               (log/warnf
                (str/join \space ["Messages differ:"
                                  (with-out-str
