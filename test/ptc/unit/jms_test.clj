@@ -45,8 +45,6 @@
             (misc/trace peeked))))
       (is false))))
 
-(comment (clojure.test/test-vars [#'test-message-id-equality]))
-
 (deftest test-message-id-equality
   (let [msg       (edn/read-string (slurp "test/data/test_msg.edn"))
         different (edn/read-string (slurp "test/data/test_msg_diff.edn"))
@@ -58,9 +56,9 @@
         (is (jms/message-ids-equal? msg)))
       (testing "test_msg equal to itself"
         (is (jms/message-ids-equal? msg msg)))
-      (testing "test_msg equal to a different message with same properties"
+      (testing "test_msg equal to a different message with same ID"
         (is (jms/message-ids-equal? msg same)))
-      (testing "test_msg not equal to different message with different properties"
+      (testing "test_msg not equal to different message with different ID"
         (is (not (jms/message-ids-equal? msg different))))
       (testing "not equal even if only one argument isn't"
         (is (not (jms/message-ids-equal? msg same different)))))))
