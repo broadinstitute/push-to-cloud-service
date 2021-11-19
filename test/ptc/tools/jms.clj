@@ -7,15 +7,14 @@
             [ptc.util.jms :as jms]
             [ptc.util.misc :as misc]))
 
-;; Local testing for ActiveMQ
 ;; https://activemq.apache.org/how-do-i-embed-a-broker-inside-a-connection
-(defn with-test-queue-connection
-  "CALL with a local JMS connection for testing."
-  [closure]
-  (let [url             "vm://localhost?broker.persistent=false"
-        test-queue-name "test.queue"]
-    (with-open [connection (start/create-queue-connection url)]
-      (closure connection test-queue-name))))
+;;
+(defn call-with-test-connection
+  "Call PRODUCE-CONSUME to use QUEUE from a local JMS connection."
+  [queue produce-consume]
+  (with-open [connection (start/create-queue-connection
+                          "vm://localhost?broker.persistent=false")]
+    (produce-consume connection queue)))
 
 (defn with-queue-connection
   "CALL with the JMS URL, QUEUE and VAULT-PATH for testing."
@@ -34,7 +33,7 @@
   (letfn [(canonicalize [file] (-> file io/file .getCanonicalPath io/file))]
     (let [{:keys [::jms/chip ::jms/push]} jms/wfl-keys->jms-keys
           push (-> push
-                   (assoc :red_idat_cloud_path (get push :red_idat_cloud_path))
+                   (assoc   :red_idat_cloud_path (get push   :red_idat_cloud_path))
                    (assoc :green_idat_cloud_path (get push :green_idat_cloud_path)))
           push-keys (vals (merge chip push))
           infile    (canonicalize file)

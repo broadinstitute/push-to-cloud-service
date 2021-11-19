@@ -11,7 +11,7 @@
     (letfn [(produce-consume [connection queue]
               (start/produce connection queue text properties)
               (start/consume connection queue))]
-      (if-let [msg (jms-tools/with-test-queue-connection produce-consume)]
+      (if-let [msg (jms-tools/call-with-test-connection "queue" produce-consume)]
         (testing "Message is not nil and can be properly consumed"
           (is (= text (.getText msg)))
           (is (apply = (map ::jms/Properties
@@ -24,7 +24,7 @@
     (letfn [(produce-peek [connection queue]
               (start/produce connection queue text properties)
               (start/peek-message connection queue))]
-      (if-let [msg (jms-tools/with-test-queue-connection produce-peek)]
+      (if-let [msg (jms-tools/call-with-test-connection "queue" produce-peek)]
         (testing "Message is not nil and can be properly consumed"
           (is (= text (.getText msg)))
           (is (apply = (map ::jms/Properties

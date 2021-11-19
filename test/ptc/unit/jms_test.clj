@@ -4,10 +4,8 @@
             [clojure.edn :as edn]
             [ptc.start :as start]
             [ptc.tools.jms :as jms-tools]
-            [ptc.util.environment :as env]
             [ptc.util.gcs :as gcs]
-            [ptc.util.jms :as jms]
-            [ptc.util.misc :as misc]))
+            [ptc.util.jms :as jms]))
 
 (def read-jms-message (comp edn/read-string slurp))
 
@@ -28,22 +26,6 @@
           workflow (get-in jms [::jms/Properties :payload :workflow])
           prefix "gs://broad-gotc-dev-wfl-ptc-test-inputs"]
       (is (#'jms/find-input-or-throw prefix workflow :greenIDatPath)))))
-
-(comment (clojure.test/test-vars [#'test-dead-letter-queue]))
-
-(deftest test-dead-letter-queue
-  (testing "a bad message winds up in the dead-letter queue"
-    (let [dlq (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
-          workflow (jms-tools/queue-one-jms-message "./test/data/bad-jms.edn")
-          prefix   (env/getenv-or-throw "PTC_BUCKET_URL")]
-      (jms-tools/with-queue-connection
-        (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
-        (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
-        (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
-        (fn [connection queue]
-          (let [peeked (start/peek-message connection queue)]
-            (misc/trace peeked))))
-      (is false))))
 
 (deftest test-message-id-equality
   (let [msg       (edn/read-string (slurp "test/data/test_msg.edn"))
