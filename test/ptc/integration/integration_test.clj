@@ -1,12 +1,12 @@
 (ns ptc.integration.integration-test
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.edn :as edn]
             [ptc.start :as start]
             [ptc.tools.gcs :as gcs-tools]
             [ptc.tools.jms :as jms-tools]
             [ptc.util.environment :as env]
             [ptc.util.gcs :as gcs]
-            [ptc.util.jms :as jms]
-            [ptc.util.misc :as misc])
+            [ptc.util.jms :as jms])
   (:import (java.util UUID)))
 
 (def bucket
@@ -48,18 +48,25 @@
                (is (= @jms-tools/good-jms-message
                       (select-keys msg [::jms/Properties])))))))))))
 
-(comment (clojure.test/test-vars [#'test-dead-letter-queue]))
-
-(deftest test-dead-letter-queue
-  (testing "a bad message winds up in the dead-letter queue"
-    (let [dlq      (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
-          workflow (jms-tools/queue-one-jms-message "./test/data/bad-jms.edn")
-          prefix   (env/getenv-or-throw "PTC_BUCKET_URL")]
-      (jms-tools/with-queue-connection
-        (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
-        (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
-        (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
-        (fn [connection queue]
-          (let [peeked (start/peek-message connection queue)]
-            (misc/trace peeked))))
-      (is false))))
+(deftest forwarding
+  (testing "forward a bad message to the dead-letter queue"
+    (let [queue (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+          dlq   (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
+          msg   (-> "./test/data/bad-jms.edn" slurp edn/read-string
+                    (update-in [::jms/Properties :payload :workflow]
+                               assoc :analysisCloudVersion
+                               (rand-int Integer/MAX_VALUE)))
+          props (-> msg jms/encode ::jms/Properties)]
+      (with-open [connection (start/create-queue-connection
+                              "vm://localhost?broker.persistent=false")]
+        (start/produce connection queue "text" props)
+        (start/listen-and-consume-from-queue
+         (fn [jms connection]
+           (#'start/handle-or-dlq jms connection)
+           false)
+         connection queue)
+        (let [peeked   (jms/ednify (start/peek-message connection dlq))
+              consumed (jms/ednify (start/consume      connection dlq))]
+          (is (= (::jms/Properties msg) (::jms/Properties peeked)))
+          (is (= (dissoc peeked   ::jms/Headers :brokerOutTime)
+                 (dissoc consumed ::jms/Headers :brokerOutTime))))))))

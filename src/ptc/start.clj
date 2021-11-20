@@ -36,7 +36,7 @@
 ;; https://activemq.apache.org/maven/apidocs/org/apache/activemq/ActiveMQMessageConsumer.html
 ;;
 (defn consume
-  "The text from a message from JMS QUEUE through CONNECTION."
+  "Consume the message from JMS QUEUE through CONNECTION."
   [connection queue]
   (with-open [session  (create-session connection)
               consumer (.createConsumer session (.createQueue session queue))]
@@ -97,13 +97,11 @@
   [jms connection]
   (let [dlq    (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
         bucket (env/getenv-or-throw "PTC_BUCKET_URL")]
-    (misc/trace jms)
     (try (jms/handle-message bucket jms)
          true
          (catch Throwable x
            (log/errorf "Catch %s and move %s to %s" x jms dlq)
            (-> jms jms/encode ::jms/Properties
-               misc/trace
                (->> (produce connection dlq (str x))))
            true))))
 
