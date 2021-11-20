@@ -57,16 +57,18 @@
                                assoc :analysisCloudVersion
                                (rand-int Integer/MAX_VALUE)))
           props (-> msg jms/encode ::jms/Properties)]
-      (with-open [connection (start/create-queue-connection
-                              "vm://localhost?broker.persistent=false")]
-        (start/produce connection queue "text" props)
-        (start/listen-and-consume-from-queue
-         (fn [jms connection]
-           (#'start/handle-or-dlq jms connection)
-           false)
-         connection queue)
-        (let [peeked   (jms/ednify (start/peek-message connection dlq))
-              consumed (jms/ednify (start/consume      connection dlq))]
-          (is (= (::jms/Properties msg) (::jms/Properties peeked)))
-          (is (= (dissoc peeked   ::jms/Headers :brokerOutTime)
-                 (dissoc consumed ::jms/Headers :brokerOutTime))))))))
+      (letfn [(handle-or-dlq-just-once [jms connection]
+                (#'start/handle-or-dlq jms connection)
+                false)
+              (unbot [msg] (dissoc msg ::jms/Headers :brokerOutTime))
+              (ok? [left right] (is (and (not-any? nil? [left right])
+                                         (= left right))))]
+        (with-open [connection (start/create-queue-connection
+                                "vm://localhost?broker.persistent=false")]
+          (start/produce connection queue "text" props)
+          (start/listen-and-consume-from-queue handle-or-dlq-just-once
+                                               connection queue)
+          (let [peeked   (jms/ednify (start/peek-message connection dlq))
+                consumed (jms/ednify (start/consume      connection dlq))]
+            (apply ok? (map ::jms/Properties [msg peeked]))
+            (apply ok? (map unbot [peeked consumed]) )))))))
