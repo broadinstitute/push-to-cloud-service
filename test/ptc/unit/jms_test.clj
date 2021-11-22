@@ -5,8 +5,7 @@
             [ptc.start :as start]
             [ptc.tools.jms :as jms-tools]
             [ptc.util.gcs :as gcs]
-            [ptc.util.jms :as jms]
-            [ptc.util.misc :as misc]))
+            [ptc.util.jms :as jms]))
 
 (def read-jms-message (comp edn/read-string slurp))
 
