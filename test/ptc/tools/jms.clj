@@ -32,9 +32,6 @@
   [file]
   (letfn [(canonicalize [file] (-> file io/file .getCanonicalPath io/file))]
     (let [{:keys [::jms/chip ::jms/push]} jms/wfl-keys->jms-keys
-          push (-> push
-                   (assoc   :red_idat_cloud_path (get push   :red_idat_cloud_path))
-                   (assoc :green_idat_cloud_path (get push :green_idat_cloud_path)))
           push-keys (vals (merge chip push))
           infile    (canonicalize file)
           dir       (io/file (.getParent infile))
