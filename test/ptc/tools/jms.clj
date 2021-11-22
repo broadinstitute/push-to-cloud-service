@@ -1,19 +1,20 @@
 (ns ptc.tools.jms
+  "Tools to aid JMS tests."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [ptc.start :as start]
-            [ptc.util.misc :as misc]
-            [ptc.util.jms :as jms]))
+            [ptc.util.environment :as env]
+            [ptc.util.jms :as jms]
+            [ptc.util.misc :as misc]))
 
-;; Local testing for ActiveMQ
 ;; https://activemq.apache.org/how-do-i-embed-a-broker-inside-a-connection
-(defn with-test-queue-connection
-  "CALL with a local JMS connection for testing."
-  [closure]
-  (let [url             "vm://localhost?broker.persistent=false"
-        test-queue-name "test.queue"]
-    (with-open [connection (start/create-queue-connection url)]
-      (closure connection test-queue-name))))
+;;
+(defn call-with-test-connection
+  "Call PRODUCE-CONSUME to use QUEUE from a local JMS connection."
+  [queue produce-consume]
+  (with-open [connection (start/create-queue-connection
+                          "vm://localhost?broker.persistent=false")]
+    (produce-consume connection queue)))
 
 (defn with-queue-connection
   "CALL with the JMS URL, QUEUE and VAULT-PATH for testing."
@@ -31,9 +32,6 @@
   [file]
   (letfn [(canonicalize [file] (-> file io/file .getCanonicalPath io/file))]
     (let [{:keys [::jms/chip ::jms/push]} jms/wfl-keys->jms-keys
-          push (-> push
-                   (assoc :red_idat_cloud_path (get push :red_idat_cloud_path))
-                   (assoc :green_idat_cloud_path (get push :green_idat_cloud_path)))
           push-keys (vals (merge chip push))
           infile    (canonicalize file)
           dir       (io/file (.getParent infile))
@@ -46,22 +44,29 @@
 
 (defn queue-messages
   "Queue N copies of MESSAGE given a JMS URL, QUEUE and VAULT-PATH."
-  [n url queue vault-path message]
-  (let [blame (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")]
-    (let [payload  (-> message jms/encode ::jms/Properties)
-          enqueue! (fn [[con queue]] (start/produce con queue blame payload))]
-      (with-queue-connection url queue vault-path
-        (fn [con queue]
-          (run! enqueue! (repeat n [con queue])))))))
+  [message n url queue vault-path]
+  (let [blame    (or (System/getenv "USER") "aou-ptc-jms-test/queue-message")
+        payload  (-> message jms/encode ::jms/Properties)
+        enqueue! (fn [[con queue]] (start/produce con queue blame payload))]
+    (with-queue-connection url queue vault-path
+      (fn [con queue]
+        (run! enqueue! (repeat n [con queue]))))))
 
 (defn -main
   [& args]
-  (let [[n zamboni-activemq-server-url zamboni-activemq-queue-name zamboni-activemq-secret-path] args
-        n                (edn/read-string n)
-        analysis-version (rand-int Integer/MAX_VALUE)
-        where            [::jms/Properties :payload :workflow :analysisCloudVersion]
-        jms-message      (edn/read-string (slurp "./test/data/plumbing-test-jms-dev.edn"))
-        message          (assoc-in jms-message where analysis-version)]
-    (when-not (pos-int? n)
-      (throw (IllegalArgumentException. "Must specify a positive integer")))
-    (queue-messages n zamboni-activemq-server-url zamboni-activemq-queue-name zamboni-activemq-secret-path message)))
+  (let [[n
+         zamboni-activemq-server-url
+         zamboni-activemq-queue-name
+         zamboni-activemq-secret-path] args
+        version [::jms/Properties :payload :workflow :analysisCloudVersion]
+        count   (edn/read-string n)
+        message (-> "./test/data/plumbing-test-jms-dev.edn"
+                    slurp edn/read-string
+                    (assoc-in version (rand-int Integer/MAX_VALUE)))]
+    (when-not (pos-int? count)
+      (throw (IllegalArgumentException.
+              (format "%s is not a positive integer" n))))
+    (queue-messages message count
+                    zamboni-activemq-server-url
+                    zamboni-activemq-queue-name
+                    zamboni-activemq-secret-path)))

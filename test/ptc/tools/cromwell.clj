@@ -3,37 +3,30 @@
   (:require [clojure.data.json :as json]
             [clojure.tools.logging :as log]
             [clj-http.client :as client]
-            [ptc.util.misc :as misc]
-            [ptc.tools.gcs :as gcs])
-  (:import [java.util.concurrent TimeUnit]))
+            [ptc.tools.gcs :as gcs]
+            [ptc.util.misc :as misc]))
 
 (defn status
   "Status of the workflow with ID at CROMWELL-URL."
   [cromwell-url id]
-  (let [auth-header (gcs/get-auth-header!)
-        response    (client/get (str cromwell-url "/api/workflows/v1/" id "/status")
-                                {:headers auth-header})]
-    (->> (:body response)
-         (misc/parse-json-string)
-         (:status))))
+  (->> (str cromwell-url "/api/workflows/v1/" id "/status")
+       (client/get {:headers (misc/get-auth-header!)})
+       :body misc/parse-json-string :status))
 
 (defn query
   "Query for a workflow with ID at CROMWELL-URL."
   [cromwell-url id]
-  (let [auth-header (gcs/get-auth-header!)
-        response    (client/get (str cromwell-url "/api/workflows/v1/" id "/query")
-                                {:headers auth-header})]
-    (->> (:body response)
-         (misc/parse-json-string)
-         (:results))))
+  (->> (str cromwell-url "/api/workflows/v1/" id "/query")
+       (client/get {:headers (misc/get-auth-header!)})
+       :body misc/parse-json-string :results))
 
 (defn work-around-cromwell-fail-bug
-  "Wait 2 seconds and ignore up to N times a bogus failure response from
-  Cromwell for workflow ID in ENVIRONMENT.  Work around the 'sore spot'
-  reported in https://github.com/broadinstitute/cromwell/issues/2671.
-  From https://github.com/broadinstitute/wfl/blob/master/api/src/zero/service/cromwell.clj#L266"
+  "Wait 2 seconds and ignore up to N times a bogus failure response
+  from Cromwell for workflow ID.  Work around the 'sore spot' reported
+  in https://github.com/broadinstitute/cromwell/issues/2671.  From
+  https://github.com/broadinstitute/wfl/blob/master/api/src/zero/service/cromwell.clj#L266"
   [n cromwell-url id]
-  (.sleep TimeUnit/SECONDS 2)
+  (misc/sleep-seconds 2)
   (let [fail {"status" "fail" "message" (str "Unrecognized workflow ID: " id)}
         {:keys [body] :as bug} (try (status cromwell-url id)
                                     (catch Exception e (ex-data e)))]
@@ -53,6 +46,6 @@
       (if (#{"Submitted" "Running"} now)
         (do (log/infof "%s: Sleeping %s seconds on status: %s"
                        id seconds now)
-            (.sleep TimeUnit/SECONDS seconds)
+            (misc/sleep-seconds seconds)
             (recur cromwell-url id))
         (status cromwell-url id)))))

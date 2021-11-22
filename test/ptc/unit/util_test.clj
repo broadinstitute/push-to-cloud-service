@@ -1,19 +1,10 @@
 (ns ptc.unit.util-test
+  "Test some ptc.util functions."
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.edn :as edn]
-            [ptc.util.misc :as misc]
-            [ptc.tools.gcs :as gcs])
-  (:import (java.io StringWriter IOException)))
-
-(deftest test-notify-everyone-on-the-list-with-message
-  (letfn [(notify [msg to-list]
-            (map (partial str msg) to-list))]
-    (let [msg      "test"
-          ppl      ["A" "B"]
-          expected ["\"test\"\nA" "\"test\"\nB"]]
-      (testing "notify-everyone-on-the-list-with-message works for notify func"
-        (is (= (misc/notify-everyone-on-the-list-with-message notify msg ppl)
-               expected))))))
+            [ptc.tools.gcs :as gcs]
+            [ptc.util.misc :as misc])
+  (:import [java.io IOException]))
 
 (deftest gs-url-test
   (testing "URL utilities"
@@ -32,42 +23,6 @@
       (is (thrown? IllegalArgumentException (gcs/parse-gs-url "gs:/b/o")))
       (is (thrown? IllegalArgumentException (gcs/parse-gs-url "gs:///o/"))))))
 
-(deftest test-message-id-equality
-  (let [test-msg           (edn/read-string (slurp "test/data/test_msg.edn"))
-        test-msg-different (edn/read-string (slurp "test/data/test_msg_diff.edn"))
-        test-msg-same      (edn/read-string (slurp "test/data/test_msg_same.edn"))]
-    (testing "message ID equality"
-      (testing "true with no arguments"
-        (is (misc/message-ids-equal?)))
-      (testing "true with one argument"
-        (is (misc/message-ids-equal? test-msg)))
-      (testing "test_msg equal to itself"
-        (is (misc/message-ids-equal? test-msg test-msg)))
-      (testing "test_msg equal to a different message with same properties"
-        (is (misc/message-ids-equal? test-msg test-msg-same)))
-      (testing "test_msg not equal to different message with different properties"
-        (is (not (misc/message-ids-equal? test-msg test-msg-different))))
-      (testing "not equal even if only one argument isn't"
-        (is (not (misc/message-ids-equal? test-msg test-msg test-msg-different)))))))
-
-(deftest test-silent-stat
-  (testing "success case"
-    (let [output (StringWriter.)]
-      (testing "returns text"
-        (binding [*out* output
-                  *err* output]
-          (is (not (empty? (misc/gcs-object-exists? "--help"))))))
-      (testing "prints nothing"
-        (is (empty? (str output))))))
-  (testing "error case"
-    (let [output (StringWriter.)]
-      (testing "returns nothing"
-        (binding [*out* output
-                  *err* output]
-          (is (nil? (misc/gcs-object-exists? "non/gcs/path")))))
-      (testing "prints nothing"
-        (is (empty? (str output)))))))
-
 (deftest test-retry-on-server-error
   (letfn [(throw-n-times [n]
             (let [counter (atom n)]
@@ -77,4 +32,3 @@
       (is (misc/retry-on-server-error 1 (throw-n-times 3))))
     (testing "Gives up after third"
       (is (thrown? Exception (misc/retry-on-server-error 1 (throw-n-times 4)))))))
-

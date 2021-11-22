@@ -1,33 +1,30 @@
 (ns ptc.util.jms
   "Adapt JMS messages into upload actions and workflow parameters."
   (:require [clojure.data.json :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
+            [ptc.util.gcs :as gcs]
             [ptc.util.misc :as misc])
   (:import [java.io FileNotFoundException]))
 
-(def cromwell
-  "Use this Cromwell.  Should depend on deployment environment."
-  "https://cromwell-gotc-auth.gotc-dev.broadinstitute.org/")
+;; Note :environment is first and :analysisCloudVersion is last.
+;;
+(def cloud-keys
+  "Workflow keys ordered for the destination path in the cloud."
+  [:environment :chipName :chipWellBarcode :analysisCloudVersion])
 
-(def environment
-  "Run in this deployment environment.
-  WFL should get this from ZERO_DEPLOY_ENVIRONMENT"
-  "aou-dev")
-
-(def uuid
-  "Pass this to WFL for some reason. WFL should generate the UUID."
-  misc/uuid-nil)
-
+;; Pass uuid-nil because WFL should generate the UUID.
+;;
 (def append-to-aou-request
   "An empty append_to_aou request with placeholder symbols."
-  {:cromwell cromwell
-   :environment environment
+  {:cromwell                    'cromwell
+   :environment                 'environment
    :extended_chip_manifest_file 'extended_chip_manifest_file
-   :notifications 'notifications
-   :params_file 'params_file
-   :uuid (str uuid)})
+   :notifications               'notifications
+   :params_file                 'params_file
+   :uuid                        (str misc/uuid-nil)})
 
 (def wfl-keys->jms-keys-table
   "How to satisfy notification keys in WFL request."
@@ -88,6 +85,30 @@
          (map key->key)
          (into {}))))
 
+(defn in-cloud-folder
+  "Return the path to LEAF under PREFIX for WORKFLOW."
+  [prefix workflow leaf]
+  (let [[env & tail] (conj ((apply juxt cloud-keys) workflow) leaf)]
+    (str/join "/" (conj tail (str/lower-case env) prefix))))
+
+(defn ^:private latest-cloud-version
+  "Nil or the path PREFIX/N/SUFFIX where N is the greatest integer and
+  an object exists in the cloud at that path."
+  [prefix suffix]
+  (let [prefixed (str prefix "/")
+        suffixed (str "/" suffix)
+        front    (count prefixed)
+        back     (count suffixed)]
+    (letfn [(suffixed? [[_ object]] (str/ends-with? object suffixed))
+            (parse     [url]        (subs url front (- (count url) back)))
+            (unparse   [n]          (str prefixed n suffixed))]
+      (-> prefix gcs/list-objects
+          (->> (map (juxt :bucket :name))
+               (filter suffixed?)
+               (map (comp edn/read-string parse (partial apply gcs/gs-url)))
+               (sort >))
+          first unparse misc/do-or-nil))))
+
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
   [workflow]
@@ -123,84 +144,48 @@
    :size                 #(.getSize                 %)
    :timestamp            #(.getTimestamp            %)})
 
-(defn cloud-suffix
-  "Return the end part of the cloud prefix for WORKFLOW."
-  [{:keys [analysisCloudVersion chipName chipWellBarcode] :as _workflow}]
-  (str/join "/" [chipName chipWellBarcode analysisCloudVersion]))
-
-(defn env-prefix
-  "Return the cloud GCS URL with PREFIX for WORKFLOW."
-  [prefix workflow]
-  (let [{:keys [environment]} workflow]
-    (str/join "/" [prefix (str/lower-case environment) (cloud-suffix workflow)])))
-
-(defn all-versions-env-prefixes
-  "Return a seq of cloud GCS URL with PREFIX for WORKFLOW,
-   with all potential analysisCloudVersion and sorted in
-   descending order."
-  [prefix {:keys [analysisCloudVersion chipName chipWellBarcode environment] :as _workflow}]
-  (for [version (range analysisCloudVersion 0 -1)]
-    (str/join "/" [prefix (str/lower-case environment) chipName chipWellBarcode version])))
-
-(defn legacy-prefix
-  "Return the cloud GCS URL with PREFIX for WORKFLOW,
-   without environment sub path in it."
-  [prefix workflow]
-  (str/join "/" [prefix (cloud-suffix workflow)]))
-
-(defn all-versions-legacy-prefixes
-  "Return a seq of cloud GCS URL with PREFIX for WORKFLOW,
-   without environment sub path in it, with all potential
-   analysisCloudVersion and sorted in descending order."
-  [prefix {:keys [analysisCloudVersion chipName chipWellBarcode] :as _workflow}]
-  (for [version (range analysisCloudVersion 0 -1)]
-    (str/join "/" [prefix chipName chipWellBarcode version])))
-
 (defn push-params
   "Push a params.txt for the WORKFLOW into the cloud at PREFIX,
   then return its path in the cloud."
   [prefix workflow]
-  (let [cloud  (env-prefix prefix workflow)
-        result (str/join "/" [cloud "params.txt"])]
-    (misc/gsutil "cp" "-" result :in (jms->params workflow))
+  (let [result (in-cloud-folder prefix workflow "params.txt")]
+    (gcs/gsutil "cp" "-" result :in (jms->params workflow))
     result))
 
-;; See https://broadinstitute.atlassian.net/wiki/spaces/GHConfluence/pages/2853961731/2021-07-28+AoU+Processing+Issue+Discussion
+;; https://broadinstitute.atlassian.net/wiki/spaces/GHConfluence/pages/2853961731/2021-07-28+AoU+Processing+Issue+Discussion
+;; Look first in local filesystem for (input-key workflow).
+;; Then try "prefix/environment/path/leaf" in the cloud.
+;; If still not found, try "prefix/path/leaf" in the cloud.
+;; Finally look for cloud files that differ in :analysisCloudVersion parts.
+;; Otherwise throw.
 ;;
-(defn lookup-push-values
-  "Find ::push paths from WORKFLOW using PREFIX.
-   Use Green IDAT file as an example, the lookup order look like:
-   1. the value of the local :greenIDatPath key
-   2. (env-prefix    prefix workflow)/{CHIPWELL_BARCODE}_Grn.idat
-   3. (legacy-prefix prefix workflow)/{CHIPWELL_BARCODE}_Grn.idat
-  Return a single map of wfl-keys and their corresponding looked up values.
-  Note we should not look at :cloudGreenIdatPath key in JMS as it is
-  for general arrays not AoU arrays!"
-  [prefix workflow]
-  (->> (for [[k local] (vec (::push wfl-keys->jms-keys))
-             :let [jms-local (local workflow)
-                   leaf      (last (str/split jms-local #"/"))
-                   glue-leaf #(str/join "/" [% leaf])
-                   lookup    (map glue-leaf
-                                  (concat
-                                   (all-versions-env-prefixes prefix workflow)
-                                   (all-versions-legacy-prefixes prefix workflow)))]]
-         (let [found (if (.exists (io/file jms-local))
-                       jms-local
-                       (loop [lookup lookup]
-                         (when (seq lookup)
-                           (if (misc/gcs-object-exists? (first lookup))
-                             (first lookup)
-                             (recur (rest lookup))))))]
-           (when-not found
-             (log/errorf (format "Failed to find %s based on %s in %s!"
-                                 leaf (first lookup) lookup))
-             (throw (FileNotFoundException.
-                     (format "Failed to find %s based on %s in %s!"
-                             leaf (first lookup) lookup))))
-           (log/info (format "Found a match at %s for %s." found leaf))
-           [k found]))
-       (into {})))
+(defn ^:private find-input-or-throw
+  "Throw or find the input file in WORKFLOW using INPUT-KEY and PREFIX."
+  [prefix workflow input-key]
+  (let [local-file   (input-key workflow)
+        join         (partial str/join "/")
+        leaf         (last (str/split local-file #"/"))
+        [env & tail] (conj ((apply juxt cloud-keys) workflow) leaf)
+        parts        (cons (str/lower-case env) tail)
+        new-result   (join (cons prefix parts))
+        old-result   (join (cons prefix (rest parts)))]
+    (or (when (.exists (io/file local-file))
+          (gcs/gsutil "-h" (str "Content-MD5:" (gcs/get-md5-hash local-file))
+                      "cp" local-file new-result)
+          new-result)
+        (when (gcs/gcs-object-exists? new-result) new-result)
+        (when (gcs/gcs-object-exists? old-result) old-result)
+        (let [unversioned ((apply juxt (butlast cloud-keys)) workflow)
+              new-prefix  (join (cons prefix unversioned))
+              old-prefix  (join (cons prefix (rest unversioned)))]
+          (or (latest-cloud-version new-prefix leaf)
+              (latest-cloud-version old-prefix leaf)
+              (let [message (format "Cannot find %s in %s" leaf
+                                    [local-file new-result old-result
+                                     (join [new-prefix "*" leaf])
+                                     (join [old-prefix "*" leaf])])]
+                (log/error message)
+                (throw (FileNotFoundException. message))))))))
 
 (def aou-reference-bucket
   "The AllOfUs reference bucket or broad-arrays-dev-storage."
@@ -211,37 +196,37 @@
   "Get the extended_chip_manifest_file from _WORKFLOW."
   [{:keys [cloudChipMetaDataDirectory extendedIlluminaManifestFileName]
     :as _workflow}]
-  (let [[bucket _] (misc/parse-gs-url cloudChipMetaDataDirectory)]
+  (let [[bucket _] (gcs/parse-gs-url cloudChipMetaDataDirectory)]
     (str (str/replace-first cloudChipMetaDataDirectory
                             bucket aou-reference-bucket)
          extendedIlluminaManifestFileName)))
 
+;; Ignore cloud paths for files with ::push key.
+;;
 (defn jms->notification
-  "Push files to PREFIX and return notification for WORKFLOW.
-   For files with ::push key, always use the looked up values instead of
-   what is in the jms message."
-  [prefix workflow]
-  (let [cloud (env-prefix prefix workflow)
-        {:keys [::chip ::copy ::push]} wfl-keys->jms-keys
-        chip-and-push (merge chip push)
-        chips (keep workflow (vals chip))
-        pushes (lookup-push-values prefix workflow)
-        sources (concat chips (vals pushes))]
-    (letfn [(rekey    [m [k v]] (assoc m k (v workflow)))
-            (cloudify [m [k v]]
-              (if-let [path (v workflow)]
-                (assoc m k (str/join "/" [cloud (last (str/split path #"/"))]))
-                m))]
-      (doseq [f sources]
-        (let [hash (misc/get-md5-hash f)]
-          (misc/gsutil "-h" (str "Content-MD5:" hash) "cp" f cloud)))
-      (reduce cloudify (reduce rekey {} copy) chip-and-push))))
+  "Push files to PREFIX and return notification for WORKFLOW."
+  [prefix {:keys [cloudChipMetaDataDirectory] :as workflow}]
+  (let [{:keys [::chip ::copy ::push]} wfl-keys->jms-keys
+        chips  (->> chip vals
+                    (map workflow)
+                    (map (fn [field]
+                           (when-not (nil? field)
+                             (str cloudChipMetaDataDirectory
+                                  (last (str/split field #"/"))))))
+                    (zipmap (keys chip))
+                    (filter second)
+                    (into {}))
+        copies (reduce (fn [m [k v]] (assoc m k (v workflow))) {} copy)
+        pushes (->> push vals
+                    (map (partial find-input-or-throw prefix workflow))
+                    (zipmap (keys push)))]
+    (merge chips copies pushes)))
 
 (defn push-append-to-aou-request
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX
   with PARAMS."
   [prefix workflow params]
-  (let [ptc (str/join "/" [(env-prefix prefix workflow) "ptc.json"])]
+  (let [ptc-json (in-cloud-folder prefix workflow "ptc.json")]
     (-> prefix
         (jms->notification workflow)
         (assoc :params_file params)
@@ -249,8 +234,8 @@
         vector
         (->> (assoc append-to-aou-request :notifications))
         json/write-str
-        (->> (misc/gsutil "cp" "-" ptc :in)))
-    [params ptc]))
+        (->> (gcs/gsutil "cp" "-" ptc-json :in)))
+    [params ptc-json]))
 
 (defn ednify
   "Return an EDN representation of the JMS MESSAGE with keyword keys."
@@ -272,7 +257,7 @@
                                              :escape-slash false))]
     (assoc message ::Properties (update Properties :payload jsonify))))
 
-(def missing-keys-message "Missing JMS keys:") ; for tests
+(def ^:private missing-keys-message "Missing JMS keys:")
 
 (defn handle-message
   "Throw or push to cloud at PREFIX all the files for ednified JMS message."
@@ -291,3 +276,11 @@
                   (str/join \space [missing-keys-message (vec missing)])))))
       (let [params (push-params prefix workflow)]
         (push-append-to-aou-request prefix workflow params)))))
+
+(defn message-ids-equal?
+  "True when the IDs of JMS MESSAGES are the same. Otherwise false."
+  [& messages]
+  (let [ids (map (comp :messageId ::Headers) messages)]
+    (or (empty? ids)
+        (and (not-any? nil? ids)
+             (apply = ids)))))

@@ -18,25 +18,14 @@ This project is managed by the vanilla Clojure CLI tools, make sure
 You could then run `clj -m $namespace` to run a module with given namespace. e.g.
 
 ```bash
-clojure -m ptc.start
+clojure -M --main ptc.start
 ```
 
 ## Development
 
-```bash
-$ tree .
-.
-├── LICENSE
-├── README.md
-├── deps.edn
-├── src
-│   └── start.clj
-└── test
-    └── start_test.clj
-```
-The project structure is shown as above, you add new entries to `deps.edn`
-to introduce a new dependency, add new modules to `src/` and implement new
-test cases to `test/`.
+Add new dependencies to `deps.edn`.
+Add new modules under `src/`,
+and new test cases under `test/`.
 
 ## Testing
 
@@ -45,20 +34,20 @@ The tests are managed by `clj` and will be executed by
  run the following code to see an example:
 
  ```bash
- clojure -A:test unit
+ clojure -M:test unit
  ```
 
 For integration testing, you need to connect to the VPN or be in the Broad
 network and run:
 
 ```bash
- clojure -A:test integration
+ clojure -M:test integration
 ```
 
 For end-to-end testing, you need to connect to the VPN or be in the Broad
 network and run:
 ```bash
- clojure -A:test e2e
+ clojure -M:test e2e
 ```
 
 The e2e test runs in the dev environment by default. To run in production:
@@ -71,7 +60,7 @@ export PTC_BUCKET_URL="gs://broad-aou-arrays-input"
 export CROMWELL_URL="https://cromwell-aou.gotc-prod.broadinstitute.org"
 export WFL_URL="https://aou-wfl.gotc-prod.broadinstitute.org"
 
-clojure -A:test integration
+clojure -M:test integration
 ```
 
 There is another test target named `acl-in-production`.
@@ -89,7 +78,7 @@ are in the AllOfUs pipeline,
 and run it like this:
 
 ```bash
- clojure -A:test acl-in-production
+ clojure -M:test acl-in-production
 ```
 
 The `acl-in-production` test verifies
@@ -103,7 +92,7 @@ To build an executable [Uber Jar with AOT compilation](https://clojure.org/guide
 simply run:
 
 ```bash
-$ clojure -A:build
+$ clojure -M:build
 ```
 
 The JAR produced by can be run with
@@ -118,12 +107,12 @@ standard and consistent code style in this repo.
 
 To lint the code, run:
 ```bash
-clojure -A:lint
+clojure -M:lint
 ```
 
 To format the code, run:
 ```bash
-clojure -A:format
+clojure -M:format
 ```
 
 #### Logging

@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [ptc.ptc :as ptc]
+            [ptc.util.environment :as env]
             [ptc.util.jms :as jms]
             [ptc.util.misc :as misc])
   (:import [javax.jms TextMessage DeliveryMode Session]
@@ -35,7 +36,7 @@
 ;; https://activemq.apache.org/maven/apidocs/org/apache/activemq/ActiveMQMessageConsumer.html
 ;;
 (defn consume
-  "The text from a message from JMS QUEUE through CONNECTION."
+  "Consume the message from JMS QUEUE through CONNECTION."
   [connection queue]
   (with-open [session  (create-session connection)
               consumer (.createConsumer session (.createQueue session queue))]
@@ -72,61 +73,51 @@
           (.commit session))))))
 
 (defn listen-and-consume-from-queue
-  "Listen to QUEUE on CONNECTION for messages,
-  and call (TASK! message) until it is false."
+  "Call TASK! on messages from QUEUE on CONNECTION until it returns false."
   [task! connection queue]
   (loop [counter 0]
     (if-let [peeked (peek-message connection queue)]
-      ; to avoid NPE on ednify
       (let [peeked (jms/ednify peeked)]
-        (do
-          (log/infof "Peeked message %s: %s" counter peeked)
-          (if (task! peeked connection)
-            (let [consumed (jms/ednify (consume connection queue))]
-              (log/infof "Task complete, consumed message %s" counter)
-              (if (not (misc/message-ids-equal? peeked consumed))
-                (log/warnf
-                 (str/join \space ["Messages differ:"
-                                   (with-out-str (pprint (data/diff peeked consumed)))])))
-              (recur (inc counter)))
-            ;; this is for testing, in production, the task!
-            ;; should always return `true` and this branch should
-            ;; never gets reached.
-            (do
-              (log/errorf
-               (str/join
-                \space ["Task returned nil/false,"
-                        "not consuming message %s and instead exiting"])
-               peeked)
-              peeked))))
+        (log/infof "Peeked message %s: %s" counter peeked)
+        (if (task! peeked connection)
+          (let [consumed (jms/ednify (consume connection queue))]
+            (log/infof "Task complete, consumed message %s" counter)
+            (if (not (jms/message-ids-equal? peeked consumed))
+              (log/warnf
+               (str/join \space ["Messages differ:"
+                                 (with-out-str
+                                   (pprint (data/diff peeked consumed)))])))
+            (recur (inc counter)))
+          (do (log/errorf "Cannot consume %s" peeked)
+              peeked)))
       (recur counter))))
 
-(defn- message-loop
+(defn ^:private handle-or-dlq
+  "Handle the JMS on CONNECTION or forward to the dead letter queue."
+  [jms connection]
+  (let [dlq    (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
+        bucket (env/getenv-or-throw "PTC_BUCKET_URL")]
+    (try (jms/handle-message bucket jms)
+         true
+         (catch Throwable x
+           (log/errorf "Catch %s and move %s to %s" x jms dlq)
+           (-> jms jms/encode ::jms/Properties
+               (->> (produce connection dlq (str x))))
+           true))))
+
+(defn ^:private message-loop
   "Loop and consume messages using the Zamboni ActiveMQ server."
   []
-  (let [queue               (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
-        dlq                 (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME")
-        url                 (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
-        vault-path          (misc/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
-        bucket-url          (misc/getenv-or-throw "PTC_BUCKET_URL")
-        {:keys [username password]} (misc/vault-secrets vault-path)]
-    (letfn [(handle-or-dlq! [jms connection] (try
-                                               (jms/handle-message bucket-url jms)
-                                               (catch Throwable x
-                                                 (log/errorf
-                                                  (str/join
-                                                   \space ["Failed to handle the message %s due to %s"
-                                                           "moving it to %s and continue..."])
-                                                  x jms dlq)
-                                                 (produce connection dlq (str x) jms))
-                                                              ;; so the jms message is always consumed from main queue
-                                               (finally true)))]
-      (try
-        (with-open [connection (create-queue-connection url username password)]
-          (listen-and-consume-from-queue handle-or-dlq! connection queue))
-        (catch Throwable x
-          (log/fatal x "Fatal error in message loop")
-          (System/exit 1))))))
+  (let [queue   (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_QUEUE_NAME")
+        url     (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SERVER_URL")
+        secrets (env/getenv-or-throw "ZAMBONI_ACTIVEMQ_SECRET_PATH")
+        {:keys [username password]} (misc/vault-secrets secrets)]
+    (try
+      (with-open [connection (create-queue-connection url username password)]
+        (listen-and-consume-from-queue handle-or-dlq connection queue))
+      (catch Throwable x
+        (log/fatal x "Fatal error in message loop")
+        (System/exit 1)))))
 
 (defn -main
   []

@@ -1,17 +1,16 @@
 (ns ptc.tools.wfl
   "Utility functions for WFL."
-  (:require [clj-http.client :as client]
-            [clojure.tools.logging :as log]
-            [ptc.util.misc :as misc]
-            [ptc.tools.gcs :as gcs])
-  (:import [java.util.concurrent TimeUnit]))
+  (:require [clojure.tools.logging :as log]
+            [clj-http.client :as client]
+            [ptc.tools.gcs :as gcs]
+            [ptc.util.misc :as misc]))
 
 (defn get-aou-workloads
   "Return the AllOfUsArrays workloads from WFL at WFL-URL."
   [wfl-url]
   (letfn [(aou? [workload] (= (:pipeline workload) "AllOfUsArrays"))]
     (-> (str wfl-url "/api/v1/workload")
-        (client/get {:headers (gcs/get-auth-header!)})
+        (client/get {:headers (misc/get-auth-header!)})
         :body misc/parse-json-string
         (->> (filter aou?)))))
 
@@ -20,7 +19,7 @@
   [wfl-url {:keys [uuid] :as _workload}]
   (let [path (format "/api/v1/workload/%s/workflows" uuid)]
     (-> (str wfl-url path)
-        (client/get {:headers (gcs/get-auth-header!)})
+        (client/get {:headers (misc/get-auth-header!)})
         :body
         misc/parse-json-string)))
 
@@ -53,6 +52,6 @@
       (loop [ids (fetch!)]
         (if (empty? ids)
           (do (log/infof "Sleeping %s seconds" seconds)
-              (.sleep TimeUnit/SECONDS seconds)
+              (misc/sleep-seconds seconds)
               (recur (fetch!)))
           (first ids))))))

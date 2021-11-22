@@ -1,6 +1,6 @@
 (ns ptc.tools.utils
   "Utility functions shared by tests."
-  (:require [ptc.util.jms     :as jms]))
+  (:require [ptc.util.jms :as jms]))
 
 (defn pushed-files
   "Extract GCS objects pushed by PTC from the workflow request
