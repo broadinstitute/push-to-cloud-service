@@ -24,8 +24,8 @@ clojure -M --main ptc.start
 ## Development
 
 Add new dependencies to `deps.edn`.
-Add new modules to `src/`,
-and new test cases to `test/`.
+Add new modules under `src/`,
+and new test cases under `test/`.
 
 ## Testing
 
