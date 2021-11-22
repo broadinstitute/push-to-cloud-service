@@ -17,7 +17,8 @@
                      re-pattern)
         workflow (get-in good path)]
     (gcs-tools/with-temporary-gcs-folder folder
-      (jms-tools/call-with-test-connection "queue"
+      (jms-tools/call-with-test-connection
+       "queue"
        (fn [connection queue]
          (testing "a BAD message"
            (start/produce connection queue

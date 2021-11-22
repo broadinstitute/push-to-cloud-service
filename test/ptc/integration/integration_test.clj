@@ -71,4 +71,4 @@
           (let [peeked   (jms/ednify (start/peek-message connection dlq))
                 consumed (jms/ednify (start/consume      connection dlq))]
             (apply ok? (map ::jms/Properties [msg peeked]))
-            (apply ok? (map unbot [peeked consumed]) )))))))
+            (apply ok? (map unbot [peeked consumed]))))))))
