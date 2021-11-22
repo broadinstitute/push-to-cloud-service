@@ -13,7 +13,7 @@
         bad      (jms-tools/fix-paths "./test/data/bad-jms.edn")
         good     (jms-tools/fix-paths "./test/data/good-jms.edn")
         missing  (-> good (data/diff bad) first (get-in path) keys first
-                     (->> (str (var-get #'jms/missing-keys-message) ".*"))
+                     (->> (str @#'jms/missing-keys-message ".*"))
                      re-pattern)
         workflow (get-in good path)]
     (gcs-tools/with-temporary-gcs-folder folder
