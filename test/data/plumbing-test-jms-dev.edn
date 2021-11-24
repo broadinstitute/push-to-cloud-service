@@ -13,7 +13,7 @@
     :chipManifestPath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExome-12v1-1_A.1.3.extended.csv"
     :chipName "HumanExome-12v1-1_A"
     :chipWellBarcode "7991775143_R01C01"
-    :cloudChipMetaDataDirectory "gs://storage/pipeline/arrays_metadata/HumanExome-12v1-1_A/"
+    :cloudChipMetaDataDirectory "gs://broad-arrays-prod-storage/pipeline/arrays_metadata/HumanExome-12v1-1_A/"
     :clusterFilePath "/home/unix/ptc/data/arrays/metadata/HumanExome-12v1-1_A/HumanExomev1_1_CEPH_A.egt"
     :collaboratorParticipantId "NA12878"
     :environment "dev"
