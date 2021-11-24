@@ -1,6 +1,7 @@
 (ns ptc.tools.cromwell
   "Utility functions for Cromwell."
   (:require [clojure.data.json :as json]
+            [clojure.string :as str]
             [clojure.tools.logging :as log]
             [clj-http.client :as client]
             [ptc.tools.gcs :as gcs]
@@ -9,9 +10,12 @@
 (defn status
   "Status of the workflow with ID at CROMWELL-URL."
   [cromwell-url id]
-  (->> (str cromwell-url "/api/workflows/v1/" id "/status")
-       (client/get {:headers (misc/get-auth-header!)})
-       :body misc/parse-json-string :status))
+  (let [url (str/join "/" [cromwell-url "api" "workflows" "v1" id "status"])]
+    (->>  {:method       :get           ; :debug true :debug-body true
+           :content-type :application/json
+           :url          url
+           :headers      (misc/get-auth-header!)}
+          client/request :body misc/parse-json-string :status)))
 
 (defn query
   "Query for a workflow with ID at CROMWELL-URL."
