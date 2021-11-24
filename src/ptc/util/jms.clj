@@ -195,7 +195,7 @@
 (defn get-extended-chip-manifest
   "Get the extended_chip_manifest_file from _WORKFLOW."
   [{:keys [cloudChipMetaDataDirectory extendedIlluminaManifestFileName]
-    :as _workflow}]
+    :as   _workflow}]
   (let [[bucket _] (gcs/parse-gs-url cloudChipMetaDataDirectory)]
     (str (str/replace-first cloudChipMetaDataDirectory
                             bucket aou-reference-bucket)
