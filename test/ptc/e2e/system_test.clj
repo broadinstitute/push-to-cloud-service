@@ -55,9 +55,9 @@
               "Timed out waiting for expected files to upload")
           (is (= (gcs/gcs-cat params) (jms/jms->params workflow))))))
     (testing "WFL starts Cromwell workflow"
-      (let [workflow-id (timeout 3 #(wfl/wait-for-workflow-creation
-                                     (env/getenv-or-throw "WFL_URL")
-                                     chipWellBarcode analysisCloudVersion))]
+      (let [workflow-id (timeout 23 #(wfl/wait-for-workflow-creation
+                                      (env/getenv-or-throw "WFL_URL")
+                                      chipWellBarcode analysisCloudVersion))]
         (is (not= (timeout) workflow-id) "wait-for-workflow-creation timed out")
         (is (uuid? (UUID/fromString workflow-id)) "workflow-id is not a UUID")
         (testing "Cromwell workflow succeeds"

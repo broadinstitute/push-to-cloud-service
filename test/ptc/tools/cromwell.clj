@@ -45,7 +45,7 @@
   [cromwell-url id]
   (work-around-cromwell-fail-bug 9 cromwell-url id)
   (loop [cromwell-url cromwell-url id id]
-    (let [seconds 15
+    (let [seconds 60
           now (status cromwell-url id)]
       (if (#{"Submitted" "Running"} now)
         (do (log/infof "%s: Sleeping %s seconds on status: %s"
