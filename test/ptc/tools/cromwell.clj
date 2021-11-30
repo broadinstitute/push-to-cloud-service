@@ -41,15 +41,16 @@
       (recur (dec n) cromwell-url id))))
 
 (defn wait-for-workflow-complete
-  "Return status of workflow named by ID when it completes."
+  "Return status from CROMWELL-URL when workflow ID completes."
   [cromwell-url id]
   (work-around-cromwell-fail-bug 9 cromwell-url id)
-  (loop [cromwell-url cromwell-url id id]
-    (let [seconds 60
-          now (status cromwell-url id)]
-      (if (#{"Submitted" "Running"} now)
-        (do (log/infof "%s: Sleeping %s seconds on status: %s"
-                       id seconds now)
-            (misc/sleep-seconds seconds)
-            (recur cromwell-url id))
-        (status cromwell-url id)))))
+  (letfn [(fetch! [] (status cromwell-url id))]
+    (let [seconds 60]
+      (loop [status (fetch!)]
+        (if (#{"Submitted" "Running"} status)
+          (do (log/infof
+               "wait-for-workflow-complete: Sleep %s seconds on %s status: %s"
+               seconds id status)
+              (misc/sleep-seconds seconds)
+              (recur (fetch!)))
+          status)))))
