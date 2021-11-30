@@ -48,10 +48,10 @@
   [wfl-url chipwell-barcode analysis-version-number]
   (letfn [(fetch! [] (get-aou-workflow-ids
                       wfl-url chipwell-barcode analysis-version-number))]
-    (let [seconds 15]
+    (let [seconds 60]
       (loop [ids (fetch!)]
         (if (empty? ids)
-          (do (log/infof "Sleeping %s seconds" seconds)
+          (do (log/infof "wait-for-workflow-creation: Sleep %s seconds" seconds)
               (misc/sleep-seconds seconds)
               (recur (fetch!)))
           (first ids))))))

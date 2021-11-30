@@ -15,10 +15,10 @@
 (defn ^:private timeout
   "Timeout FUNCTION after MINUTES."
   ([] ::timed-out)
-  ([seconds function]
+  ([minutes function]
    (let [cancel (timeout)
          ff     (future (function))
-         result (deref ff (* 60 1000 seconds) cancel)]
+         result (deref ff (* 60 1000 minutes) cancel)]
      (when (= cancel result)
        (future-cancel ff))
      result)))
@@ -54,14 +54,12 @@
                                               gcs/wait-for-files)))
               "Timed out waiting for expected files to upload")
           (is (= (gcs/gcs-cat params) (jms/jms->params workflow))))))
-    (testing "Cromwell workflow is started by WFL"
-      (let [workflow-id (timeout 3 #(wfl/wait-for-workflow-creation
-                                     (env/getenv-or-throw "WFL_URL")
-                                     chipWellBarcode analysisCloudVersion))]
-        (is (not= (timeout) workflow-id)
-            "Timeout waiting for workflow creation")
-        (is (uuid? (UUID/fromString workflow-id))
-            "Workflow id is not a valid UUID")
+    (testing "WFL starts Cromwell workflow"
+      (let [workflow-id (timeout 23 #(wfl/wait-for-workflow-creation
+                                      (env/getenv-or-throw "WFL_URL")
+                                      chipWellBarcode analysisCloudVersion))]
+        (is (not= (timeout) workflow-id) "wait-for-workflow-creation timed out")
+        (is (uuid? (UUID/fromString workflow-id)) "workflow-id is not a UUID")
         (testing "Cromwell workflow succeeds"
           (let [result (timeout 60 #(cromwell/wait-for-workflow-complete
                                      (env/getenv-or-throw "CROMWELL_URL")

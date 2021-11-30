@@ -26,7 +26,7 @@
     :clioPort                                    443
     :clioServer                                  "clioServer"
     :clioUseHttps                                true
-    :cloudChipMetaDataDirectory                  "gs://storage/pipeline/arrays_metadata/PsychChip_v1-1_15073391_A1/"
+    :cloudChipMetaDataDirectory                  "gs://broad-arrays-dev-storage/pipeline/arrays_metadata/PsychChip_v1-1_15073391_A1/"
     :cloudSoftwarePath                           "/seq/cloud/prod/software"
     :clusterFilePath                             "bogus-cluster.egt"
     :collaboratorParticipantId                   "3999595072"

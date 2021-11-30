@@ -1,6 +1,7 @@
 (ns ptc.tools.cromwell
   "Utility functions for Cromwell."
   (:require [clojure.data.json :as json]
+            [clojure.string :as str]
             [clojure.tools.logging :as log]
             [clj-http.client :as client]
             [ptc.tools.gcs :as gcs]
@@ -9,9 +10,12 @@
 (defn status
   "Status of the workflow with ID at CROMWELL-URL."
   [cromwell-url id]
-  (->> (str cromwell-url "/api/workflows/v1/" id "/status")
-       (client/get {:headers (misc/get-auth-header!)})
-       :body misc/parse-json-string :status))
+  (let [url (str/join "/" [cromwell-url "api" "workflows" "v1" id "status"])]
+    (->>  {:method       :get           ; :debug true :debug-body true
+           :content-type :application/json
+           :url          url
+           :headers      (misc/get-auth-header!)}
+          client/request :body misc/parse-json-string :status)))
 
 (defn query
   "Query for a workflow with ID at CROMWELL-URL."
@@ -37,15 +41,16 @@
       (recur (dec n) cromwell-url id))))
 
 (defn wait-for-workflow-complete
-  "Return status of workflow named by ID when it completes."
+  "Return status from CROMWELL-URL when workflow ID completes."
   [cromwell-url id]
   (work-around-cromwell-fail-bug 9 cromwell-url id)
-  (loop [cromwell-url cromwell-url id id]
-    (let [seconds 15
-          now (status cromwell-url id)]
-      (if (#{"Submitted" "Running"} now)
-        (do (log/infof "%s: Sleeping %s seconds on status: %s"
-                       id seconds now)
-            (misc/sleep-seconds seconds)
-            (recur cromwell-url id))
-        (status cromwell-url id)))))
+  (letfn [(fetch! [] (status cromwell-url id))]
+    (let [seconds 60]
+      (loop [status (fetch!)]
+        (if (#{"Submitted" "Running"} status)
+          (do (log/infof
+               "wait-for-workflow-complete: Sleep %s seconds on %s status: %s"
+               seconds id status)
+              (misc/sleep-seconds seconds)
+              (recur (fetch!)))
+          status)))))
