@@ -53,9 +53,9 @@
   (let [env-token  (System/getenv "VAULT_TOKEN")
         token-path (str (System/getProperty "user.home") "/.vault-token")]
     (try (vault/read-secret
-          (doto (vault/new-client "https://clotho.broadinstitute.org:8200/")
+          (doto (vault/new-client "https://clotho.broadinstitute.org:8200")
             (vault/authenticate! :token (or env-token (slurp token-path))))
-          path)
+          path {})
          (catch Throwable e
            (log/warn e "Issue with Vault")
            (log/debug "Perhaps run 'vault login' and try again")))))
