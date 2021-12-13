@@ -30,18 +30,18 @@ and new test cases under `test/`.
 ## Testing
 
 The tests are managed by `clj` and will be executed by
- [`kaocha`](https://github.com/lambdaisland/kaocha) test runner. You could
- run the following code to see an example:
+[`kaocha`](https://github.com/lambdaisland/kaocha) test runner. You could
+run the following code to see an example:
 
- ```bash
- clojure -M:test unit
- ```
+```bash
+clojure -M:test unit
+```
 
 For integration testing, you need to connect to the VPN or be in the Broad
 network and run:
 
 ```bash
- clojure -M:test integration
+clojure -M:test integration
 ```
 
 For end-to-end testing, you need to connect to the VPN or be in the Broad
@@ -78,7 +78,7 @@ are in the AllOfUs pipeline,
 and run it like this:
 
 ```bash
- clojure -M:test acl-in-production
+clojure -M:test acl-in-production
 ```
 
 The `acl-in-production` test verifies
@@ -92,7 +92,7 @@ To build an executable [Uber Jar with AOT compilation](https://clojure.org/guide
 simply run:
 
 ```bash
-$ clojure -M:build
+clojure -M:build
 ```
 
 The JAR produced by can be run with
@@ -124,6 +124,7 @@ Examples are in `test/unit/logging_test.clj`.
 
 push-to-cloud-service is designed to be a [systemd user unit](https://wiki.archlinux.org/index.php/Systemd/User).
 Once installed via the bundled install script, you can enable push-to-cloud via:
+
 ```bash
 systemctl --user enable --now push-to-cloud.service
 systemctl enable ptc-vault.service
