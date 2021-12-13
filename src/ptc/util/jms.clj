@@ -32,10 +32,11 @@
    ::copy   true     :analysis_version_number             :analysisCloudVersion
    ::copy   true     :chip_well_barcode                   :chipWellBarcode
    ::copy   true     :cloud_chip_metadata_directory       :cloudChipMetaDataDirectory
+   ::copy   false    :control_data_directory              :controlDataDirectory
    ::copy   false    :control_sample_name                 :controlSampleName
-   ::chip   false    :control_sample_vcf_file             :controlSampleCloudVcfPath
-   ::chip   false    :control_sample_vcf_index_file       :controlSampleCloudVcfIndexPath
-   ::chip   false    :control_sample_intervals_file       :controlSampleCloudIntervalsFilePath
+   ::copy   false    :control_sample_vcf_file             :controlSampleCloudVcfPath
+   ::copy   false    :control_sample_vcf_index_file       :controlSampleCloudVcfIndexPath
+   ::copy   false    :control_sample_intervals_file       :controlSampleCloudIntervalsFilePath
    ::copy   true     :environment                         :environment
    ::copy   true     :extended_illumina_manifest_filename :extendedIlluminaManifestFileName
    ::copy   false    :minor_allele_frequency_file         :minorAlleleFrequencyFileCloudPath

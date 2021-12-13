@@ -18,6 +18,7 @@ Its syntax is given by https://logging.apache.org/log4j/2.x/manual/configuration
         </Console>
     </Appenders>
     <Loggers>
+        <Logger name="org.apache" level="WARN" />
         <Logger name="org.apache.activemq" level="ERROR"/>
         <Root level="DEBUG">
             <AppenderRef ref="stdout"/>

@@ -30,7 +30,7 @@
     :cloudSoftwarePath                           "/seq/cloud/prod/software"
     :clusterFilePath                             "bogus-cluster.egt"
     ;; :collaboratorParticipantId                "3999595072" ; FAIL!
-    :controlDataDirectory                        "gs://storage/pipeline/arrays_controldata/"
+    :controlDataDirectory                        "gs://broad-arrays-dev-storage/pipeline/arrays_controldata/"
     :cromwellBaseExecutionCloudPath              "gs://execution/"
     :cromwellBaseUrl                             "https://cromwell"
     :cromwellJarPath                             "/cromwell/current/cromwell.jar"
