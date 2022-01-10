@@ -9,6 +9,11 @@
             [ptc.util.misc :as misc])
   (:import [java.io FileNotFoundException]))
 
+(def chips
+  "The processing chips from most recent to oldest."
+  ["GDA-8v1-0_D1"
+   "GDA-8v1-0_A5"])
+
 ;; Note :environment is first and :analysisCloudVersion is last.
 ;;
 (def cloud-keys
