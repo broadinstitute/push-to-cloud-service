@@ -11,11 +11,21 @@
   [url]
   (let [[gs-colon nada bucket object] (str/split url #"/" 4)]
     (when-not
-        (and (every? seq [gs-colon bucket])
-             (= "gs:" gs-colon)
-             (= "" nada))
+     (and (every? seq [gs-colon bucket])
+          (= "gs:" gs-colon)
+          (= "" nada))
       (throw (IllegalArgumentException. (format "Bad GCS URL: '%s'" url))))
     [bucket (or object "")]))
+
+(defn list-gcs-folder
+  "Nil or URLs for the GCS objects of folder."
+  [folder]
+  (-> folder
+      (vector "**")
+      (->> (str/join "/")
+           (gcs/gsutil "ls"))
+      (str/split #"\n")
+      misc/do-or-nil))
 
 (defn delete-object
   "Delete URL or OBJECT from BUCKET"

@@ -108,7 +108,10 @@
     (letfn [(suffixed? [[_ object]] (str/ends-with? object suffixed))
             (parse     [url]        (subs url front (- (count url) back)))
             (unparse   [n]          (str prefixed n suffixed))]
-      (-> prefix gcs/list-gcs-folder
+      (-> [prefix "**"]
+          (->> (str/join "/")
+               (gcs/gsutil "ls"))
+          (str/split #"\n")
           (->> (map (juxt :bucket :name))
                (filter suffixed?)
                (map (comp edn/read-string parse (partial apply gcs/gs-url)))

@@ -86,12 +86,3 @@
                (lazy-cat items (when nextPageToken (each nextPageToken)))))]
      (each "")))
   ([url] (apply list-objects (parse-gs-url url))))
-
-(defn list-gcs-folder
-  "Nil or URLs for the GCS objects of folder."
-  [folder]
-  (-> [folder "**"]
-      (->> (str/join "/")
-           (gsutil "ls"))
-      (str/split #"\n")
-      misc/do-or-nil))
