@@ -171,8 +171,9 @@
   (let [local-file   (input-key workflow)
         join         (partial str/join "/")
         leaf         (last (str/split local-file #"/"))
-        [env & tail] (conj ((apply juxt cloud-keys) workflow) leaf)
-        parts        (cons (str/lower-case env) tail)
+        [env & tail] ((apply juxt (butlast cloud-keys)) workflow)
+        unversioned  (vec (cons (str/lower-case env) tail))
+        parts        (conj unversioned leaf)
         new-result   (join (cons prefix parts))
         old-result   (join (cons prefix (rest parts)))]
     (or (when (.exists (io/file local-file))
@@ -181,9 +182,8 @@
           new-result)
         (when (gcs/gcs-object-exists? new-result) new-result)
         (when (gcs/gcs-object-exists? old-result) old-result)
-        (let [unversioned ((apply juxt (butlast cloud-keys)) workflow)
-              new-prefix  (join (cons prefix unversioned))
-              old-prefix  (join (cons prefix (rest unversioned)))]
+        (let [new-prefix   (join (cons prefix unversioned))
+              old-prefix   (join (cons prefix (rest unversioned)))]
           (or (latest-cloud-version new-prefix leaf)
               (latest-cloud-version old-prefix leaf)
               (let [message (format "Cannot find %s in %s" leaf
