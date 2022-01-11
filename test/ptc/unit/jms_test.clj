@@ -14,14 +14,14 @@
     (let [jms (read-jms-message "./test/data/reprocessing-jms.edn")
           workflow (get-in jms [::jms/Properties :payload :workflow])
           prefix "gs://broad-gotc-dev-wfl-ptc-test-inputs"]
-      (is (#'jms/find-input-or-throw prefix workflow :greenIDatPath)))))
+      (is (#'jms/find-push-input-or-throw prefix workflow :greenIDatPath)))))
 
 (deftest use-GDA-8v1-0_D1-chip
-  (testing "Can find cloud idats under an old chip."
+  (testing "Find cloud idats under an old chip."
     (let [jms (read-jms-message "./test/data/GDA-8v1-0_D1-jms.edn")
           workflow (get-in jms [::jms/Properties :payload :workflow])
           prefix "gs://broad-gotc-dev-wfl-ptc-test-inputs"]
-      (is (#'jms/find-input-or-throw prefix workflow :greenIDatPath)))))
+      (is (#'jms/find-push-input-or-throw prefix workflow :greenIDatPath)))))
 
 (deftest test-message-id-equality
   (let [msg       (read-jms-message "./test/data/test_msg.edn")

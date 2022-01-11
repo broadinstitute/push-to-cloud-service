@@ -97,6 +97,11 @@
   (let [[env & tail] (conj ((apply juxt cloud-keys) workflow) leaf)]
     (str/join "/" (conj tail (str/lower-case env) prefix))))
 
+(comment
+  (latest-cloud-version
+   "gs://broad-gotc-dev-wfl-ptc-test-inputs/dev/GDA-8v1-0_D1/205800630035_R01C01"
+   "205800630035_R01C01_Grn.idat"))
+
 (defn ^:private latest-cloud-version
   "Nil or the path PREFIX/N/SUFFIX where N is the greatest integer and
   an object exists in the cloud at that path."
@@ -168,30 +173,39 @@
 ;; Finally look for cloud files that differ in :analysisCloudVersion parts.
 ;; Otherwise throw.
 ;;
-(defn ^:private find-input-or-throw
-  "Throw or find the input file in WORKFLOW using INPUT-KEY and PREFIX."
+(defn ^:private find-push-input-or-throw
+  "Throw or find the ::push file in WORKFLOW using INPUT-KEY at PREFIX."
   [prefix workflow input-key]
   (let [local-file   (input-key workflow)
         join         (partial str/join "/")
         leaf         (last (str/split local-file #"/"))
-        [env & tail] ((apply juxt (butlast cloud-keys)) workflow)
-        unversioned  (vec (cons (str/lower-case env) tail))
-        parts        (conj unversioned leaf)
-        new-result   (join (cons prefix parts))
-        old-result   (join (cons prefix (rest parts)))]
+        [env & tail] ((apply juxt cloud-keys) workflow)
+        low-env      (str/lower-case env)
+        chipped      (vec (cons low-env tail))
+        unchipped    (vec (cons low-env (rest tail)))
+        unversioned  (vec (cons low-env (butlast tail)))
+        new-result   (join (cons prefix (conj unchipped leaf)))
+        env-parts    (conj chipped leaf)
+        env-result   (join (cons prefix env-parts))
+        old-result   (join (cons prefix (rest env-parts)))]
     (or (when (.exists (io/file local-file))
           (gcs/gsutil "-h" (str "Content-MD5:" (gcs/get-md5-hash local-file))
                       "cp" local-file new-result)
-          new-result)
+          env-result)
         (when (gcs/gcs-object-exists? new-result) new-result)
+        (when (gcs/gcs-object-exists? env-result) env-result)
         (when (gcs/gcs-object-exists? old-result) old-result)
-        (let [new-prefix   (join (cons prefix unversioned))
-              old-prefix   (join (cons prefix (rest unversioned)))]
+        (let [new-prefix (join (cons prefix (butlast unchipped)))
+              env-prefix (join (cons prefix unversioned))
+              old-prefix (join (cons prefix (rest unversioned)))]
           (or (latest-cloud-version new-prefix leaf)
+              (latest-cloud-version env-prefix leaf)
               (latest-cloud-version old-prefix leaf)
               (let [message (format "Cannot find %s in %s" leaf
-                                    [local-file new-result old-result
+                                    [local-file
+                                     new-result env-result old-result
                                      (join [new-prefix "*" leaf])
+                                     (join [env-prefix "*" leaf])
                                      (join [old-prefix "*" leaf])])]
                 (log/error message)
                 (throw (FileNotFoundException. message))))))))
@@ -227,7 +241,7 @@
                     (into {}))
         copies (reduce (fn [m [k v]] (assoc m k (v workflow))) {} copy)
         pushes (->> push vals
-                    (map (partial find-input-or-throw prefix workflow))
+                    (map (partial find-push-input-or-throw prefix workflow))
                     (zipmap (keys push)))]
     (merge chips copies pushes)))
 
