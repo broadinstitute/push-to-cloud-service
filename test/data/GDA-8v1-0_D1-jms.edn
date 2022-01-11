@@ -5,15 +5,15 @@
   :brokerOutTime 1641851075165
   :commandId 7
   :compressed false
-  :destination #object[org.apache.activemq.command.ActiveMQQueue 0x1897b6a3 "queue://wfl.broad.pushtocloud.enqueue"]
+  ;; :destination #object[org.apache.activemq.command.ActiveMQQueue 0x1897b6a3 "queue://wfl.broad.pushtocloud.enqueue"]
   :droppable false
   :expiration 0
   :groupSequence 0
-  :marshalledProperties #object[org.apache.activemq.util.ByteSequence 0x58399d8a "org.apache.activemq.util.ByteSequence@58399d8a"]
-  :messageId "#object[org.apache.activemq.command.MessageId 0x5f843218 ID:vpicard02.broadinstitute.org-35360-1641486568783-5:1:1:1:3]"
+  ;; :marshalledProperties #object[org.apache.activemq.util.ByteSequence 0x58399d8a "org.apache.activemq.util.ByteSequence@58399d8a"]
+  ;; :messageId "#object[org.apache.activemq.command.MessageId 0x5f843218 ID:vpicard02.broadinstitute.org-35360-1641486568783-5:1:1:1:3]"
   :persistent true
   :priority 4
-  :producerId #object[org.apache.activemq.command.ProducerId 0x75383d2f "ID:vpicard02.broadinstitute.org-35360-1641486568783-5:1:1:1"]
+  ;; :producerId #object[org.apache.activemq.command.ProducerId 0x75383d2f "ID:vpicard02.broadinstitute.org-35360-1641486568783-5:1:1:1"]
   :readOnlyBody true
   :readOnlyProperties true
   :redeliveryCounter 0
