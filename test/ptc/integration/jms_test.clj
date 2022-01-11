@@ -39,7 +39,7 @@
                             (->> (apply juxt)))
                  inputs (remove nil? (push (first notifications)))
                  pushed (into [params ptc] inputs)
-                 gcs    (gcs-tools/list-gcs-folder folder)]
+                 gcs    (gcs/list-gcs-folder folder)]
              (is (= (set pushed) (set gcs)))
              (is (= (jms/jms->params workflow)
                     (gcs-tools/gcs-cat params))))))))))
