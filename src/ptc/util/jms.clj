@@ -198,10 +198,11 @@
   look for LEAF under GDA-8v1-0_A5 too.  Return a vector of cloud paths
   tried when LEAF is not found."
   [prefix leaf {:keys [chipName] :as workflow}]
-  (let [unhacked (find-chipped-path prefix leaf workflow)]
+  (let [stale-chip "GDA-8v1-0_A5"
+        unhacked   (find-chipped-path prefix leaf workflow)]
     (if (string? unhacked) unhacked
-        (if (= "GDA-8v1-0_A5" chipName) unhacked
-            (let [stale (assoc workflow :chipName "GDA-8v1-0_A5")
+        (if (= stale-chip chipName) unhacked
+            (let [stale  (assoc workflow :chipName stale-chip)
                   hacked (find-chipped-path prefix leaf stale)]
               (if (string? hacked) hacked
                   (into unhacked hacked)))))))
