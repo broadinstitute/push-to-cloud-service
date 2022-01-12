@@ -1,0 +1,17 @@
+# This is /etc/sysconfig/push-to-cloud on the BITS VM.
+
+# Environment variables used by the
+# push-to-cloud service.
+
+# Zamboni ActiveMQ Configuration
+ZAMBONI_ACTIVEMQ_QUEUE_NAME="wfl.broad.pushtocloud.enqueue"
+ZAMBONI_ACTIVEMQ_DEAD_LETTER_QUEUE_NAME="wfl.broad.pushtocloud.enqueue-dlq"
+ZAMBONI_ACTIVEMQ_SERVER_URL="failover:ssl://vpicard-jms.broadinstitute.org:61616"
+ZAMBONI_ACTIVEMQ_SECRET_PATH="secret/dsde/gotc/prod/activemq/logins/zamboni"
+
+# Cloud Storage
+PTC_BUCKET_URL="gs://broad-aou-arrays-input"
+AOU_REFERENCE_BUCKET="broad-arrays-aou-storage"
+
+# Vault
+VAULT_ADDR="https://clotho.broadinstitute.org:8200/"

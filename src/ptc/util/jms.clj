@@ -96,19 +96,18 @@
   "Nil or the path PREFIX/N/SUFFIX where N is the greatest integer and
   an object exists in the cloud at that path."
   [prefix suffix]
-  (let [prefixed (str prefix "/")
-        suffixed (str "/" suffix)
-        front    (count prefixed)
-        back     (count suffixed)]
-    (letfn [(suffixed? [[_ object]] (str/ends-with? object suffixed))
-            (parse     [url]        (subs url front (- (count url) back)))
-            (unparse   [n]          (str prefixed n suffixed))]
-      (-> prefix gcs/list-objects
-          (->> (map (juxt :bucket :name))
-               (filter suffixed?)
-               (map (comp edn/read-string parse (partial apply gcs/gs-url)))
-               (sort >))
-          first unparse misc/do-or-nil))))
+  (let [front (inc (count prefix))
+        back  (inc (count suffix))]
+    (letfn [(parse [url]
+              (let [s (subs url front (- (count url) back))]
+                [(edn/read-string s) url]))]
+      (-> [prefix "*" suffix]
+          (->> (str/join "/")
+               (gcs/gsutil "ls"))
+          (str/split #"\n")
+          (->> (map parse)
+               (sort-by first >))
+          first second misc/do-or-nil))))
 
 (defn jms->params
   "Replace JMS keys in WORKFLOW with their params.txt names."
@@ -153,47 +152,109 @@
     (gcs/gsutil "cp" "-" result :in (jms->params workflow))
     result))
 
-;; https://broadinstitute.atlassian.net/wiki/spaces/GHConfluence/pages/2853961731/2021-07-28+AoU+Processing+Issue+Discussion
-;; Look first in local filesystem for (input-key workflow).
-;; Then try "prefix/environment/path/leaf" in the cloud.
-;; If still not found, try "prefix/path/leaf" in the cloud.
-;; Finally look for cloud files that differ in :analysisCloudVersion parts.
-;; Otherwise throw.
-;;
-(defn ^:private find-input-or-throw
-  "Throw or find the input file in WORKFLOW using INPUT-KEY and PREFIX."
-  [prefix workflow input-key]
-  (let [local-file   (input-key workflow)
-        join         (partial str/join "/")
-        leaf         (last (str/split local-file #"/"))
-        [env & tail] (conj ((apply juxt cloud-keys) workflow) leaf)
-        parts        (cons (str/lower-case env) tail)
-        new-result   (join (cons prefix parts))
-        old-result   (join (cons prefix (rest parts)))]
-    (or (when (.exists (io/file local-file))
-          (gcs/gsutil "-h" (str "Content-MD5:" (gcs/get-md5-hash local-file))
-                      "cp" local-file new-result)
+(def ^:private pathify (partial str/join "/"))
+
+(defn ^:private push-or-chipless-path
+  "Return the chipless cloud path defined by WORKFLOW under PREFIX for
+  the LOCAL file named LEAF or a vector of paths tried."
+  [prefix local leaf workflow]
+  (let [[env & tail] ((apply juxt cloud-keys) workflow)
+        low-env      (str/lower-case env)
+        chipless     (vec (cons low-env (rest tail)))
+        new-result   (pathify (cons prefix (conj chipless leaf)))]
+    (or (when (.exists (io/file local))
+          (gcs/gsutil "-h" (str "Content-MD5:" (gcs/get-md5-hash local))
+                      "cp" local new-result)
           new-result)
         (when (gcs/gcs-object-exists? new-result) new-result)
-        (when (gcs/gcs-object-exists? old-result) old-result)
-        (let [unversioned ((apply juxt (butlast cloud-keys)) workflow)
-              new-prefix  (join (cons prefix unversioned))
-              old-prefix  (join (cons prefix (rest unversioned)))]
+        (let [new-prefix (pathify (cons prefix (butlast chipless)))]
           (or (latest-cloud-version new-prefix leaf)
-              (latest-cloud-version old-prefix leaf)
-              (let [message (format "Cannot find %s in %s" leaf
-                                    [local-file new-result old-result
-                                     (join [new-prefix "*" leaf])
-                                     (join [old-prefix "*" leaf])])]
-                (log/error message)
-                (throw (FileNotFoundException. message))))))))
+              [local new-result (pathify [new-prefix "*" leaf])])))))
 
-(def aou-reference-bucket
+(defn ^:private find-chipped-path
+  "Return the chipped cloud path defined by WORKFLOW for file named LEAF
+  under PREFIX or a vector of the paths tried."
+  [prefix leaf workflow]
+  (let [[env & tail] ((apply juxt cloud-keys) workflow)
+        low-env      (str/lower-case env)
+        chipped      (vec (cons low-env tail))
+        unversioned  (vec (cons low-env (butlast tail)))
+        env-parts    (conj chipped leaf)
+        env-result   (pathify (cons prefix env-parts))
+        old-result   (pathify (cons prefix (rest env-parts)))]
+    (or (when (gcs/gcs-object-exists? env-result) env-result)
+        (when (gcs/gcs-object-exists? old-result) old-result)
+        (let [env-prefix (pathify (cons prefix unversioned))
+              old-prefix (pathify (cons prefix (rest unversioned)))]
+          (or (latest-cloud-version env-prefix leaf)
+              (latest-cloud-version old-prefix leaf)
+              [env-result old-result
+               (pathify [env-prefix "*" leaf])
+               (pathify [old-prefix "*" leaf])])))))
+
+(defn ^:private hack-try-stale-chips
+  "Return the chipped cloud path defined by WORKFLOW for file named LEAF
+  under PREFIX.  If the WORKFLOW names a chip other than GDA-8v1-0_A5,
+  look for LEAF under GDA-8v1-0_A5 too.  Return a vector of cloud paths
+  tried when LEAF is not found."
+  [prefix leaf {:keys [chipName] :as workflow}]
+  (let [stale-chip "GDA-8v1-0_A5"
+        unhacked   (find-chipped-path prefix leaf workflow)]
+    (if (string? unhacked) unhacked
+        (if (= stale-chip chipName) unhacked
+            (let [stale  (assoc workflow :chipName stale-chip)
+                  hacked (find-chipped-path prefix leaf stale)]
+              (if (string? hacked) hacked
+                  (into unhacked hacked)))))))
+
+(defn ^:private find-push-input-cloud-path
+  "Return a cloud path under PREFIX for the LOCAL file named LEAF in
+  WORKFLOW.  Return a vector of the paths tried when none is found."
+  [prefix local leaf {:keys [chipName] :as workflow}]
+  (let [chipless (push-or-chipless-path prefix local leaf workflow)]
+    (if (string? chipless) chipless
+        (let [chipped (hack-try-stale-chips prefix leaf workflow)]
+          (if (string? chipped) chipped
+              (into chipless chipped))))))
+
+;; https://broadinstitute.atlassian.net/wiki/spaces/GHConfluence/pages/2853961731/2021-07-28+AoU+Processing+Issue+Discussion
+;;
+;; Look for ::push inputs at the paths (and in the order) shown here.
+;; Use the wildcard path with the highest :analysisCloudVersion.
+;;
+;; ERROR ptc.util.jms - Cannot find 205800630035_R01C01_Grn.idat in
+;; ["/humgen/illumina_data/205800630035/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/GDA-8v1-0_D1/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/GDA-8v1-0_D1/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/GDA-8v1-0_D1/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/GDA-8v1-0_D1/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/GDA-8v1-0_A5/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/GDA-8v1-0_A5/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"]
+;;
+;; Throw that exception when no local file nor cloud path is found.
+;;
+(defn ^:private find-push-input-or-throw
+  "Throw or find the ::push file in WORKFLOW using INPUT-KEY at PREFIX."
+  [prefix workflow input-key]
+  (let [local (input-key workflow)
+        leaf  (last (str/split local #"/"))
+        result (find-push-input-cloud-path prefix local leaf workflow)]
+    (when (vector? result)
+      (let [message (format "Cannot find %s in %s" leaf result)]
+        (log/error message)
+        (throw (FileNotFoundException. message))))
+    result))
+
+(def ^:private aou-reference-bucket
   "The AllOfUs reference bucket or broad-arrays-dev-storage."
   (or (System/getenv "AOU_REFERENCE_BUCKET")
       "broad-arrays-dev-storage"))
 
-(defn get-extended-chip-manifest
+(defn ^:private get-extended-chip-manifest
   "Get the extended_chip_manifest_file from _WORKFLOW."
   [{:keys [cloudChipMetaDataDirectory extendedIlluminaManifestFileName]
     :as   _workflow}]
@@ -204,7 +265,7 @@
 
 ;; Ignore cloud paths for files with ::push key.
 ;;
-(defn jms->notification
+(defn ^:private jms->notification
   "Push files to PREFIX and return notification for WORKFLOW."
   [prefix {:keys [cloudChipMetaDataDirectory] :as workflow}]
   (let [{:keys [::chip ::copy ::push]} wfl-keys->jms-keys
@@ -219,11 +280,11 @@
                     (into {}))
         copies (reduce (fn [m [k v]] (assoc m k (v workflow))) {} copy)
         pushes (->> push vals
-                    (map (partial find-input-or-throw prefix workflow))
+                    (map (partial find-push-input-or-throw prefix workflow))
                     (zipmap (keys push)))]
     (merge chips copies pushes)))
 
-(defn push-append-to-aou-request
+(defn ^:private push-append-to-aou-request
   "Push an append_to_aou request for WORKFLOW to the cloud at PREFIX
   with PARAMS."
   [prefix workflow params]
