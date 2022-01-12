@@ -223,16 +223,16 @@
 ;;
 ;; ERROR ptc.util.jms - Cannot find 205800630035_R01C01_Grn.idat in
 ;; ["/humgen/illumina_data/205800630035/205800630035_R01C01_Grn.idat"
-;;  "gs://broad-gotc-dev-wfl-ptc-test-inputs/dev/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
-;;  "gs://broad-gotc-dev-wfl-ptc-test-inputs/dev/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
-;;  "gs://broad-gotc-dev-wfl-ptc-test-inputs/dev/GDA-8v1-0_D1/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
-;;  "gs://broad-gotc-dev-wfl-ptc-test-inputs/GDA-8v1-0_D1/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
-;;  "gs://broad-gotc-dev-wfl-ptc-test-inputs/dev/GDA-8v1-0_D1/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
-;;  "gs://broad-gotc-dev-wfl-ptc-test-inputs/GDA-8v1-0_D1/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
-;;  "gs://broad-gotc-dev-wfl-ptc-test-inputs/dev/GDA-8v1-0_A5/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
-;;  "gs://broad-gotc-dev-wfl-ptc-test-inputs/GDA-8v1-0_A5/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
-;;  "gs://broad-gotc-dev-wfl-ptc-test-inputs/dev/GDA-8v1-0_A5/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
-;;  "gs://broad-gotc-dev-wfl-ptc-test-inputs/GDA-8v1-0_A5/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"]
+;;  "gs://broad-aou-arrays-input/prod/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/GDA-8v1-0_D1/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/GDA-8v1-0_D1/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/GDA-8v1-0_D1/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/GDA-8v1-0_D1/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/GDA-8v1-0_A5/205800630035_R01C01/4/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/prod/GDA-8v1-0_A5/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"
+;;  "gs://broad-aou-arrays-input/GDA-8v1-0_A5/205800630035_R01C01/*/205800630035_R01C01_Grn.idat"]
 ;;
 ;; Throw that exception when no local file nor cloud path is found.
 ;;
