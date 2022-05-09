@@ -31,7 +31,7 @@
        ""
        "Where: <env> is one of: %s"
        ""
-       "You ran: jms %s"]
+       "You ran: clj -M:jms %s"]
       (->> (str/join \newline))
       (format (str/join \space (map name (keys environments)))
               (str/join \space the-args))))
